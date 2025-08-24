@@ -197,8 +197,15 @@ function updateIngredientStock(name: string, amount: number) {
       $ingredientStock.set(currentStock.filter((item) => item.name !== name))
     } else {
       const updatedStock = [...currentStock]
-      updatedStock[existingIndex] = { ...updatedStock[existingIndex], amount }
-      $ingredientStock.set(updatedStock)
+      const existingItem = updatedStock[existingIndex]
+      if (existingItem) {
+        updatedStock[existingIndex] = {
+          name: existingItem.name,
+          amount,
+          amountType: existingItem.amountType
+        }
+        $ingredientStock.set(updatedStock)
+      }
     }
   } else if (amount > 0) {
     const allIngredients = $allIngredients.get()
