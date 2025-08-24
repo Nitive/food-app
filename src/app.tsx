@@ -1,12 +1,12 @@
 import '@mantine/core/styles.css'
 
-import { Anchor, Checkbox, Group, List, MantineProvider, Table, Text, Title } from '@mantine/core'
+import { Anchor, Button, Checkbox, Group, List, MantineProvider, Table, Text, Title, Stack, Badge, ActionIcon, NumberInput, Paper, Divider } from '@mantine/core'
 import { useStore } from '@nanostores/react'
-import { CheckCircleFillIcon } from '@primer/octicons-react'
+import { CheckCircleFillIcon, PlusIcon, DashIcon, TrashIcon } from '@primer/octicons-react'
 import { atom, computed } from 'nanostores'
 import { createRoot } from 'react-dom/client'
 import { BrowserRouter, Route, Routes, useParams } from 'react-router'
-import { sumBy, unique } from 'remeda'
+import { sumBy, unique, groupBy } from 'remeda'
 import { recipes } from './data.js'
 
 function Providers(props: { children: React.ReactNode }) {
@@ -17,62 +17,232 @@ function Providers(props: { children: React.ReactNode }) {
   )
 }
 
-const $selectedRecipesIds = atom<number[]>([])
-const $selectedRecipes = computed($selectedRecipesIds, (rs) => recipes.filter((r) => rs.includes(r.id)))
-
-function addSelectedRecipe(id: number) {
-  $selectedRecipesIds.set(unique([...$selectedRecipesIds.get(), id]))
+// Типы для корзины
+interface CartItem {
+  recipeId: number
+  quantity: number
 }
 
-function removeSelectedRecipe(id: number) {
-  $selectedRecipesIds.set($selectedRecipesIds.get().filter((rid) => rid !== id))
+// Состояние корзины
+const $cartItems = atom<CartItem[]>([])
+
+// Вычисляем рецепты в корзине
+const $cartRecipes = computed($cartItems, (items) => 
+  items.map(item => {
+    const recipe = recipes.find(r => r.id === item.recipeId)
+    return recipe ? { ...recipe, quantity: item.quantity } : null
+  }).filter(Boolean)
+)
+
+// Вычисляем список покупок (группированные ингредиенты)
+const $shoppingList = computed($cartItems, (items) => {
+  const allIngredients: Array<{name: string, amount: number, amountType: string}> = []
+  
+  items.forEach(item => {
+    const recipe = recipes.find(r => r.id === item.recipeId)
+    if (recipe) {
+      recipe.ingredients.forEach(ingredient => {
+        allIngredients.push({
+          name: ingredient.name,
+          amount: ingredient.amount * item.quantity,
+          amountType: ingredient.amountType
+        })
+      })
+    }
+  })
+  
+  // Группируем по названию ингредиента
+  const grouped = groupBy(allIngredients, (item) => item.name)
+  
+  return Object.entries(grouped).map(([name, ingredients]) => ({
+    name,
+    totalAmount: sumBy(ingredients, (item) => item.amount),
+    amountType: ingredients[0].amountType
+  }))
+})
+
+// Функции для работы с корзиной
+function addToCart(recipeId: number) {
+  const currentItems = $cartItems.get()
+  const existingItem = currentItems.find(item => item.recipeId === recipeId)
+  
+  if (existingItem) {
+    $cartItems.set(currentItems.map(item => 
+      item.recipeId === recipeId 
+        ? { ...item, quantity: item.quantity + 1 }
+        : item
+    ))
+  } else {
+    $cartItems.set([...currentItems, { recipeId, quantity: 1 }])
+  }
+}
+
+function removeFromCart(recipeId: number) {
+  const currentItems = $cartItems.get()
+  const existingItem = currentItems.find(item => item.recipeId === recipeId)
+  
+  if (existingItem && existingItem.quantity > 1) {
+    $cartItems.set(currentItems.map(item => 
+      item.recipeId === recipeId 
+        ? { ...item, quantity: item.quantity - 1 }
+        : item
+    ))
+  } else {
+    $cartItems.set(currentItems.filter(item => item.recipeId !== recipeId))
+  }
+}
+
+function updateCartQuantity(recipeId: number, quantity: number) {
+  const currentItems = $cartItems.get()
+  
+  if (quantity <= 0) {
+    $cartItems.set(currentItems.filter(item => item.recipeId !== recipeId))
+  } else {
+    $cartItems.set(currentItems.map(item => 
+      item.recipeId === recipeId 
+        ? { ...item, quantity }
+        : item
+    ))
+  }
+}
+
+function clearCart() {
+  $cartItems.set([])
 }
 
 function RecipesPage() {
-  const selectedRecipes = useStore($selectedRecipes)
+  const cartRecipes = useStore($cartRecipes)
+  const shoppingList = useStore($shoppingList)
 
   const stats = {
-    calories: sumBy(selectedRecipes, (r) => r.calories).toFixed(1),
-    proteins: sumBy(selectedRecipes, (r) => r.proteins).toFixed(1),
-    fats: sumBy(selectedRecipes, (r) => r.fats).toFixed(1),
-    carbohydrates: sumBy(selectedRecipes, (r) => r.carbohydrates).toFixed(1),
+    calories: sumBy(cartRecipes, (r) => (r?.calories || 0) * (r?.quantity || 0)).toFixed(1),
+    proteins: sumBy(cartRecipes, (r) => (r?.proteins || 0) * (r?.quantity || 0)).toFixed(1),
+    fats: sumBy(cartRecipes, (r) => (r?.fats || 0) * (r?.quantity || 0)).toFixed(1),
+    carbohydrates: sumBy(cartRecipes, (r) => (r?.carbohydrates || 0) * (r?.quantity || 0)).toFixed(1),
   }
 
   return (
-    <>
+    <Stack gap="lg">
       <Title>Рецепты</Title>
+      
       <Table>
         <Table.Thead>
           <Table.Tr>
             <Table.Th>Название</Table.Th>
+            <Table.Th>Ингредиенты</Table.Th>
+            <Table.Th>Действия</Table.Th>
           </Table.Tr>
         </Table.Thead>
         <Table.Tbody>
           {recipes.map((recipe) => (
             <Table.Tr key={recipe.id}>
-              <Table.Td width={1}>
-                <Checkbox
-                  onClick={(e) => {
-                    if (e.currentTarget.checked) {
-                      addSelectedRecipe(recipe.id)
-                    } else {
-                      removeSelectedRecipe(recipe.id)
-                    }
-                  }}
-                />
-              </Table.Td>
               <Table.Td>
                 <Anchor href={`/recipe/${recipe.id}`}>{recipe.name}</Anchor>
               </Table.Td>
               <Table.Td>{recipe.ingredients.map((i) => i.name).join(', ')}</Table.Td>
+              <Table.Td>
+                <Group gap="xs">
+                  <ActionIcon 
+                    variant="light" 
+                    color="blue" 
+                    onClick={() => addToCart(recipe.id)}
+                  >
+                    <PlusIcon size={16} />
+                  </ActionIcon>
+                </Group>
+              </Table.Td>
             </Table.Tr>
           ))}
         </Table.Tbody>
       </Table>
-      <Amount>
-        КБЖУ {stats.calories}/{stats.proteins}/{stats.fats}/{stats.carbohydrates}
-      </Amount>
-    </>
+
+      {cartRecipes.length > 0 && (
+        <>
+          <Divider />
+          
+          <Title order={2}>Корзина</Title>
+          
+          <Table>
+            <Table.Thead>
+              <Table.Tr>
+                <Table.Th>Рецепт</Table.Th>
+                <Table.Th>Количество</Table.Th>
+                <Table.Th>КБЖУ (на порцию)</Table.Th>
+                <Table.Th>Действия</Table.Th>
+              </Table.Tr>
+            </Table.Thead>
+                         <Table.Tbody>
+               {cartRecipes.map((recipe) => (
+                 <Table.Tr key={recipe?.id}>
+                   <Table.Td>
+                     <Anchor href={`/recipe/${recipe?.id}`}>{recipe?.name}</Anchor>
+                   </Table.Td>
+                   <Table.Td>
+                     <Group gap="xs">
+                       <ActionIcon 
+                         variant="light" 
+                         color="red" 
+                         onClick={() => removeFromCart(recipe?.id || 0)}
+                       >
+                         <DashIcon size={16} />
+                       </ActionIcon>
+                       <NumberInput
+                         value={recipe?.quantity || 0}
+                         onChange={(value) => updateCartQuantity(recipe?.id || 0, Number(value) || 0)}
+                         min={1}
+                         max={99}
+                         w={80}
+                         size="sm"
+                       />
+                     </Group>
+                   </Table.Td>
+                   <Table.Td>
+                     <Text size="sm">
+                       {recipe?.calories}/{recipe?.proteins}/{recipe?.fats}/{recipe?.carbohydrates}
+                     </Text>
+                   </Table.Td>
+                   <Table.Td>
+                     <ActionIcon 
+                       variant="light" 
+                       color="red" 
+                       onClick={() => updateCartQuantity(recipe?.id || 0, 0)}
+                     >
+                       <TrashIcon size={16} />
+                     </ActionIcon>
+                   </Table.Td>
+                 </Table.Tr>
+               ))}
+             </Table.Tbody>
+          </Table>
+
+          <Group justify="space-between" align="center">
+            <Text fw={500}>
+              Общий КБЖУ: {stats.calories}/{stats.proteins}/{stats.fats}/{stats.carbohydrates}
+            </Text>
+            <Button variant="light" color="red" onClick={clearCart}>
+              Очистить корзину
+            </Button>
+          </Group>
+
+          <Divider />
+          
+          <Title order={2}>Список покупок</Title>
+          
+          <Paper p="md" withBorder>
+            <List icon={<CheckCircleFillIcon size={16} fill="var(--mantine-color-green-8)" />}>
+              {shoppingList.map((item) => (
+                <List.Item key={item.name}>
+                  <Text fw={500}>{item.name}</Text>
+                  <Amount>
+                    {item.totalAmount} {item.amountType}
+                  </Amount>
+                </List.Item>
+              ))}
+            </List>
+          </Paper>
+        </>
+      )}
+    </Stack>
   )
 }
 
