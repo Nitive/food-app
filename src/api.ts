@@ -1,10 +1,17 @@
 import { node } from '@elysiajs/node'
-import { PrismaClient } from '@prisma/client'
+import { cors } from '@elysiajs/cors'
 import { Elysia, t } from 'elysia'
+import { PrismaClient } from '@prisma/client'
 
 const prisma = new PrismaClient()
 
 const app = new Elysia({ adapter: node() as any })
+  .use(cors({
+    origin: ['http://localhost:5173', 'http://localhost:3000', 'http://127.0.0.1:5173', 'http://127.0.0.1:3000'],
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization']
+  }))
   // Получить все рецепты
   .get('/api/recipes', async () => {
     const recipes = await prisma.recipe.findMany({
