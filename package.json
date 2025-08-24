@@ -4,6 +4,7 @@
   "description": "",
   "type": "module",
   "scripts": {
+    "types": "tsc -p . --noEmit",
     "dev": "tsx watch src/index.ts",
     "build": "tsc src/index.ts --outDir dist",
     "start": "NODE_ENV=production node dist/index.js"
