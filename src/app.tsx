@@ -17,7 +17,12 @@ import {
   Text,
   TextInput,
   Title,
+  Badge,
+  Box,
+  Grid,
+  Card,
 } from '@mantine/core'
+import { Calendar } from '@mantine/dates'
 import { useStore } from '@nanostores/react'
 import { CheckCircleFillIcon, DashIcon, PlusIcon, TrashIcon, XCircleFillIcon } from '@primer/octicons-react'
 import { atom } from 'nanostores'
@@ -787,41 +792,106 @@ function CalendarPage() {
   const recipes = useStore($recipes)
   const calendarItems = useStore($calendarItems)
   const loading = useStore($loading)
-  const [selectedDate, setSelectedDate] = React.useState<string>('')
+  const [selectedDate, setSelectedDate] = React.useState<Date | null>(null)
   const [selectedRecipe, setSelectedRecipe] = React.useState<number | null>(null)
+  const [currentMonth, setCurrentMonth] = React.useState(new Date())
 
   const handleAddToCalendar = () => {
     if (selectedDate && selectedRecipe) {
-      addToCalendar(selectedDate, selectedRecipe)
-      setSelectedDate('')
-      setSelectedRecipe(null)
+      const dateString = selectedDate.toISOString().split('T')[0]
+      if (dateString) {
+        addToCalendar(dateString, selectedRecipe)
+        setSelectedDate(null)
+        setSelectedRecipe(null)
+      }
     }
   }
 
-  const formatDate = (date: Date) => {
-    return new Date(date).toLocaleDateString('ru-RU', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
+  const handleDateClick = (date: Date) => {
+    setSelectedDate(date)
+  }
+
+  const getEventsForDate = (date: Date) => {
+    const dateString = date.toISOString().split('T')[0]
+    return calendarItems.filter(item => {
+      const itemDate = new Date(item.date).toISOString().split('T')[0]
+      return itemDate === dateString
     })
   }
 
-  const groupByDate = (items: CalendarItem[]) => {
-    const groups: Record<string, CalendarItem[]> = {}
-    items.forEach(item => {
-      const dateKey = new Date(item.date).toISOString().split('T')[0]
-      if (dateKey && !groups[dateKey]) {
-        groups[dateKey] = []
-      }
-      if (dateKey && groups[dateKey]) {
-        groups[dateKey].push(item)
-      }
-    })
-    return groups
+  const renderDay = (date: Date) => {
+    const events = getEventsForDate(date)
+    const isToday = new Date().toDateString() === date.toDateString()
+    const isSelected = selectedDate && selectedDate.toDateString() === date.toDateString()
+
+    return (
+      <Box
+        style={{
+          position: 'relative',
+          minHeight: 80,
+          padding: 4,
+          cursor: 'pointer',
+          backgroundColor: isSelected ? 'var(--mantine-color-blue-1)' : 'transparent',
+          border: isToday ? '2px solid var(--mantine-color-blue-6)' : '1px solid var(--mantine-color-gray-3)',
+          borderRadius: 4,
+        }}
+        onClick={() => handleDateClick(date)}
+      >
+        <Text
+          size="sm"
+          fw={isToday ? 700 : 500}
+          c={isToday ? 'blue' : 'inherit'}
+          mb={4}
+        >
+          {date.getDate()}
+        </Text>
+        
+        {events.length > 0 && (
+          <Stack gap={2}>
+            {events.slice(0, 2).map((event) => (
+              <Badge
+                key={event.id}
+                size="xs"
+                variant="filled"
+                color="blue"
+                style={{ fontSize: '10px', padding: '2px 4px' }}
+              >
+                {event.recipe.name}
+              </Badge>
+            ))}
+            {events.length > 2 && (
+              <Text size="xs" c="dimmed">
+                +{events.length - 2} еще
+              </Text>
+            )}
+          </Stack>
+        )}
+      </Box>
+    )
   }
 
-  const groupedItems = groupByDate(calendarItems)
+  const getMonthDays = (date: Date) => {
+    const year = date.getFullYear()
+    const month = date.getMonth()
+    const firstDay = new Date(year, month, 1)
+    const lastDay = new Date(year, month + 1, 0)
+    const startDate = new Date(firstDay)
+    const firstDayOfWeek = firstDay.getDay()
+    startDate.setDate(startDate.getDate() - (firstDayOfWeek === 0 ? 6 : firstDayOfWeek - 1))
+    
+    const days = []
+    const currentDate = new Date(startDate)
+    
+    while (currentDate <= lastDay || currentDate.getDay() !== 1) {
+      days.push(new Date(currentDate))
+      currentDate.setDate(currentDate.getDate() + 1)
+    }
+    
+    return days
+  }
+
+  const monthDays = getMonthDays(currentMonth)
+  const weekDays = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс']
 
   return (
     <Stack gap="lg" pos="relative">
@@ -845,83 +915,131 @@ function CalendarPage() {
       </Group>
 
       <Text c="dimmed">
-        Планируйте свое питание на неделю. Выберите дату и рецепт, чтобы добавить его в календарь.
+        Планируйте свое питание на месяц. Кликните на день, чтобы добавить рецепт.
         Все рецепты из календаря можно добавить в корзину одним кликом.
       </Text>
 
-      <Paper p="md" withBorder>
-        <Title order={3} mb="md">Добавить рецепт в календарь</Title>
-        <Group align="flex-end">
-          <input
-            type="date"
-            value={selectedDate}
-            onChange={(e) => setSelectedDate(e.target.value)}
-            style={{
-              padding: '8px 12px',
-              border: '1px solid #ccc',
-              borderRadius: '4px',
-              fontSize: '14px'
-            }}
-          />
-          <Select
-            placeholder="Выберите рецепт"
-            value={selectedRecipe?.toString() || ''}
-            onChange={(value) => setSelectedRecipe(value ? Number(value) : null)}
-            data={recipes.map(recipe => ({
-              value: recipe.id.toString(),
-              label: recipe.name
-            }))}
-            style={{ minWidth: 200 }}
-          />
-          <Button 
-            onClick={handleAddToCalendar}
-            disabled={!selectedDate || !selectedRecipe}
-          >
-            Добавить
-          </Button>
-        </Group>
-      </Paper>
+      <Grid>
+        <Grid.Col span={8}>
+          <Card withBorder p="md">
+            <Group justify="space-between" mb="md">
+              <Title order={3}>
+                {currentMonth.toLocaleDateString('ru-RU', { 
+                  month: 'long', 
+                  year: 'numeric' 
+                })}
+              </Title>
+              <Group gap="xs">
+                <Button 
+                  variant="light" 
+                  size="sm"
+                  onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1))}
+                >
+                  ←
+                </Button>
+                <Button 
+                  variant="light" 
+                  size="sm"
+                  onClick={() => setCurrentMonth(new Date())}
+                >
+                  Сегодня
+                </Button>
+                <Button 
+                  variant="light" 
+                  size="sm"
+                  onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1))}
+                >
+                  →
+                </Button>
+              </Group>
+            </Group>
 
-      <Title order={2}>Запланированные рецепты</Title>
+            <Grid>
+              {weekDays.map((day) => (
+                <Grid.Col key={day} span={1}>
+                  <Text ta="center" fw={600} size="sm" c="dimmed">
+                    {day}
+                  </Text>
+                </Grid.Col>
+              ))}
+              
+              {monthDays.map((date, index) => (
+                <Grid.Col key={index} span={1}>
+                  {renderDay(date)}
+                </Grid.Col>
+              ))}
+            </Grid>
+          </Card>
+        </Grid.Col>
 
-      {Object.keys(groupedItems).length === 0 ? (
-        <Paper p="md" withBorder>
-          <Text c="dimmed" ta="center">
-            Нет запланированных рецептов. Добавьте рецепты в календарь выше.
-          </Text>
-        </Paper>
-      ) : (
-        <Stack gap="md">
-          {Object.entries(groupedItems)
-            .sort(([a], [b]) => a.localeCompare(b))
-            .map(([dateKey, items]) => (
-              <Paper key={dateKey} p="md" withBorder>
-                <Title order={4} mb="sm">
-                  {formatDate(new Date(dateKey))}
+        <Grid.Col span={4}>
+          <Stack gap="md">
+            {selectedDate && (
+              <Card withBorder p="md">
+                <Title order={4} mb="md">
+                  {selectedDate.toLocaleDateString('ru-RU', {
+                    weekday: 'long',
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric'
+                  })}
                 </Title>
-                <Stack gap="xs">
-                  {items.map((item) => (
+
+                <Stack gap="xs" mb="md">
+                  {getEventsForDate(selectedDate).map((item) => (
                     <Group key={item.id} justify="space-between" align="center">
                       <div>
-                        <Text fw={500}>{item.recipe.name}</Text>
-                        <Text size="sm" c="dimmed">
+                        <Text fw={500} size="sm">{item.recipe.name}</Text>
+                        <Text size="xs" c="dimmed">
                           КБЖУ: {item.recipe.calories}/{item.recipe.proteins}/{item.recipe.fats}/{item.recipe.carbohydrates}
                         </Text>
                       </div>
                       <ActionIcon 
                         variant="light" 
                         color="red" 
+                        size="sm"
                         onClick={() => removeFromCalendar(item.id)}
                       >
-                        <TrashIcon size={16} />
+                        <TrashIcon size={12} />
                       </ActionIcon>
                     </Group>
                   ))}
                 </Stack>
-              </Paper>
-            ))}
-        </Stack>
-      )}
+
+                <Divider mb="md" />
+
+                <Title order={5} mb="sm">Добавить рецепт</Title>
+                <Select
+                  placeholder="Выберите рецепт"
+                  value={selectedRecipe?.toString() || ''}
+                  onChange={(value) => setSelectedRecipe(value ? Number(value) : null)}
+                  data={recipes.map(recipe => ({
+                    value: recipe.id.toString(),
+                    label: recipe.name
+                  }))}
+                  mb="sm"
+                />
+                <Button 
+                  onClick={handleAddToCalendar}
+                  disabled={!selectedRecipe}
+                  size="sm"
+                  fullWidth
+                >
+                  Добавить
+                </Button>
+              </Card>
+            )}
+
+            {!selectedDate && (
+              <Card withBorder p="md">
+                <Text c="dimmed" ta="center">
+                  Выберите день в календаре, чтобы добавить рецепт
+                </Text>
+              </Card>
+            )}
+          </Stack>
+        </Grid.Col>
+      </Grid>
     </Stack>
   )
 }
