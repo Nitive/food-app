@@ -6,23 +6,33 @@ import {
   Divider,
   Group,
   List,
+  LoadingOverlay,
   MantineProvider,
+  Modal,
   NumberInput,
   Paper,
+  Select,
   Stack,
   Table,
   Text,
+  TextInput,
   Title,
-  LoadingOverlay,
 } from '@mantine/core'
 import { useStore } from '@nanostores/react'
 import { CheckCircleFillIcon, DashIcon, PlusIcon, TrashIcon, XCircleFillIcon } from '@primer/octicons-react'
-import { atom, computed } from 'nanostores'
+import { atom } from 'nanostores'
+import React from 'react'
 import { createRoot } from 'react-dom/client'
 import { BrowserRouter, Link, Route, Routes, useParams } from 'react-router'
-import { groupBy, sumBy } from 'remeda'
-import { apiClient, type Recipe, type CartItem, type Ingredient, type StockItem, type ShoppingListItem } from './api-client.js'
-import React from 'react'
+import { sumBy } from 'remeda'
+import {
+  apiClient,
+  type CartItem,
+  type Ingredient,
+  type Recipe,
+  type ShoppingListItem,
+  type StockItem,
+} from './api-client.js'
 
 function Providers(props: { children: React.ReactNode }) {
   return (
@@ -50,6 +60,9 @@ const $stockItems = atom<StockItem[]>([])
 // Состояние списка покупок
 const $shoppingList = atom<ShoppingListItem[]>([])
 
+// Состояние модального окна создания рецепта
+const $createRecipeModal = atom(false)
+
 // Загрузка данных
 async function loadData() {
   $loading.set(true)
@@ -59,9 +72,9 @@ async function loadData() {
       apiClient.getCart(),
       apiClient.getIngredients(),
       apiClient.getStock(),
-      apiClient.getShoppingList()
+      apiClient.getShoppingList(),
     ])
-    
+
     $recipes.set(recipes)
     $cartItems.set(cartItems)
     $ingredients.set(ingredients)
@@ -121,8 +134,45 @@ async function updateIngredientStock(ingredientId: number, amount: number) {
   }
 }
 
+async function clearAllData() {
+  try {
+    await apiClient.clearCart()
+    await loadData() // Перезагружаем данные
+  } catch (error) {
+    console.error('Ошибка очистки данных:', error)
+  }
+}
+
+// Функция создания рецепта
+async function createRecipe(recipeData: {
+  name: string
+  calories: number
+  proteins: number
+  fats: number
+  carbohydrates: number
+  ingredients: { name: string; amount: number; amountType: string }[]
+}) {
+  try {
+    await apiClient.createRecipe(recipeData)
+    await loadData() // Перезагружаем данные
+    $createRecipeModal.set(false) // Закрываем модальное окно
+  } catch (error) {
+    console.error('Ошибка создания рецепта:', error)
+  }
+}
+
+// Функция создания ингредиента
+async function createIngredient(ingredientData: { name: string; amountType: string }) {
+  try {
+    await apiClient.createIngredient(ingredientData)
+    await loadData() // Перезагружаем данные
+  } catch (error) {
+    console.error('Ошибка создания ингредиента:', error)
+  }
+}
+
 function getIngredientStock(ingredientName: string): number {
-  const stockItem = $stockItems.get().find(item => item.ingredient.name === ingredientName)
+  const stockItem = $stockItems.get().find((item) => item.ingredient.name === ingredientName)
   return stockItem?.amount || 0
 }
 
@@ -142,14 +192,24 @@ function RecipesPage() {
   return (
     <Stack gap="lg" pos="relative">
       <LoadingOverlay visible={loading} />
-      
+
       <Group justify="space-between" align="center">
         <Title>Рецепты</Title>
-        <Button component={Link} to="/ingredients" variant="light">
-          Управление ингредиентами
-        </Button>
+        <Group gap="xs">
+          <Button
+            variant="light"
+            color="green"
+            leftSection={<PlusIcon size={16} />}
+            onClick={() => $createRecipeModal.set(true)}
+          >
+            Создать рецепт
+          </Button>
+          <Button component={Link} to="/ingredients" variant="light">
+            Управление ингредиентами
+          </Button>
+        </Group>
       </Group>
-      
+
       <Table>
         <Table.Thead>
           <Table.Tr>
@@ -185,9 +245,9 @@ function RecipesPage() {
       {cartItems.length > 0 && (
         <>
           <Divider />
-          
+
           <Title order={2}>Корзина</Title>
-          
+
           <Table>
             <Table.Thead>
               <Table.Tr>
@@ -210,7 +270,11 @@ function RecipesPage() {
                   </Table.Td>
                   <Table.Td>
                     <Group gap="xs">
-                      <ActionIcon variant="light" color="red" onClick={() => updateCartQuantity(item.id, item.quantity - 1)}>
+                      <ActionIcon
+                        variant="light"
+                        color="red"
+                        onClick={() => updateCartQuantity(item.id, item.quantity - 1)}
+                      >
                         <DashIcon size={16} />
                       </ActionIcon>
                       <NumberInput
@@ -248,9 +312,9 @@ function RecipesPage() {
           </Group>
 
           <Divider />
-          
+
           <Title order={2}>Список покупок</Title>
-          
+
           <Paper p="md" withBorder>
             <List icon={<CheckCircleFillIcon size={16} fill="var(--mantine-color-green-8)" />}>
               {shoppingList.map((item) => (
@@ -277,7 +341,7 @@ function IngredientsPage() {
   return (
     <Stack gap="lg" pos="relative">
       <LoadingOverlay visible={loading} />
-      
+
       <Group justify="space-between" align="center">
         <Title>Управление ингредиентами</Title>
         <Group gap="xs">
@@ -291,8 +355,8 @@ function IngredientsPage() {
       </Group>
 
       <Text c="dimmed">
-        Укажите количество имеющихся ингредиентов. Это поможет составить точный список покупок. 
-        Все данные автоматически сохраняются в базе данных.
+        Укажите количество имеющихся ингредиентов. Это поможет составить точный список покупок. Все данные автоматически
+        сохраняются в базе данных.
       </Text>
 
       <Table>
@@ -305,8 +369,8 @@ function IngredientsPage() {
         </Table.Thead>
         <Table.Tbody>
           {ingredients.map((ingredient) => {
-            const currentStock = stockItems.find(s => s.ingredient.id === ingredient.id)?.amount || 0
-            
+            const currentStock = stockItems.find((s) => s.ingredient.id === ingredient.id)?.amount || 0
+
             return (
               <Table.Tr key={ingredient.id}>
                 <Table.Td>
@@ -357,6 +421,222 @@ function Amount(props: { children: React.ReactNode }) {
     <Text component="span" c="gray.6" fw={500}>
       {props.children}{' '}
     </Text>
+  )
+}
+
+function CreateRecipeForm() {
+  const [formData, setFormData] = React.useState({
+    name: '',
+    calories: 0,
+    proteins: 0,
+    fats: 0,
+    carbohydrates: 0,
+    ingredients: [{ name: '', amount: 0, amountType: 'гр' }],
+  })
+
+  const [loading, setLoading] = React.useState(false)
+  const [ingredientSearch, setIngredientSearch] = React.useState<string[]>([''])
+  const modalOpened = useStore($createRecipeModal)
+  const ingredients = useStore($ingredients)
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setLoading(true)
+
+    try {
+      await createRecipe(formData)
+      // Сбрасываем форму
+      setFormData({
+        name: '',
+        calories: 0,
+        proteins: 0,
+        fats: 0,
+        carbohydrates: 0,
+        ingredients: [{ name: '', amount: 0, amountType: 'гр' }],
+      })
+      setIngredientSearch([''])
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const addIngredient = () => {
+    setFormData((prev) => ({
+      ...prev,
+      ingredients: [...prev.ingredients, { name: '', amount: 0, amountType: 'гр' }],
+    }))
+    setIngredientSearch((prev) => [...prev, ''])
+  }
+
+  const removeIngredient = (index: number) => {
+    setFormData((prev) => ({
+      ...prev,
+      ingredients: prev.ingredients.filter((_, i) => i !== index),
+    }))
+    setIngredientSearch((prev) => prev.filter((_, i) => i !== index))
+  }
+
+  const updateIngredient = (index: number, field: string, value: string | number) => {
+    setFormData((prev) => ({
+      ...prev,
+      ingredients: prev.ingredients.map((ing, i) => (i === index ? { ...ing, [field]: value } : ing)),
+    }))
+  }
+
+  const handleIngredientSearch = (index: number, searchValue: string) => {
+    setIngredientSearch((prev) => prev.map((val, i) => (i === index ? searchValue : val)))
+  }
+
+  const handleIngredientSelect = async (index: number, selectedValue: string | null) => {
+    if (!selectedValue) return
+
+    // Проверяем, является ли это новым ингредиентом
+    if (selectedValue.startsWith('Создать: ')) {
+      const newIngredientName = selectedValue.replace('Создать: ', '')
+      const currentAmountType = formData.ingredients[index]?.amountType || 'гр'
+
+      try {
+        await createIngredient({ name: newIngredientName, amountType: currentAmountType })
+        // Обновляем форму с новым ингредиентом
+        updateIngredient(index, 'name', newIngredientName)
+        setIngredientSearch((prev) => prev.map((val, i) => (i === index ? '' : val)))
+      } catch (error) {
+        console.error('Ошибка создания ингредиента:', error)
+      }
+    } else {
+      // Выбираем существующий ингредиент
+      updateIngredient(index, 'name', selectedValue)
+      setIngredientSearch((prev) => prev.map((val, i) => (i === index ? '' : val)))
+    }
+  }
+
+  const getFilteredIngredients = (searchValue: string, index: number) => {
+    if (!searchValue) return ingredients.map((ing) => ing.name)
+
+    const filtered = ingredients
+      .filter((ing) => ing.name.toLowerCase().includes(searchValue.toLowerCase()))
+      .map((ing) => ing.name)
+
+    // Добавляем опцию создания нового ингредиента, если он не найден
+    const exactMatch = ingredients.some((ing) => ing.name.toLowerCase() === searchValue.toLowerCase())
+
+    if (!exactMatch && searchValue.trim()) {
+      filtered.push(`Создать: ${searchValue}`)
+    }
+
+    return filtered
+  }
+
+  return (
+    <Modal opened={modalOpened} onClose={() => $createRecipeModal.set(false)} title="Создать новый рецепт" size="lg">
+      <form onSubmit={handleSubmit}>
+        <Stack gap="md">
+          <TextInput
+            label="Название рецепта"
+            placeholder="Введите название рецепта"
+            value={formData.name}
+            onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
+            required
+          />
+
+          <Group grow>
+            <NumberInput
+              label="Калории"
+              placeholder="0"
+              value={formData.calories}
+              onChange={(value) => setFormData((prev) => ({ ...prev, calories: Number(value) || 0 }))}
+              min={0}
+              required
+            />
+            <NumberInput
+              label="Белки (г)"
+              placeholder="0"
+              value={formData.proteins}
+              onChange={(value) => setFormData((prev) => ({ ...prev, proteins: Number(value) || 0 }))}
+              min={0}
+              required
+            />
+            <NumberInput
+              label="Жиры (г)"
+              placeholder="0"
+              value={formData.fats}
+              onChange={(value) => setFormData((prev) => ({ ...prev, fats: Number(value) || 0 }))}
+              min={0}
+              required
+            />
+            <NumberInput
+              label="Углеводы (г)"
+              placeholder="0"
+              value={formData.carbohydrates}
+              onChange={(value) => setFormData((prev) => ({ ...prev, carbohydrates: Number(value) || 0 }))}
+              min={0}
+              required
+            />
+          </Group>
+
+          <Divider />
+
+          <Group justify="space-between" align="center">
+            <Title order={3}>Ингредиенты</Title>
+            <Button type="button" variant="light" leftSection={<PlusIcon size={16} />} onClick={addIngredient}>
+              Добавить ингредиент
+            </Button>
+          </Group>
+
+          {formData.ingredients.map((ingredient, index) => (
+            <Group key={index} align="flex-end">
+              <Select
+                label="Название"
+                placeholder="Начните вводить название ингредиента"
+                value={ingredient.name}
+                onChange={(value) => handleIngredientSelect(index, value)}
+                data={getFilteredIngredients(ingredientSearch[index] || '', index)}
+                searchValue={ingredientSearch[index] || ''}
+                onSearchChange={(value) => handleIngredientSearch(index, value)}
+                searchable
+                style={{ flex: 1 }}
+                required
+              />
+              <NumberInput
+                label="Количество"
+                placeholder="0"
+                value={ingredient.amount}
+                onChange={(value) => updateIngredient(index, 'amount', Number(value) || 0)}
+                min={0}
+                w={120}
+                required
+              />
+              <Select
+                label="Единица"
+                value={ingredient.amountType}
+                onChange={(value) => updateIngredient(index, 'amountType', value || 'гр')}
+                data={['гр', 'мл', 'шт', 'по вкусу']}
+                w={120}
+                required
+              />
+              {formData.ingredients.length > 1 && (
+                <ActionIcon variant="light" color="red" onClick={() => removeIngredient(index)} mb={4}>
+                  <TrashIcon size={16} />
+                </ActionIcon>
+              )}
+            </Group>
+          ))}
+
+          <Group justify="flex-end" mt="md">
+            <Button variant="light" onClick={() => $createRecipeModal.set(false)} disabled={loading}>
+              Отмена
+            </Button>
+            <Button
+              type="submit"
+              loading={loading}
+              disabled={!formData.name || formData.ingredients.some((ing) => !ing.name)}
+            >
+              Создать рецепт
+            </Button>
+          </Group>
+        </Stack>
+      </form>
+    </Modal>
   )
 }
 
@@ -435,6 +715,7 @@ function App() {
           <Route path="ingredients" element={<IngredientsPage />} />
           <Route path="recipe/:id" element={<Recipe />} />
         </Routes>
+        <CreateRecipeForm />
       </Providers>
     </div>
   )

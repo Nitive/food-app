@@ -17,27 +17,27 @@ async function main() {
 
   // Создаем уникальные ингредиенты
   const allIngredients = new Map<string, { name: string; amountType: string }>()
-  
-  recipes.forEach(recipe => {
-    recipe.ingredients.forEach(ingredient => {
+
+  recipes.forEach((recipe) => {
+    recipe.ingredients.forEach((ingredient) => {
       if (!allIngredients.has(ingredient.name)) {
         allIngredients.set(ingredient.name, {
           name: ingredient.name,
-          amountType: ingredient.amountType
+          amountType: ingredient.amountType,
         })
       }
     })
   })
 
   const ingredients = Array.from(allIngredients.values())
-  
+
   // Сохраняем ингредиенты в базу
   for (const ingredient of ingredients) {
     await prisma.ingredient.create({
       data: {
         name: ingredient.name,
-        amountType: ingredient.amountType
-      }
+        amountType: ingredient.amountType,
+      },
     })
   }
 
@@ -51,14 +51,14 @@ async function main() {
         calories: recipe.calories,
         proteins: recipe.proteins,
         fats: recipe.fats,
-        carbohydrates: recipe.carbohydrates
-      }
+        carbohydrates: recipe.carbohydrates,
+      },
     })
 
     // Добавляем ингредиенты к рецепту
     for (const ingredient of recipe.ingredients) {
       const dbIngredient = await prisma.ingredient.findUnique({
-        where: { name: ingredient.name }
+        where: { name: ingredient.name },
       })
 
       if (dbIngredient) {
@@ -67,8 +67,8 @@ async function main() {
             data: {
               recipeId: createdRecipe.id,
               ingredientId: dbIngredient.id,
-              amount: ingredient.amount
-            }
+              amount: ingredient.amount,
+            },
           })
         } catch (error) {
           // Игнорируем ошибки дублирования

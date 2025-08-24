@@ -55,9 +55,28 @@ export const apiClient = {
     return data
   },
 
+  async createRecipe(recipeData: {
+    name: string
+    calories: number
+    proteins: number
+    fats: number
+    carbohydrates: number
+    ingredients: { name: string; amount: number; amountType: string }[]
+  }): Promise<Recipe> {
+    const { data } = await client.api.recipes.post(recipeData)
+    if (!data) throw new Error('Failed to create recipe')
+    return data as unknown as Recipe
+  },
+
   async getIngredients(): Promise<Ingredient[]> {
     const { data } = await client.api.ingredients.get()
     return data || []
+  },
+
+  async createIngredient(ingredientData: { name: string; amountType: string }): Promise<Ingredient> {
+    const { data } = await client.api.ingredients.post(ingredientData)
+    if (!data) throw new Error('Failed to create ingredient')
+    return data as unknown as Ingredient
   },
 
   async getCart(): Promise<CartItem[]> {
@@ -103,5 +122,5 @@ export const apiClient = {
   async getShoppingList(): Promise<ShoppingListItem[]> {
     const { data } = await client.api['shopping-list'].get()
     return data || []
-  }
+  },
 }
