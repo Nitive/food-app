@@ -1,0 +1,78 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Recipe {
+  id            Int           @id @default(autoincrement())
+  name          String        @unique
+  calories      Float
+  proteins      Float
+  fats          Float
+  carbohydrates Float
+  ingredients   RecipeIngredient[]
+  cartItems     CartItem[]
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  @@map("recipes")
+}
+
+model Ingredient {
+  id            Int               @id @default(autoincrement())
+  name          String            @unique
+  amountType    String            // гр, мл, шт, по вкусу
+  recipeIngredients RecipeIngredient[]
+  stockItems    StockItem[]
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  @@map("ingredients")
+}
+
+model RecipeIngredient {
+  id            Int         @id @default(autoincrement())
+  recipeId      Int
+  ingredientId  Int
+  amount        Float
+  recipe        Recipe      @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  ingredient    Ingredient  @relation(fields: [ingredientId], references: [id], onDelete: Cascade)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  @@unique([recipeId, ingredientId])
+  @@map("recipe_ingredients")
+}
+
+model CartItem {
+  id            Int       @id @default(autoincrement())
+  recipeId      Int
+  quantity      Int       @default(1)
+  recipe        Recipe    @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@map("cart_items")
+}
+
+model StockItem {
+  id            Int         @id @default(autoincrement())
+  ingredientId  Int
+  amount        Float       @default(0)
+  ingredient    Ingredient  @relation(fields: [ingredientId], references: [id], onDelete: Cascade)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  @@unique([ingredientId])
+  @@map("stock_items")
+}

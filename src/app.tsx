@@ -13,6 +13,7 @@ import {
   Table,
   Text,
   Title,
+  LoadingOverlay,
 } from '@mantine/core'
 import { useStore } from '@nanostores/react'
 import { CheckCircleFillIcon, DashIcon, PlusIcon, TrashIcon, XCircleFillIcon } from '@primer/octicons-react'
@@ -20,7 +21,8 @@ import { atom, computed } from 'nanostores'
 import { createRoot } from 'react-dom/client'
 import { BrowserRouter, Link, Route, Routes, useParams } from 'react-router'
 import { groupBy, sumBy } from 'remeda'
-import { recipes } from './data.js'
+import { apiClient, type Recipe, type CartItem, type Ingredient, type StockItem, type ShoppingListItem } from './api-client.js'
+import React from 'react'
 
 function Providers(props: { children: React.ReactNode }) {
   return (
@@ -30,229 +32,124 @@ function Providers(props: { children: React.ReactNode }) {
   )
 }
 
-// Типы для корзины
-interface CartItem {
-  recipeId: number
-  quantity: number
-}
+// Состояние загрузки
+const $loading = atom(false)
 
-// Типы для ингредиентов
-interface IngredientStock {
-  name: string
-  amount: number
-  amountType: string
-}
-
-// Функции для работы с localStorage
-function loadFromStorage<T>(key: string, defaultValue: T): T {
-  try {
-    const stored = localStorage.getItem(key)
-    return stored ? JSON.parse(stored) : defaultValue
-  } catch (error) {
-    console.warn(`Failed to load ${key} from localStorage:`, error)
-    return defaultValue
-  }
-}
-
-function saveToStorage<T>(key: string, value: T): void {
-  try {
-    localStorage.setItem(key, JSON.stringify(value))
-  } catch (error) {
-    console.warn(`Failed to save ${key} to localStorage:`, error)
-  }
-}
-
-// Загружаем начальное состояние из localStorage
-const initialCartItems = loadFromStorage<CartItem[]>('food-app-cart', [])
-const initialIngredientStock = loadFromStorage<IngredientStock[]>('food-app-ingredients', [])
+// Состояние рецептов
+const $recipes = atom<Recipe[]>([])
 
 // Состояние корзины
-const $cartItems = atom<CartItem[]>(initialCartItems)
+const $cartItems = atom<CartItem[]>([])
+
+// Состояние ингредиентов
+const $ingredients = atom<Ingredient[]>([])
 
 // Состояние наличия ингредиентов
-const $ingredientStock = atom<IngredientStock[]>(initialIngredientStock)
+const $stockItems = atom<StockItem[]>([])
 
-// Подписываемся на изменения и сохраняем в localStorage
-$cartItems.listen((items) => {
-  saveToStorage('food-app-cart', items)
-})
+// Состояние списка покупок
+const $shoppingList = atom<ShoppingListItem[]>([])
 
-$ingredientStock.listen((stock) => {
-  saveToStorage('food-app-ingredients', stock)
-})
-
-// Получаем все уникальные ингредиенты из рецептов
-const $allIngredients = computed([], () => {
-  const allIngredients = new Map<string, { name: string; amountType: string }>()
-
-  recipes.forEach((recipe) => {
-    recipe.ingredients.forEach((ingredient) => {
-      if (!allIngredients.has(ingredient.name)) {
-        allIngredients.set(ingredient.name, {
-          name: ingredient.name,
-          amountType: ingredient.amountType,
-        })
-      }
-    })
-  })
-
-  return Array.from(allIngredients.values())
-})
-
-// Вычисляем рецепты в корзине
-const $cartRecipes = computed($cartItems, (items) =>
-  items
-    .map((item) => {
-      const recipe = recipes.find((r) => r.id === item.recipeId)
-      return recipe ? { ...recipe, quantity: item.quantity } : null
-    })
-    .filter(Boolean)
-)
-
-// Вычисляем список покупок (группированные ингредиенты с учетом наличия)
-const $shoppingList = computed([$cartItems, $ingredientStock], (items, stock) => {
-  const allIngredients: Array<{ name: string; amount: number; amountType: string }> = []
-
-  items.forEach((item) => {
-    const recipe = recipes.find((r) => r.id === item.recipeId)
-    if (recipe) {
-      recipe.ingredients.forEach((ingredient) => {
-        allIngredients.push({
-          name: ingredient.name,
-          amount: ingredient.amount * item.quantity,
-          amountType: ingredient.amountType,
-        })
-      })
-    }
-  })
-
-  // Группируем по названию ингредиента
-  const grouped = groupBy(allIngredients, (item) => item.name)
-
-  return Object.entries(grouped)
-    .map(([name, ingredients]) => {
-      const totalNeeded = sumBy(ingredients, (item) => item.amount)
-      const available = stock.find((s) => s.name === name)?.amount || 0
-      const needToBuy = Math.max(0, totalNeeded - available)
-
-      return {
-        name,
-        totalNeeded,
-        available,
-        needToBuy,
-        amountType: ingredients[0].amountType,
-      }
-    })
-    .filter((item) => item.needToBuy > 0) // Показываем только то, что нужно купить
-})
+// Загрузка данных
+async function loadData() {
+  $loading.set(true)
+  try {
+    const [recipes, cartItems, ingredients, stockItems, shoppingList] = await Promise.all([
+      apiClient.getRecipes(),
+      apiClient.getCart(),
+      apiClient.getIngredients(),
+      apiClient.getStock(),
+      apiClient.getShoppingList()
+    ])
+    
+    $recipes.set(recipes)
+    $cartItems.set(cartItems)
+    $ingredients.set(ingredients)
+    $stockItems.set(stockItems)
+    $shoppingList.set(shoppingList)
+  } catch (error) {
+    console.error('Ошибка загрузки данных:', error)
+  } finally {
+    $loading.set(false)
+  }
+}
 
 // Функции для работы с корзиной
-function addToCart(recipeId: number) {
-  const currentItems = $cartItems.get()
-  const existingItem = currentItems.find((item) => item.recipeId === recipeId)
-
-  if (existingItem) {
-    $cartItems.set(
-      currentItems.map((item) => (item.recipeId === recipeId ? { ...item, quantity: item.quantity + 1 } : item))
-    )
-  } else {
-    $cartItems.set([...currentItems, { recipeId, quantity: 1 }])
+async function addToCart(recipeId: number) {
+  try {
+    const newItem = await apiClient.addToCart(recipeId)
+    await loadData() // Перезагружаем данные
+  } catch (error) {
+    console.error('Ошибка добавления в корзину:', error)
   }
 }
 
-function removeFromCart(recipeId: number) {
-  const currentItems = $cartItems.get()
-  const existingItem = currentItems.find((item) => item.recipeId === recipeId)
-
-  if (existingItem && existingItem.quantity > 1) {
-    $cartItems.set(
-      currentItems.map((item) => (item.recipeId === recipeId ? { ...item, quantity: item.quantity - 1 } : item))
-    )
-  } else {
-    $cartItems.set(currentItems.filter((item) => item.recipeId !== recipeId))
+async function updateCartQuantity(id: number, quantity: number) {
+  try {
+    await apiClient.updateCartItem(id, quantity)
+    await loadData() // Перезагружаем данные
+  } catch (error) {
+    console.error('Ошибка обновления корзины:', error)
   }
 }
 
-function updateCartQuantity(recipeId: number, quantity: number) {
-  const currentItems = $cartItems.get()
-
-  if (quantity <= 0) {
-    $cartItems.set(currentItems.filter((item) => item.recipeId !== recipeId))
-  } else {
-    $cartItems.set(currentItems.map((item) => (item.recipeId === recipeId ? { ...item, quantity } : item)))
+async function removeFromCart(id: number) {
+  try {
+    await apiClient.removeFromCart(id)
+    await loadData() // Перезагружаем данные
+  } catch (error) {
+    console.error('Ошибка удаления из корзины:', error)
   }
 }
 
-function clearCart() {
-  $cartItems.set([])
+async function clearCart() {
+  try {
+    await apiClient.clearCart()
+    await loadData() // Перезагружаем данные
+  } catch (error) {
+    console.error('Ошибка очистки корзины:', error)
+  }
 }
 
 // Функции для работы с наличием ингредиентов
-function updateIngredientStock(name: string, amount: number) {
-  const currentStock = $ingredientStock.get()
-  const existingIndex = currentStock.findIndex((item) => item.name === name)
-
-  if (existingIndex >= 0) {
-    if (amount <= 0) {
-      $ingredientStock.set(currentStock.filter((item) => item.name !== name))
-    } else {
-      const updatedStock = [...currentStock]
-      const existingItem = updatedStock[existingIndex]
-      if (existingItem) {
-        updatedStock[existingIndex] = {
-          name: existingItem.name,
-          amount,
-          amountType: existingItem.amountType
-        }
-        $ingredientStock.set(updatedStock)
-      }
-    }
-  } else if (amount > 0) {
-    const allIngredients = $allIngredients.get()
-    const ingredient = allIngredients.find((i) => i.name === name)
-    if (ingredient) {
-      const newItem: IngredientStock = {
-        name,
-        amount,
-        amountType: ingredient.amountType,
-      }
-      $ingredientStock.set([...currentStock, newItem])
-    }
+async function updateIngredientStock(ingredientId: number, amount: number) {
+  try {
+    await apiClient.updateStock(ingredientId, amount)
+    await loadData() // Перезагружаем данные
+  } catch (error) {
+    console.error('Ошибка обновления наличия:', error)
   }
 }
 
-function getIngredientStock(name: string): number {
-  return $ingredientStock.get().find((item) => item.name === name)?.amount || 0
-}
-
-// Функция для очистки всех данных
-function clearAllData() {
-  $cartItems.set([])
-  $ingredientStock.set([])
-  localStorage.removeItem('food-app-cart')
-  localStorage.removeItem('food-app-ingredients')
+function getIngredientStock(ingredientName: string): number {
+  const stockItem = $stockItems.get().find(item => item.ingredient.name === ingredientName)
+  return stockItem?.amount || 0
 }
 
 function RecipesPage() {
-  const cartRecipes = useStore($cartRecipes)
+  const recipes = useStore($recipes)
+  const cartItems = useStore($cartItems)
   const shoppingList = useStore($shoppingList)
+  const loading = useStore($loading)
 
   const stats = {
-    calories: sumBy(cartRecipes, (r) => (r?.calories || 0) * (r?.quantity || 0)).toFixed(1),
-    proteins: sumBy(cartRecipes, (r) => (r?.proteins || 0) * (r?.quantity || 0)).toFixed(1),
-    fats: sumBy(cartRecipes, (r) => (r?.fats || 0) * (r?.quantity || 0)).toFixed(1),
-    carbohydrates: sumBy(cartRecipes, (r) => (r?.carbohydrates || 0) * (r?.quantity || 0)).toFixed(1),
+    calories: sumBy(cartItems, (r) => (r?.recipe?.calories || 0) * (r?.quantity || 0)).toFixed(1),
+    proteins: sumBy(cartItems, (r) => (r?.recipe?.proteins || 0) * (r?.quantity || 0)).toFixed(1),
+    fats: sumBy(cartItems, (r) => (r?.recipe?.fats || 0) * (r?.quantity || 0)).toFixed(1),
+    carbohydrates: sumBy(cartItems, (r) => (r?.recipe?.carbohydrates || 0) * (r?.quantity || 0)).toFixed(1),
   }
 
   return (
-    <Stack gap="lg">
+    <Stack gap="lg" pos="relative">
+      <LoadingOverlay visible={loading} />
+      
       <Group justify="space-between" align="center">
         <Title>Рецепты</Title>
         <Button component={Link} to="/ingredients" variant="light">
           Управление ингредиентами
         </Button>
       </Group>
-
+      
       <Table>
         <Table.Thead>
           <Table.Tr>
@@ -285,12 +182,12 @@ function RecipesPage() {
         </Table.Tbody>
       </Table>
 
-      {cartRecipes.length > 0 && (
+      {cartItems.length > 0 && (
         <>
           <Divider />
-
+          
           <Title order={2}>Корзина</Title>
-
+          
           <Table>
             <Table.Thead>
               <Table.Tr>
@@ -301,24 +198,24 @@ function RecipesPage() {
               </Table.Tr>
             </Table.Thead>
             <Table.Tbody>
-              {cartRecipes.map((recipe) => (
-                <Table.Tr key={recipe?.id}>
+              {cartItems.map((item) => (
+                <Table.Tr key={item.id}>
                   <Table.Td>
                     <Link
-                      to={`/recipe/${recipe?.id}`}
+                      to={`/recipe/${item.recipe.id}`}
                       style={{ color: 'var(--mantine-color-blue-6)', textDecoration: 'none' }}
                     >
-                      {recipe?.name}
+                      {item.recipe.name}
                     </Link>
                   </Table.Td>
                   <Table.Td>
                     <Group gap="xs">
-                      <ActionIcon variant="light" color="red" onClick={() => removeFromCart(recipe?.id || 0)}>
+                      <ActionIcon variant="light" color="red" onClick={() => updateCartQuantity(item.id, item.quantity - 1)}>
                         <DashIcon size={16} />
                       </ActionIcon>
                       <NumberInput
-                        value={recipe?.quantity || 0}
-                        onChange={(value) => updateCartQuantity(recipe?.id || 0, Number(value) || 0)}
+                        value={item.quantity}
+                        onChange={(value) => updateCartQuantity(item.id, Number(value) || 0)}
                         min={1}
                         max={99}
                         w={80}
@@ -328,11 +225,11 @@ function RecipesPage() {
                   </Table.Td>
                   <Table.Td>
                     <Text size="sm">
-                      {recipe?.calories}/{recipe?.proteins}/{recipe?.fats}/{recipe?.carbohydrates}
+                      {item.recipe.calories}/{item.recipe.proteins}/{item.recipe.fats}/{item.recipe.carbohydrates}
                     </Text>
                   </Table.Td>
                   <Table.Td>
-                    <ActionIcon variant="light" color="red" onClick={() => updateCartQuantity(recipe?.id || 0, 0)}>
+                    <ActionIcon variant="light" color="red" onClick={() => removeFromCart(item.id)}>
                       <TrashIcon size={16} />
                     </ActionIcon>
                   </Table.Td>
@@ -351,16 +248,16 @@ function RecipesPage() {
           </Group>
 
           <Divider />
-
+          
           <Title order={2}>Список покупок</Title>
-
+          
           <Paper p="md" withBorder>
             <List icon={<CheckCircleFillIcon size={16} fill="var(--mantine-color-green-8)" />}>
               {shoppingList.map((item) => (
                 <List.Item key={item.name}>
                   <Text fw={500}>{item.name}</Text>
                   <Amount>
-                    {item.needToBuy} {item.amountType} (нужно {item.totalNeeded}, есть {item.available})
+                    {item.amount} {item.amountType}
                   </Amount>
                 </List.Item>
               ))}
@@ -373,15 +270,18 @@ function RecipesPage() {
 }
 
 function IngredientsPage() {
-  const allIngredients = useStore($allIngredients)
-  const ingredientStock = useStore($ingredientStock)
+  const ingredients = useStore($ingredients)
+  const stockItems = useStore($stockItems)
+  const loading = useStore($loading)
 
   return (
-    <Stack gap="lg">
+    <Stack gap="lg" pos="relative">
+      <LoadingOverlay visible={loading} />
+      
       <Group justify="space-between" align="center">
         <Title>Управление ингредиентами</Title>
         <Group gap="xs">
-          <Button variant="light" color="red" onClick={clearAllData} size="sm">
+          <Button variant="light" color="red" onClick={clearCart} size="sm">
             Очистить все данные
           </Button>
           <Button component={Link} to="/" variant="light">
@@ -391,8 +291,8 @@ function IngredientsPage() {
       </Group>
 
       <Text c="dimmed">
-        Укажите количество имеющихся ингредиентов. Это поможет составить точный список покупок. Все данные автоматически
-        сохраняются в браузере.
+        Укажите количество имеющихся ингредиентов. Это поможет составить точный список покупок. 
+        Все данные автоматически сохраняются в базе данных.
       </Text>
 
       <Table>
@@ -404,11 +304,11 @@ function IngredientsPage() {
           </Table.Tr>
         </Table.Thead>
         <Table.Tbody>
-          {allIngredients.map((ingredient) => {
-            const currentStock = ingredientStock.find((s) => s.name === ingredient.name)?.amount || 0
-
+          {ingredients.map((ingredient) => {
+            const currentStock = stockItems.find(s => s.ingredient.id === ingredient.id)?.amount || 0
+            
             return (
-              <Table.Tr key={ingredient.name}>
+              <Table.Tr key={ingredient.id}>
                 <Table.Td>
                   <Text fw={500}>{ingredient.name}</Text>
                 </Table.Td>
@@ -418,7 +318,7 @@ function IngredientsPage() {
                 <Table.Td>
                   <NumberInput
                     value={currentStock}
-                    onChange={(value) => updateIngredientStock(ingredient.name, Number(value) || 0)}
+                    onChange={(value) => updateIngredientStock(ingredient.id, Number(value) || 0)}
                     min={0}
                     max={9999}
                     w={120}
@@ -437,16 +337,16 @@ function IngredientsPage() {
           Ингредиенты в наличии
         </Title>
         <List>
-          {ingredientStock.map((item) => (
-            <List.Item key={item.name}>
-              <Text fw={500}>{item.name}</Text>
+          {stockItems.map((item) => (
+            <List.Item key={item.ingredient.name}>
+              <Text fw={500}>{item.ingredient.name}</Text>
               <Amount>
-                {item.amount} {item.amountType}
+                {item.amount} {item.ingredient.amountType}
               </Amount>
             </List.Item>
           ))}
         </List>
-        {ingredientStock.length === 0 && <Text c="dimmed">Нет ингредиентов в наличии</Text>}
+        {stockItems.length === 0 && <Text c="dimmed">Нет ингредиентов в наличии</Text>}
       </Paper>
     </Stack>
   )
@@ -463,6 +363,7 @@ function Amount(props: { children: React.ReactNode }) {
 function Recipe() {
   const params = useParams()
   const id: number = Number(params.id)
+  const recipes = useStore($recipes)
   const recipe = recipes.find((r) => r.id === id)
 
   if (!recipe) {
@@ -513,6 +414,11 @@ function Recipe() {
 }
 
 function App() {
+  // Загружаем данные при монтировании компонента
+  React.useEffect(() => {
+    loadData()
+  }, [])
+
   return (
     <div
       style={{
