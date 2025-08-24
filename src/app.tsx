@@ -32,6 +32,7 @@ import {
   type Recipe,
   type ShoppingListItem,
   type StockItem,
+  type CalendarItem,
 } from './api-client.js'
 
 function Providers(props: { children: React.ReactNode }) {
@@ -60,6 +61,9 @@ const $stockItems = atom<StockItem[]>([])
 // Состояние списка покупок
 const $shoppingList = atom<ShoppingListItem[]>([])
 
+// Состояние календаря
+const $calendarItems = atom<CalendarItem[]>([])
+
 // Состояние модального окна создания рецепта
 const $createRecipeModal = atom(false)
 
@@ -70,12 +74,13 @@ const $createIngredientModal = atom(false)
 async function loadData() {
   $loading.set(true)
   try {
-    const [recipes, cartItems, ingredients, stockItems, shoppingList] = await Promise.all([
+    const [recipes, cartItems, ingredients, stockItems, shoppingList, calendarItems] = await Promise.all([
       apiClient.getRecipes(),
       apiClient.getCart(),
       apiClient.getIngredients(),
       apiClient.getStock(),
       apiClient.getShoppingList(),
+      apiClient.getCalendar(),
     ])
 
     $recipes.set(recipes)
@@ -83,6 +88,7 @@ async function loadData() {
     $ingredients.set(ingredients)
     $stockItems.set(stockItems)
     $shoppingList.set(shoppingList)
+    $calendarItems.set(calendarItems)
   } catch (error) {
     console.error('Ошибка загрузки данных:', error)
   } finally {
@@ -184,6 +190,34 @@ async function deleteIngredient(id: number) {
   }
 }
 
+// Функции для работы с календарем
+async function addToCalendar(date: string, recipeId: number) {
+  try {
+    await apiClient.addToCalendar(date, recipeId)
+    await loadData() // Перезагружаем данные
+  } catch (error) {
+    console.error('Ошибка добавления в календарь:', error)
+  }
+}
+
+async function removeFromCalendar(id: number) {
+  try {
+    await apiClient.removeFromCalendar(id)
+    await loadData() // Перезагружаем данные
+  } catch (error) {
+    console.error('Ошибка удаления из календаря:', error)
+  }
+}
+
+async function addCalendarToCart() {
+  try {
+    await apiClient.addCalendarToCart()
+    await loadData() // Перезагружаем данные
+  } catch (error) {
+    console.error('Ошибка добавления календаря в корзину:', error)
+  }
+}
+
 function getIngredientStock(ingredientName: string): number {
   const stockItem = $stockItems.get().find((item) => item.ingredient.name === ingredientName)
   return stockItem?.amount || 0
@@ -209,13 +243,16 @@ function RecipesPage() {
       <Group justify="space-between" align="center">
         <Title>Рецепты</Title>
         <Group gap="xs">
-          <Button
-            variant="light"
+          <Button 
+            variant="light" 
             color="green"
             leftSection={<PlusIcon size={16} />}
             onClick={() => $createRecipeModal.set(true)}
           >
             Создать рецепт
+          </Button>
+          <Button component={Link} to="/calendar" variant="light" color="blue">
+            Календарь
           </Button>
           <Button component={Link} to="/ingredients" variant="light">
             Управление ингредиентами
@@ -746,6 +783,149 @@ function CreateIngredientForm() {
   )
 }
 
+function CalendarPage() {
+  const recipes = useStore($recipes)
+  const calendarItems = useStore($calendarItems)
+  const loading = useStore($loading)
+  const [selectedDate, setSelectedDate] = React.useState<string>('')
+  const [selectedRecipe, setSelectedRecipe] = React.useState<number | null>(null)
+
+  const handleAddToCalendar = () => {
+    if (selectedDate && selectedRecipe) {
+      addToCalendar(selectedDate, selectedRecipe)
+      setSelectedDate('')
+      setSelectedRecipe(null)
+    }
+  }
+
+  const formatDate = (date: Date) => {
+    return new Date(date).toLocaleDateString('ru-RU', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    })
+  }
+
+  const groupByDate = (items: CalendarItem[]) => {
+    const groups: Record<string, CalendarItem[]> = {}
+    items.forEach(item => {
+      const dateKey = new Date(item.date).toISOString().split('T')[0]
+      if (dateKey && !groups[dateKey]) {
+        groups[dateKey] = []
+      }
+      if (dateKey && groups[dateKey]) {
+        groups[dateKey].push(item)
+      }
+    })
+    return groups
+  }
+
+  const groupedItems = groupByDate(calendarItems)
+
+  return (
+    <Stack gap="lg" pos="relative">
+      <LoadingOverlay visible={loading} />
+
+      <Group justify="space-between" align="center">
+        <Title>Календарь планирования питания</Title>
+        <Group gap="xs">
+          <Button 
+            variant="light" 
+            color="blue"
+            onClick={addCalendarToCart}
+            disabled={calendarItems.length === 0}
+          >
+            Добавить все в корзину
+          </Button>
+          <Button component={Link} to="/" variant="light">
+            Назад к рецептам
+          </Button>
+        </Group>
+      </Group>
+
+      <Text c="dimmed">
+        Планируйте свое питание на неделю. Выберите дату и рецепт, чтобы добавить его в календарь.
+        Все рецепты из календаря можно добавить в корзину одним кликом.
+      </Text>
+
+      <Paper p="md" withBorder>
+        <Title order={3} mb="md">Добавить рецепт в календарь</Title>
+        <Group align="flex-end">
+          <input
+            type="date"
+            value={selectedDate}
+            onChange={(e) => setSelectedDate(e.target.value)}
+            style={{
+              padding: '8px 12px',
+              border: '1px solid #ccc',
+              borderRadius: '4px',
+              fontSize: '14px'
+            }}
+          />
+          <Select
+            placeholder="Выберите рецепт"
+            value={selectedRecipe?.toString() || ''}
+            onChange={(value) => setSelectedRecipe(value ? Number(value) : null)}
+            data={recipes.map(recipe => ({
+              value: recipe.id.toString(),
+              label: recipe.name
+            }))}
+            style={{ minWidth: 200 }}
+          />
+          <Button 
+            onClick={handleAddToCalendar}
+            disabled={!selectedDate || !selectedRecipe}
+          >
+            Добавить
+          </Button>
+        </Group>
+      </Paper>
+
+      <Title order={2}>Запланированные рецепты</Title>
+
+      {Object.keys(groupedItems).length === 0 ? (
+        <Paper p="md" withBorder>
+          <Text c="dimmed" ta="center">
+            Нет запланированных рецептов. Добавьте рецепты в календарь выше.
+          </Text>
+        </Paper>
+      ) : (
+        <Stack gap="md">
+          {Object.entries(groupedItems)
+            .sort(([a], [b]) => a.localeCompare(b))
+            .map(([dateKey, items]) => (
+              <Paper key={dateKey} p="md" withBorder>
+                <Title order={4} mb="sm">
+                  {formatDate(new Date(dateKey))}
+                </Title>
+                <Stack gap="xs">
+                  {items.map((item) => (
+                    <Group key={item.id} justify="space-between" align="center">
+                      <div>
+                        <Text fw={500}>{item.recipe.name}</Text>
+                        <Text size="sm" c="dimmed">
+                          КБЖУ: {item.recipe.calories}/{item.recipe.proteins}/{item.recipe.fats}/{item.recipe.carbohydrates}
+                        </Text>
+                      </div>
+                      <ActionIcon 
+                        variant="light" 
+                        color="red" 
+                        onClick={() => removeFromCalendar(item.id)}
+                      >
+                        <TrashIcon size={16} />
+                      </ActionIcon>
+                    </Group>
+                  ))}
+                </Stack>
+              </Paper>
+            ))}
+        </Stack>
+      )}
+    </Stack>
+  )
+}
+
 function Recipe() {
   const params = useParams()
   const id: number = Number(params.id)
@@ -819,6 +999,7 @@ function App() {
         <Routes>
           <Route index element={<RecipesPage />} />
           <Route path="ingredients" element={<IngredientsPage />} />
+          <Route path="calendar" element={<CalendarPage />} />
           <Route path="recipe/:id" element={<Recipe />} />
         </Routes>
         <CreateRecipeForm />

@@ -22,6 +22,7 @@ model Recipe {
   carbohydrates Float
   ingredients   RecipeIngredient[]
   cartItems     CartItem[]
+  calendarItems CalendarItem[]
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
 
@@ -75,4 +76,16 @@ model StockItem {
 
   @@unique([ingredientId])
   @@map("stock_items")
+}
+
+model CalendarItem {
+  id            Int       @id @default(autoincrement())
+  date          DateTime
+  recipeId      Int
+  recipe        Recipe    @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@unique([date, recipeId])
+  @@map("calendar_items")
 }

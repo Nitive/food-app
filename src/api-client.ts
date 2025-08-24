@@ -43,6 +43,20 @@ export interface ShoppingListItem {
   amountType: string
 }
 
+export interface CalendarItem {
+  id: number
+  date: Date
+  recipeId: number
+  recipe: {
+    id: number
+    name: string
+    calories: number
+    proteins: number
+    fats: number
+    carbohydrates: number
+  }
+}
+
 export const apiClient = {
   async getRecipes(): Promise<Recipe[]> {
     const { data } = await client.api.recipes.get()
@@ -128,5 +142,28 @@ export const apiClient = {
   async getShoppingList(): Promise<ShoppingListItem[]> {
     const { data } = await client.api['shopping-list'].get()
     return data || []
+  },
+
+  async getCalendar(): Promise<CalendarItem[]> {
+    const { data } = await client.api.calendar.get()
+    return data || []
+  },
+
+  async addToCalendar(date: string, recipeId: number): Promise<CalendarItem> {
+    const { data } = await client.api.calendar.post({ date, recipeId })
+    if (!data) throw new Error('Failed to add to calendar')
+    return data as unknown as CalendarItem
+  },
+
+  async removeFromCalendar(id: number): Promise<{ deleted: boolean }> {
+    const { data } = await client.api.calendar({ id }).delete()
+    if (!data) throw new Error('Failed to remove from calendar')
+    return data as unknown as { deleted: boolean }
+  },
+
+  async addCalendarToCart(): Promise<CartItem[]> {
+    const { data } = await client.api.calendar['add-to-cart'].post()
+    if (!data) throw new Error('Failed to add calendar to cart')
+    return data as unknown as CartItem[]
   },
 }

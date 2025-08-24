@@ -390,18 +390,18 @@ const app = new Elysia({ adapter: node() as any })
           include: {
             ingredients: {
               include: {
-                ingredient: true,
-              },
-            },
-          },
-        },
-      },
+                ingredient: true
+              }
+            }
+          }
+        }
+      }
     })
 
     const stockItems = await prisma.stockItem.findMany({
       include: {
-        ingredient: true,
-      },
+        ingredient: true
+      }
     })
 
     // Собираем все необходимые ингредиенты
@@ -437,6 +437,143 @@ const app = new Elysia({ adapter: node() as any })
       amount: data.amount,
       amountType: data.amountType,
     }))
+  })
+
+  // Получить календарь планирования
+  .get('/api/calendar', async () => {
+    const calendarItems = await prisma.calendarItem.findMany({
+      include: {
+        recipe: true
+      },
+      orderBy: {
+        date: 'asc'
+      }
+    })
+
+    return calendarItems.map(item => ({
+      id: item.id,
+      date: item.date,
+      recipeId: item.recipeId,
+      recipe: {
+        id: item.recipe.id,
+        name: item.recipe.name,
+        calories: item.recipe.calories,
+        proteins: item.recipe.proteins,
+        fats: item.recipe.fats,
+        carbohydrates: item.recipe.carbohydrates
+      }
+    }))
+  })
+
+  // Добавить рецепт в календарь
+  .post('/api/calendar', async ({ body }) => {
+    const { date, recipeId } = body
+
+    // Проверяем, есть ли уже рецепт на эту дату
+    const existingItem = await prisma.calendarItem.findFirst({
+      where: { 
+        date: new Date(date),
+        recipeId 
+      }
+    })
+
+    if (existingItem) {
+      throw new Error('Этот рецепт уже добавлен на эту дату')
+    }
+
+    const calendarItem = await prisma.calendarItem.create({
+      data: {
+        date: new Date(date),
+        recipeId
+      },
+      include: {
+        recipe: true
+      }
+    })
+
+    return {
+      id: calendarItem.id,
+      date: calendarItem.date,
+      recipeId: calendarItem.recipeId,
+      recipe: {
+        id: calendarItem.recipe.id,
+        name: calendarItem.recipe.name,
+        calories: calendarItem.recipe.calories,
+        proteins: calendarItem.recipe.proteins,
+        fats: calendarItem.recipe.fats,
+        carbohydrates: calendarItem.recipe.carbohydrates
+      }
+    }
+  }, {
+    body: t.Object({
+      date: t.String(),
+      recipeId: t.Number()
+    })
+  })
+
+  // Удалить рецепт из календаря
+  .delete('/api/calendar/:id', async ({ params }) => {
+    await prisma.calendarItem.delete({
+      where: { id: parseInt(params.id) }
+    })
+    return { deleted: true }
+  })
+
+  // Добавить все рецепты из календаря в корзину
+  .post('/api/calendar/add-to-cart', async () => {
+    const calendarItems = await prisma.calendarItem.findMany({
+      include: {
+        recipe: true
+      }
+    })
+
+    const results = []
+
+    for (const item of calendarItems) {
+      // Проверяем, есть ли уже этот рецепт в корзине
+      const existingCartItem = await prisma.cartItem.findFirst({
+        where: { recipeId: item.recipeId }
+      })
+
+      if (existingCartItem) {
+        // Увеличиваем количество
+        const updatedItem = await prisma.cartItem.update({
+          where: { id: existingCartItem.id },
+          data: { quantity: existingCartItem.quantity + 1 },
+          include: {
+            recipe: {
+              include: {
+                ingredients: {
+                  include: {
+                    ingredient: true
+                  }
+                }
+              }
+            }
+          }
+        })
+        results.push(updatedItem)
+      } else {
+        // Добавляем новый элемент
+        const newItem = await prisma.cartItem.create({
+          data: { recipeId: item.recipeId, quantity: 1 },
+          include: {
+            recipe: {
+              include: {
+                ingredients: {
+                  include: {
+                    ingredient: true
+                  }
+                }
+              }
+            }
+          }
+        })
+        results.push(newItem)
+      }
+    }
+
+    return results
   })
 
   .listen(3000, ({ hostname, port }) => {
