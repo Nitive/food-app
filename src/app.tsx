@@ -63,6 +63,9 @@ const $shoppingList = atom<ShoppingListItem[]>([])
 // Состояние модального окна создания рецепта
 const $createRecipeModal = atom(false)
 
+// Состояние модального окна создания ингредиента
+const $createIngredientModal = atom(false)
+
 // Загрузка данных
 async function loadData() {
   $loading.set(true)
@@ -168,6 +171,16 @@ async function createIngredient(ingredientData: { name: string; amountType: stri
     await loadData() // Перезагружаем данные
   } catch (error) {
     console.error('Ошибка создания ингредиента:', error)
+  }
+}
+
+// Функция удаления ингредиента
+async function deleteIngredient(id: number) {
+  try {
+    await apiClient.deleteIngredient(id)
+    await loadData() // Перезагружаем данные
+  } catch (error) {
+    console.error('Ошибка удаления ингредиента:', error)
   }
 }
 
@@ -345,6 +358,15 @@ function IngredientsPage() {
       <Group justify="space-between" align="center">
         <Title>Управление ингредиентами</Title>
         <Group gap="xs">
+          <Button 
+            variant="light" 
+            color="green"
+            leftSection={<PlusIcon size={16} />}
+            onClick={() => $createIngredientModal.set(true)}
+            size="sm"
+          >
+            Создать ингредиент
+          </Button>
           <Button variant="light" color="red" onClick={clearCart} size="sm">
             Очистить все данные
           </Button>
@@ -365,6 +387,7 @@ function IngredientsPage() {
             <Table.Th>Ингредиент</Table.Th>
             <Table.Th>Единица измерения</Table.Th>
             <Table.Th>Количество в наличии</Table.Th>
+            <Table.Th>Действия</Table.Th>
           </Table.Tr>
         </Table.Thead>
         <Table.Tbody>
@@ -389,6 +412,16 @@ function IngredientsPage() {
                     size="sm"
                     placeholder="0"
                   />
+                </Table.Td>
+                <Table.Td>
+                  <ActionIcon 
+                    variant="light" 
+                    color="red" 
+                    onClick={() => deleteIngredient(ingredient.id)}
+                    size="sm"
+                  >
+                    <TrashIcon size={16} />
+                  </ActionIcon>
                 </Table.Td>
               </Table.Tr>
             )
@@ -640,6 +673,79 @@ function CreateRecipeForm() {
   )
 }
 
+function CreateIngredientForm() {
+  const [formData, setFormData] = React.useState({
+    name: '',
+    amountType: 'гр'
+  })
+
+  const [loading, setLoading] = React.useState(false)
+  const modalOpened = useStore($createIngredientModal)
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setLoading(true)
+    
+    try {
+      await createIngredient(formData)
+      // Сбрасываем форму
+      setFormData({
+        name: '',
+        amountType: 'гр'
+      })
+      $createIngredientModal.set(false) // Закрываем модальное окно
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <Modal 
+      opened={modalOpened} 
+      onClose={() => $createIngredientModal.set(false)}
+      title="Создать новый ингредиент"
+      size="md"
+    >
+      <form onSubmit={handleSubmit}>
+        <Stack gap="md">
+          <TextInput
+            label="Название ингредиента"
+            placeholder="Введите название ингредиента"
+            value={formData.name}
+            onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+            required
+          />
+
+          <Select
+            label="Единица измерения"
+            value={formData.amountType}
+            onChange={(value) => setFormData(prev => ({ ...prev, amountType: value || 'гр' }))}
+            data={['гр', 'мл', 'шт', 'по вкусу']}
+            required
+          />
+
+          <Group justify="flex-end" mt="md">
+            <Button 
+              variant="light" 
+              onClick={() => $createIngredientModal.set(false)}
+              disabled={loading}
+            >
+              Отмена
+            </Button>
+            <Button 
+              type="submit" 
+              loading={loading}
+              disabled={!formData.name}
+            >
+              Создать ингредиент
+            </Button>
+          </Group>
+        </Stack>
+      </form>
+    </Modal>
+  )
+}
+
 function Recipe() {
   const params = useParams()
   const id: number = Number(params.id)
@@ -716,6 +822,7 @@ function App() {
           <Route path="recipe/:id" element={<Recipe />} />
         </Routes>
         <CreateRecipeForm />
+        <CreateIngredientForm />
       </Providers>
     </div>
   )

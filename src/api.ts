@@ -175,6 +175,31 @@ const app = new Elysia({ adapter: node() as any })
     }
   )
 
+  // Удалить ингредиент
+  .delete('/api/ingredients/:id', async ({ params }) => {
+    const id = parseInt(params.id)
+    
+    // Проверяем, используется ли ингредиент в рецептах
+    const recipeIngredients = await prisma.recipeIngredient.findMany({
+      where: { ingredientId: id }
+    })
+    
+    if (recipeIngredients.length > 0) {
+      throw new Error('Нельзя удалить ингредиент, который используется в рецептах')
+    }
+    
+    // Удаляем ингредиент и связанные записи о наличии
+    await prisma.stockItem.deleteMany({
+      where: { ingredientId: id }
+    })
+    
+    await prisma.ingredient.delete({
+      where: { id }
+    })
+    
+    return { deleted: true }
+  })
+
   // Получить корзину
   .get('/api/cart', async () => {
     const cartItems = await prisma.cartItem.findMany({

@@ -5,9 +5,9 @@
   "type": "module",
   "scripts": {
     "types": "tsc -p . --noEmit",
-    "dev": "tsx watch src/index.ts",
-    "build": "tsc src/index.ts --outDir dist",
-    "start": "NODE_ENV=production node dist/index.js",
+    "start-backend": "tsx watch src/api.ts",
+    "build-backend": "tsc src/api.ts --outDir dist",
+    "start-frontend": "vite",
     "db:seed": "tsx scripts/seed.ts",
     "db:migrate": "prisma migrate dev",
     "db:generate": "prisma generate"

@@ -79,6 +79,12 @@ export const apiClient = {
     return data as unknown as Ingredient
   },
 
+  async deleteIngredient(id: number): Promise<{ deleted: boolean }> {
+    const { data } = await client.api.ingredients({ id }).delete()
+    if (!data) throw new Error('Failed to delete ingredient')
+    return data as unknown as { deleted: boolean }
+  },
+
   async getCart(): Promise<CartItem[]> {
     const { data } = await client.api.cart.get()
     return data || []
