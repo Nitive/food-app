@@ -10,6 +10,9 @@ export interface Recipe {
   proteins: number
   fats: number
   carbohydrates: number
+  instructions?: string | null
+  cookingTime?: number | null
+  difficulty?: string | null
   ingredients: {
     name: string
     amount: number

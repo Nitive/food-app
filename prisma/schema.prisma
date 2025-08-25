@@ -20,6 +20,9 @@ model Recipe {
   proteins      Float
   fats          Float
   carbohydrates Float
+  instructions  String?       // Описание приготовления
+  cookingTime   Int?          // Время приготовления в минутах
+  difficulty    String?       // Сложность: easy, medium, hard
   ingredients   RecipeIngredient[]
   cartItems     CartItem[]
   calendarItems CalendarItem[]

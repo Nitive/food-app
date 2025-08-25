@@ -16,6 +16,7 @@ import {
   Table,
   Text,
   TextInput,
+  Textarea,
   Title,
   Badge,
   Box,
@@ -233,12 +234,69 @@ function RecipesPage() {
   const cartItems = useStore($cartItems)
   const shoppingList = useStore($shoppingList)
   const loading = useStore($loading)
+  const [searchQuery, setSearchQuery] = React.useState('')
+  const [sortBy, setSortBy] = React.useState<'name' | 'calories' | 'popularity'>('name')
+  const [filterCategory, setFilterCategory] = React.useState<string | null>(null)
+  const [viewMode, setViewMode] = React.useState<'cards' | 'table'>('cards')
 
   const stats = {
     calories: sumBy(cartItems, (r) => (r?.recipe?.calories || 0) * (r?.quantity || 0)).toFixed(1),
     proteins: sumBy(cartItems, (r) => (r?.recipe?.proteins || 0) * (r?.quantity || 0)).toFixed(1),
     fats: sumBy(cartItems, (r) => (r?.recipe?.fats || 0) * (r?.quantity || 0)).toFixed(1),
     carbohydrates: sumBy(cartItems, (r) => (r?.recipe?.carbohydrates || 0) * (r?.quantity || 0)).toFixed(1),
+  }
+
+  // Фильтрация и сортировка рецептов
+  const filteredAndSortedRecipes = React.useMemo(() => {
+    let filtered = recipes.filter(recipe => 
+      recipe.name.toLowerCase().includes(searchQuery.toLowerCase())
+    )
+
+    // Фильтр по категории (простая логика на основе названия)
+    if (filterCategory) {
+      filtered = filtered.filter(recipe => {
+        const name = recipe.name.toLowerCase()
+        switch (filterCategory) {
+          case 'breakfast':
+            return name.includes('омлет') || name.includes('блины') || name.includes('сырники') || name.includes('яичница')
+          case 'lunch':
+            return name.includes('суп') || name.includes('салат') || name.includes('паста')
+          case 'dinner':
+            return name.includes('мясо') || name.includes('рыба') || name.includes('курица')
+          case 'dessert':
+            return name.includes('торт') || name.includes('пирог') || name.includes('мороженое')
+          default:
+            return true
+        }
+      })
+    }
+
+    // Сортировка
+    filtered.sort((a, b) => {
+      switch (sortBy) {
+        case 'name':
+          return a.name.localeCompare(b.name)
+        case 'calories':
+          return a.calories - b.calories
+        case 'popularity':
+          // Простая логика популярности на основе количества в корзине
+          const aInCart = cartItems.filter(item => item.recipeId === a.id).length
+          const bInCart = cartItems.filter(item => item.recipeId === b.id).length
+          return bInCart - aInCart
+        default:
+          return 0
+      }
+    })
+
+    return filtered
+  }, [recipes, searchQuery, filterCategory, sortBy, cartItems])
+
+  // Статистика всех рецептов
+  const allRecipesStats = {
+    total: recipes.length,
+    avgCalories: recipes.length > 0 ? (recipes.reduce((sum, r) => sum + r.calories, 0) / recipes.length).toFixed(0) : '0',
+    totalIngredients: recipes.reduce((sum, r) => sum + r.ingredients.length, 0),
+    inCart: cartItems.length
   }
 
   return (
@@ -248,6 +306,22 @@ function RecipesPage() {
       <Group justify="space-between" align="center">
         <Title>Рецепты</Title>
         <Group gap="xs">
+          {/* Мини-корзина */}
+          {cartItems.length > 0 && (
+            <Badge 
+              size="lg" 
+              color="blue" 
+              variant="filled"
+              style={{ cursor: 'pointer' }}
+              onClick={() => {
+                // Прокрутка к корзине
+                document.getElementById('cart-section')?.scrollIntoView({ behavior: 'smooth' })
+              }}
+            >
+              🛒 {cartItems.length} в корзине ({stats.calories} ккал)
+            </Badge>
+          )}
+          
           <Button 
             variant="light" 
             color="green"
@@ -265,41 +339,223 @@ function RecipesPage() {
         </Group>
       </Group>
 
-      <Table>
-        <Table.Thead>
-          <Table.Tr>
-            <Table.Th>Название</Table.Th>
-            <Table.Th>Ингредиенты</Table.Th>
-            <Table.Th>Действия</Table.Th>
-          </Table.Tr>
-        </Table.Thead>
-        <Table.Tbody>
-          {recipes.map((recipe) => (
-            <Table.Tr key={recipe.id}>
-              <Table.Td>
-                <Link
-                  to={`/recipe/${recipe.id}`}
-                  style={{ color: 'var(--mantine-color-blue-6)', textDecoration: 'none' }}
-                >
-                  {recipe.name}
-                </Link>
-              </Table.Td>
-              <Table.Td>{recipe.ingredients.map((i) => i.name).join(', ')}</Table.Td>
-              <Table.Td>
-                <Group gap="xs">
-                  <ActionIcon variant="light" color="blue" onClick={() => addToCart(recipe.id)}>
-                    <PlusIcon size={16} />
-                  </ActionIcon>
-                </Group>
-              </Table.Td>
-            </Table.Tr>
+      {/* Панель поиска и фильтрации */}
+      <Card withBorder p="md">
+        <Stack gap="md">
+          <Group gap="md" align="flex-end">
+            <TextInput
+              placeholder="Поиск рецептов..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              style={{ flex: 1 }}
+              leftSection={<span style={{ fontSize: '12px' }}>🔍</span>}
+            />
+            <Select
+              placeholder="Категория"
+              value={filterCategory || ''}
+              onChange={(value) => setFilterCategory(value || null)}
+              data={[
+                { value: '', label: 'Все категории' },
+                { value: 'breakfast', label: '🍳 Завтрак' },
+                { value: 'lunch', label: '🍽️ Обед' },
+                { value: 'dinner', label: '🌙 Ужин' },
+                { value: 'dessert', label: '🍰 Десерты' }
+              ]}
+              clearable
+              w={150}
+            />
+            <Select
+              placeholder="Сортировка"
+              value={sortBy}
+              onChange={(value) => setSortBy(value as any)}
+              data={[
+                { value: 'name', label: 'По названию' },
+                { value: 'calories', label: 'По калориям' },
+                { value: 'popularity', label: 'По популярности' }
+              ]}
+              w={150}
+            />
+            <Button.Group>
+              <Button 
+                variant={viewMode === 'cards' ? 'filled' : 'light'}
+                size="sm"
+                onClick={() => setViewMode('cards')}
+              >
+                📋 Карточки
+              </Button>
+              <Button 
+                variant={viewMode === 'table' ? 'filled' : 'light'}
+                size="sm"
+                onClick={() => setViewMode('table')}
+              >
+                📊 Таблица
+              </Button>
+            </Button.Group>
+          </Group>
+          
+          {searchQuery || filterCategory ? (
+            <Text size="sm" c="dimmed">
+              Найдено рецептов: {filteredAndSortedRecipes.length}
+            </Text>
+          ) : null}
+        </Stack>
+      </Card>
+
+      {/* Дашборд статистики */}
+      <Grid>
+        <Grid.Col span={3}>
+          <Card withBorder p="md" style={{ textAlign: 'center' }}>
+            <Text size="xl" fw={700} c="blue">{allRecipesStats.total}</Text>
+            <Text size="sm" c="dimmed">Всего рецептов</Text>
+          </Card>
+        </Grid.Col>
+        <Grid.Col span={3}>
+          <Card withBorder p="md" style={{ textAlign: 'center' }}>
+            <Text size="xl" fw={700} c="green">{allRecipesStats.avgCalories}</Text>
+            <Text size="sm" c="dimmed">Средние калории</Text>
+          </Card>
+        </Grid.Col>
+        <Grid.Col span={3}>
+          <Card withBorder p="md" style={{ textAlign: 'center' }}>
+            <Text size="xl" fw={700} c="orange">{allRecipesStats.totalIngredients}</Text>
+            <Text size="sm" c="dimmed">Ингредиентов</Text>
+          </Card>
+        </Grid.Col>
+        <Grid.Col span={3}>
+          <Card withBorder p="md" style={{ textAlign: 'center' }}>
+            <Text size="xl" fw={700} c="purple">{allRecipesStats.inCart}</Text>
+            <Text size="sm" c="dimmed">В корзине</Text>
+          </Card>
+        </Grid.Col>
+      </Grid>
+
+      {/* Отображение рецептов */}
+      {viewMode === 'cards' ? (
+        <Grid>
+          {filteredAndSortedRecipes.map((recipe) => (
+            <Grid.Col key={recipe.id} span={4}>
+              <Card 
+                withBorder 
+                p="md" 
+                style={{ 
+                  height: '100%',
+                  transition: 'all 0.2s ease',
+                  cursor: 'pointer'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = 'translateY(-2px)'
+                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)'
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = 'translateY(0)'
+                  e.currentTarget.style.boxShadow = 'none'
+                }}
+              >
+                <Stack gap="sm">
+                  {/* Заголовок карточки */}
+                  <Group justify="space-between" align="flex-start">
+                    <Link
+                      to={`/recipe/${recipe.id}`}
+                      style={{ 
+                        color: 'var(--mantine-color-blue-6)', 
+                        textDecoration: 'none',
+                        flex: 1
+                      }}
+                    >
+                      <Title order={4} lineClamp={2}>{recipe.name}</Title>
+                    </Link>
+                    <ActionIcon 
+                      variant="light" 
+                      color="blue" 
+                      onClick={(e) => {
+                        e.preventDefault()
+                        e.stopPropagation()
+                        addToCart(recipe.id)
+                      }}
+                    >
+                      <PlusIcon size={16} />
+                    </ActionIcon>
+                  </Group>
+
+                  {/* КБЖУ */}
+                  <Group gap="xs">
+                    <Badge size="sm" color="blue">{recipe.calories} ккал</Badge>
+                    <Badge size="sm" color="green">{recipe.proteins}г белка</Badge>
+                    <Badge size="sm" color="orange">{recipe.fats}г жиров</Badge>
+                    <Badge size="sm" color="purple">{recipe.carbohydrates}г углеводов</Badge>
+                  </Group>
+
+                  {/* Ингредиенты */}
+                  <div>
+                    <Text size="sm" fw={500} c="dimmed" mb={4}>Ингредиенты:</Text>
+                    <Text size="xs" c="dimmed" lineClamp={3}>
+                      {recipe.ingredients.map((i) => i.name).join(', ')}
+                    </Text>
+                  </div>
+
+                  {/* Быстрые действия */}
+                  <Group gap="xs" mt="auto">
+                    <Button 
+                      variant="light" 
+                      size="xs" 
+                      fullWidth
+                      onClick={() => addToCart(recipe.id)}
+                    >
+                      Добавить в корзину
+                    </Button>
+                  </Group>
+                </Stack>
+              </Card>
+            </Grid.Col>
           ))}
-        </Table.Tbody>
-      </Table>
+        </Grid>
+      ) : (
+        <Table>
+          <Table.Thead>
+            <Table.Tr>
+              <Table.Th>Название</Table.Th>
+              <Table.Th>КБЖУ</Table.Th>
+              <Table.Th>Ингредиенты</Table.Th>
+              <Table.Th>Действия</Table.Th>
+            </Table.Tr>
+          </Table.Thead>
+          <Table.Tbody>
+            {filteredAndSortedRecipes.map((recipe) => (
+              <Table.Tr key={recipe.id}>
+                <Table.Td>
+                  <Link
+                    to={`/recipe/${recipe.id}`}
+                    style={{ color: 'var(--mantine-color-blue-6)', textDecoration: 'none' }}
+                  >
+                    {recipe.name}
+                  </Link>
+                </Table.Td>
+                <Table.Td>
+                  <Text size="sm">
+                    {recipe.calories}/{recipe.proteins}/{recipe.fats}/{recipe.carbohydrates}
+                  </Text>
+                </Table.Td>
+                <Table.Td>
+                  <Text size="sm" lineClamp={2}>
+                    {recipe.ingredients.map((i) => i.name).join(', ')}
+                  </Text>
+                </Table.Td>
+                <Table.Td>
+                  <Group gap="xs">
+                    <ActionIcon variant="light" color="blue" onClick={() => addToCart(recipe.id)}>
+                      <PlusIcon size={16} />
+                    </ActionIcon>
+                  </Group>
+                </Table.Td>
+              </Table.Tr>
+            ))}
+          </Table.Tbody>
+        </Table>
+      )}
 
       {cartItems.length > 0 && (
         <>
-          <Divider />
+          <Divider id="cart-section" />
 
           <Title order={2}>Корзина</Title>
 
@@ -392,10 +648,111 @@ function IngredientsPage() {
   const ingredients = useStore($ingredients)
   const stockItems = useStore($stockItems)
   const loading = useStore($loading)
+  const [searchQuery, setSearchQuery] = React.useState('')
+  const [filterCategory, setFilterCategory] = React.useState<string | null>(null)
+  const [sortBy, setSortBy] = React.useState<'name' | 'amount' | 'category'>('name')
+  const [viewMode, setViewMode] = React.useState<'cards' | 'table'>('cards')
+
+  // Функция для определения категории ингредиента
+  const getIngredientCategory = (name: string): string => {
+    const lowerName = name.toLowerCase()
+    if (lowerName.includes('молоко') || lowerName.includes('творог') || lowerName.includes('сыр') || lowerName.includes('сметана') || lowerName.includes('масло')) {
+      return 'dairy'
+    } else if (lowerName.includes('мясо') || lowerName.includes('курица') || lowerName.includes('рыба') || lowerName.includes('колбаса')) {
+      return 'meat'
+    } else if (lowerName.includes('помидор') || lowerName.includes('огурец') || lowerName.includes('морковь') || lowerName.includes('лук') || lowerName.includes('картофель')) {
+      return 'vegetables'
+    } else if (lowerName.includes('яблоко') || lowerName.includes('банан') || lowerName.includes('апельсин') || lowerName.includes('виноград')) {
+      return 'fruits'
+    } else if (lowerName.includes('мука') || lowerName.includes('сахар') || lowerName.includes('масло растительное') || lowerName.includes('яйцо')) {
+      return 'basics'
+    } else {
+      return 'other'
+    }
+  }
+
+  // Фильтрация и сортировка ингредиентов
+  const filteredAndSortedIngredients = React.useMemo(() => {
+    let filtered = ingredients.filter(ingredient => 
+      ingredient.name.toLowerCase().includes(searchQuery.toLowerCase())
+    )
+
+    // Фильтр по категории
+    if (filterCategory) {
+      filtered = filtered.filter(ingredient => 
+        getIngredientCategory(ingredient.name) === filterCategory
+      )
+    }
+
+    // Сортировка
+    filtered.sort((a, b) => {
+      const stockA = stockItems.find(s => s.ingredient.id === a.id)?.amount || 0
+      const stockB = stockItems.find(s => s.ingredient.id === b.id)?.amount || 0
+      
+      switch (sortBy) {
+        case 'name':
+          return a.name.localeCompare(b.name)
+        case 'amount':
+          return stockB - stockA
+        case 'category':
+          return getIngredientCategory(a.name).localeCompare(getIngredientCategory(b.name))
+        default:
+          return 0
+      }
+    })
+
+    return filtered
+  }, [ingredients, stockItems, searchQuery, filterCategory, sortBy])
+
+  // Статистика
+  const stats = {
+    total: ingredients.length,
+    inStock: stockItems.length,
+    lowStock: stockItems.filter(item => item.amount < 10).length,
+    totalAmount: stockItems.reduce((sum, item) => sum + item.amount, 0)
+  }
+
+  // Категории для фильтрации
+  const categories = [
+    { value: 'dairy', label: '🥛 Молочные продукты' },
+    { value: 'meat', label: '🥩 Мясо и рыба' },
+    { value: 'vegetables', label: '🥬 Овощи' },
+    { value: 'fruits', label: '🍎 Фрукты' },
+    { value: 'basics', label: '🧂 Основные продукты' },
+    { value: 'other', label: '📦 Прочее' }
+  ]
 
   return (
     <Stack gap="lg" pos="relative">
       <LoadingOverlay visible={loading} />
+
+      {/* Дашборд статистики */}
+      <Grid>
+        <Grid.Col span={3}>
+          <Card withBorder p="md" style={{ textAlign: 'center' }}>
+            <Text size="xl" fw={700} c="blue">{stats.total}</Text>
+            <Text size="sm" c="dimmed">Всего ингредиентов</Text>
+          </Card>
+        </Grid.Col>
+        <Grid.Col span={3}>
+          <Card withBorder p="md" style={{ textAlign: 'center' }}>
+            <Text size="xl" fw={700} c="green">{stats.inStock}</Text>
+            <Text size="sm" c="dimmed">В наличии</Text>
+          </Card>
+        </Grid.Col>
+        <Grid.Col span={3}>
+          <Card withBorder p="md" style={{ textAlign: 'center' }}>
+            <Text size="xl" fw={700} c="orange">{stats.lowStock}</Text>
+            <Text size="sm" c="dimmed">Заканчиваются</Text>
+          </Card>
+        </Grid.Col>
+        <Grid.Col span={3}>
+          <Card withBorder p="md" style={{ textAlign: 'center' }}>
+            <Text size="xl" fw={700} c="purple">{stats.totalAmount}</Text>
+            <Text size="sm" c="dimmed">Общее количество</Text>
+          </Card>
+        </Grid.Col>
+      </Grid>
 
       <Group justify="space-between" align="center">
         <Title>Управление ингредиентами</Title>
@@ -412,81 +769,399 @@ function IngredientsPage() {
           <Button variant="light" color="red" onClick={clearCart} size="sm">
             Очистить все данные
           </Button>
+          <Button 
+            variant="light" 
+            color="blue"
+            onClick={() => {
+              // Быстрое добавление популярных ингредиентов
+              const popularIngredients = [
+                { name: 'Мука', amountType: 'гр' },
+                { name: 'Сахар', amountType: 'гр' },
+                { name: 'Яйца', amountType: 'шт' },
+                { name: 'Молоко', amountType: 'мл' },
+                { name: 'Масло растительное', amountType: 'мл' },
+                { name: 'Соль', amountType: 'гр' }
+              ]
+              
+              popularIngredients.forEach(async (ingredient) => {
+                const exists = ingredients.find(i => i.name.toLowerCase() === ingredient.name.toLowerCase())
+                if (!exists) {
+                  await createIngredient({ name: ingredient.name, amountType: ingredient.amountType })
+                }
+              })
+            }}
+            size="sm"
+          >
+            📦 Добавить популярные
+          </Button>
           <Button component={Link} to="/" variant="light">
             Назад к рецептам
           </Button>
         </Group>
       </Group>
 
-      <Text c="dimmed">
-        Укажите количество имеющихся ингредиентов. Это поможет составить точный список покупок. Все данные автоматически
-        сохраняются в базе данных.
-      </Text>
+      <Card withBorder p="md" style={{ backgroundColor: 'var(--mantine-color-blue-0)' }}>
+        <Group gap="md" align="flex-start">
+          <div style={{ fontSize: '24px' }}>💡</div>
+          <div style={{ flex: 1 }}>
+            <Text fw={500} mb="xs">Советы по управлению ингредиентами:</Text>
+            <List size="sm" c="dimmed">
+              <List.Item>• Используйте поиск и фильтры для быстрого нахождения ингредиентов</List.Item>
+              <List.Item>• Переключайтесь между карточками и таблицей для удобного просмотра</List.Item>
+              <List.Item>• Ингредиенты с количеством менее 10 выделяются красным цветом</List.Item>
+              <List.Item>• Используйте быстрые кнопки +10/-10 для изменения количества</List.Item>
+              <List.Item>• Нажмите "Добавить популярные" для создания базовых ингредиентов</List.Item>
+            </List>
+          </div>
+        </Group>
+      </Card>
 
-      <Table>
-        <Table.Thead>
-          <Table.Tr>
-            <Table.Th>Ингредиент</Table.Th>
-            <Table.Th>Единица измерения</Table.Th>
-            <Table.Th>Количество в наличии</Table.Th>
-            <Table.Th>Действия</Table.Th>
-          </Table.Tr>
-        </Table.Thead>
-        <Table.Tbody>
-          {ingredients.map((ingredient) => {
-            const currentStock = stockItems.find((s) => s.ingredient.id === ingredient.id)?.amount || 0
+      {/* Панель поиска и фильтрации */}
+      <Card withBorder p="md">
+        <Stack gap="md">
+          <Group gap="md" align="flex-end">
+            <TextInput
+              placeholder="Поиск ингредиентов..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              style={{ flex: 1 }}
+              leftSection={<span style={{ fontSize: '12px' }}>🔍</span>}
+            />
+            <Select
+              placeholder="Категория"
+              value={filterCategory || ''}
+              onChange={(value) => setFilterCategory(value || null)}
+              data={[
+                { value: '', label: 'Все категории' },
+                ...categories
+              ]}
+              clearable
+              w={200}
+            />
+            <Select
+              placeholder="Сортировка"
+              value={sortBy}
+              onChange={(value) => setSortBy(value as any)}
+              data={[
+                { value: 'name', label: 'По названию' },
+                { value: 'amount', label: 'По количеству' },
+                { value: 'category', label: 'По категории' }
+              ]}
+              w={150}
+            />
+            <Button.Group>
+              <Button 
+                variant={viewMode === 'cards' ? 'filled' : 'light'}
+                size="sm"
+                onClick={() => setViewMode('cards')}
+              >
+                📋 Карточки
+              </Button>
+              <Button 
+                variant={viewMode === 'table' ? 'filled' : 'light'}
+                size="sm"
+                onClick={() => setViewMode('table')}
+              >
+                📊 Таблица
+              </Button>
+            </Button.Group>
+          </Group>
+          
+          {searchQuery || filterCategory ? (
+            <Text size="sm" c="dimmed">
+              Найдено ингредиентов: {filteredAndSortedIngredients.length}
+            </Text>
+          ) : null}
+        </Stack>
+      </Card>
 
-            return (
-              <Table.Tr key={ingredient.id}>
-                <Table.Td>
-                  <Text fw={500}>{ingredient.name}</Text>
-                </Table.Td>
-                <Table.Td>
-                  <Text>{ingredient.amountType}</Text>
-                </Table.Td>
-                <Table.Td>
-                  <NumberInput
-                    value={currentStock}
-                    onChange={(value) => updateIngredientStock(ingredient.id, Number(value) || 0)}
-                    min={0}
-                    max={9999}
-                    w={120}
-                    size="sm"
-                    placeholder="0"
-                  />
-                </Table.Td>
-                <Table.Td>
-                  <ActionIcon 
-                    variant="light" 
-                    color="red" 
-                    onClick={() => deleteIngredient(ingredient.id)}
-                    size="sm"
+      {/* Отображение ингредиентов */}
+      <div>
+        {viewMode === 'cards' ? (
+          <Grid>
+            {filteredAndSortedIngredients.map((ingredient) => {
+              const currentStock = stockItems.find((s) => s.ingredient.id === ingredient.id)?.amount || 0
+              const category = getIngredientCategory(ingredient.name)
+              const isLowStock = currentStock < 10
+
+              return (
+                <Grid.Col key={ingredient.id} span={4}>
+                  <Card 
+                    withBorder 
+                    p="md" 
+                    style={{ 
+                      height: '100%',
+                      transition: 'all 0.2s ease',
+                      borderColor: isLowStock ? 'var(--mantine-color-red-3)' : 'var(--mantine-color-gray-3)',
+                      backgroundColor: isLowStock ? 'var(--mantine-color-red-0)' : 'transparent'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.transform = 'translateY(-2px)'
+                      e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)'
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.transform = 'translateY(0)'
+                      e.currentTarget.style.boxShadow = 'none'
+                    }}
                   >
-                    <TrashIcon size={16} />
-                  </ActionIcon>
-                </Table.Td>
-              </Table.Tr>
-            )
-          })}
-        </Table.Tbody>
-      </Table>
+                    <Stack gap="sm">
+                      {/* Заголовок карточки */}
+                      <Group justify="space-between" align="flex-start">
+                        <div style={{ flex: 1 }}>
+                          <Title order={4} lineClamp={2}>{ingredient.name}</Title>
+                          <Text size="xs" c="dimmed" mt={4}>
+                            {categories.find(c => c.value === category)?.label || '📦 Прочее'}
+                          </Text>
+                        </div>
+                        <ActionIcon 
+                          variant="light" 
+                          color="red" 
+                          onClick={() => deleteIngredient(ingredient.id)}
+                          size="sm"
+                        >
+                          <TrashIcon size={16} />
+                        </ActionIcon>
+                      </Group>
 
-      <Paper p="md" withBorder>
-        <Title order={3} mb="sm">
-          Ингредиенты в наличии
+                      {/* Единица измерения */}
+                      <Badge size="sm" color="gray" variant="light">
+                        {ingredient.amountType}
+                      </Badge>
+
+                      {/* Количество в наличии */}
+                      <div>
+                        <Text size="sm" fw={500} mb="xs">Количество в наличии:</Text>
+                        <Group gap="xs" align="center">
+                          <NumberInput
+                            value={currentStock}
+                            onChange={(value) => updateIngredientStock(ingredient.id, Number(value) || 0)}
+                            min={0}
+                            max={9999}
+                            w={100}
+                            size="sm"
+                            placeholder="0"
+                          />
+                          <Text size="xs" c="dimmed">
+                            {ingredient.amountType}
+                          </Text>
+                        </Group>
+                      </div>
+
+                      {/* Быстрые действия */}
+                      <Group gap="xs">
+                        <Button 
+                          variant="light" 
+                          size="xs"
+                          onClick={() => updateIngredientStock(ingredient.id, currentStock + 10)}
+                        >
+                          +10
+                        </Button>
+                        <Button 
+                          variant="light" 
+                          size="xs"
+                          onClick={() => updateIngredientStock(ingredient.id, Math.max(0, currentStock - 10))}
+                        >
+                          -10
+                        </Button>
+                        <Button 
+                          variant="light" 
+                          size="xs"
+                          color="red"
+                          onClick={() => updateIngredientStock(ingredient.id, 0)}
+                        >
+                          Очистить
+                        </Button>
+                      </Group>
+                    </Stack>
+                  </Card>
+                </Grid.Col>
+              )
+            })}
+          </Grid>
+        ) : (
+          <Table>
+            <Table.Thead>
+              <Table.Tr>
+                <Table.Th>Ингредиент</Table.Th>
+                <Table.Th>Категория</Table.Th>
+                <Table.Th>Единица измерения</Table.Th>
+                <Table.Th>Количество в наличии</Table.Th>
+                <Table.Th>Действия</Table.Th>
+              </Table.Tr>
+            </Table.Thead>
+            <Table.Tbody>
+              {filteredAndSortedIngredients.map((ingredient) => {
+                const currentStock = stockItems.find((s) => s.ingredient.id === ingredient.id)?.amount || 0
+                const category = getIngredientCategory(ingredient.name)
+                const isLowStock = currentStock < 10
+
+                return (
+                  <Table.Tr 
+                    key={ingredient.id}
+                    style={{
+                      backgroundColor: isLowStock ? 'var(--mantine-color-red-0)' : 'transparent'
+                    }}
+                  >
+                    <Table.Td>
+                      <Text fw={500}>{ingredient.name}</Text>
+                    </Table.Td>
+                    <Table.Td>
+                      <Badge size="sm" color="gray" variant="light">
+                        {categories.find(c => c.value === category)?.label || '📦 Прочее'}
+                      </Badge>
+                    </Table.Td>
+                    <Table.Td>
+                      <Text>{ingredient.amountType}</Text>
+                    </Table.Td>
+                    <Table.Td>
+                      <Group gap="xs" align="center">
+                        <NumberInput
+                          value={currentStock}
+                          onChange={(value) => updateIngredientStock(ingredient.id, Number(value) || 0)}
+                          min={0}
+                          max={9999}
+                          w={100}
+                          size="sm"
+                          placeholder="0"
+                        />
+                        <Group gap="xs">
+                          <Button 
+                            variant="light" 
+                            size="xs"
+                            onClick={() => updateIngredientStock(ingredient.id, currentStock + 10)}
+                          >
+                            +10
+                          </Button>
+                          <Button 
+                            variant="light" 
+                            size="xs"
+                            onClick={() => updateIngredientStock(ingredient.id, Math.max(0, currentStock - 10))}
+                          >
+                            -10
+                          </Button>
+                        </Group>
+                      </Group>
+                    </Table.Td>
+                    <Table.Td>
+                      <ActionIcon 
+                        variant="light" 
+                        color="red" 
+                        onClick={() => deleteIngredient(ingredient.id)}
+                        size="sm"
+                      >
+                        <TrashIcon size={16} />
+                      </ActionIcon>
+                    </Table.Td>
+                  </Table.Tr>
+                )
+              })}
+            </Table.Tbody>
+          </Table>
+        )}
+      </div>
+
+      {/* Быстрые действия */}
+      <Card withBorder p="md">
+        <Title order={3} mb="md">
+          ⚡ Быстрые действия
         </Title>
-        <List>
-          {stockItems.map((item) => (
-            <List.Item key={item.ingredient.name}>
-              <Text fw={500}>{item.ingredient.name}</Text>
-              <Amount>
-                {item.amount} {item.ingredient.amountType}
-              </Amount>
-            </List.Item>
-          ))}
-        </List>
-        {stockItems.length === 0 && <Text c="dimmed">Нет ингредиентов в наличии</Text>}
-      </Paper>
+        <Group gap="md">
+          <Button 
+            variant="light" 
+            color="green"
+            onClick={() => {
+              // Добавить +10 ко всем ингредиентам в наличии
+              stockItems.forEach(item => {
+                updateIngredientStock(item.ingredient.id, item.amount + 10)
+              })
+            }}
+            size="sm"
+          >
+            ➕ +10 ко всем
+          </Button>
+          <Button 
+            variant="light" 
+            color="orange"
+            onClick={() => {
+              // Очистить все низкие запасы
+              stockItems.filter(item => item.amount < 10).forEach(item => {
+                updateIngredientStock(item.ingredient.id, 0)
+              })
+            }}
+            size="sm"
+          >
+            🗑️ Очистить низкие запасы
+          </Button>
+          <Button 
+            variant="light" 
+            color="blue"
+            onClick={() => {
+              // Показать только ингредиенты с низкими запасами
+              setFilterCategory(null)
+              setSearchQuery('')
+              // Фильтруем только те, у которых количество < 10
+              const lowStockIngredients = ingredients.filter(ingredient => {
+                const stock = stockItems.find(s => s.ingredient.id === ingredient.id)?.amount || 0
+                return stock < 10
+              })
+              if (lowStockIngredients.length > 0) {
+                setSearchQuery(lowStockIngredients.map(i => i.name).join(' '))
+              }
+            }}
+            size="sm"
+          >
+            🔍 Показать низкие запасы
+          </Button>
+        </Group>
+      </Card>
+
+      {/* Улучшенная секция "Ингредиенты в наличии" */}
+      <Card withBorder p="md">
+        <Title order={3} mb="md">
+          📦 Ингредиенты в наличии ({stockItems.length})
+        </Title>
+        {stockItems.length > 0 ? (
+          <Grid>
+            {stockItems.map((item) => {
+              const isLowStock = item.amount < 10
+              const category = getIngredientCategory(item.ingredient.name)
+              
+              return (
+                <Grid.Col key={item.ingredient.name} span={4}>
+                  <Card 
+                    withBorder 
+                    p="sm" 
+                    style={{
+                      backgroundColor: isLowStock ? 'var(--mantine-color-orange-0)' : 'var(--mantine-color-green-0)',
+                      borderColor: isLowStock ? 'var(--mantine-color-orange-3)' : 'var(--mantine-color-green-3)'
+                    }}
+                  >
+                    <Group justify="space-between" align="center">
+                      <div style={{ flex: 1 }}>
+                        <Text fw={500} size="sm">{item.ingredient.name}</Text>
+                        <Text size="xs" c="dimmed">
+                          {categories.find(c => c.value === category)?.label || '📦 Прочее'}
+                        </Text>
+                      </div>
+                      <Badge 
+                        color={isLowStock ? 'orange' : 'green'} 
+                        variant="light"
+                        size="sm"
+                      >
+                        {item.amount} {item.ingredient.amountType}
+                      </Badge>
+                    </Group>
+                  </Card>
+                </Grid.Col>
+              )
+            })}
+          </Grid>
+        ) : (
+          <Text c="dimmed" ta="center" py="xl">
+            Нет ингредиентов в наличии
+          </Text>
+        )}
+      </Card>
     </Stack>
   )
 }
@@ -506,6 +1181,9 @@ function CreateRecipeForm() {
     proteins: 0,
     fats: 0,
     carbohydrates: 0,
+    instructions: '',
+    cookingTime: 0,
+    difficulty: '',
     ingredients: [{ name: '', amount: 0, amountType: 'гр' }],
   })
 
@@ -527,6 +1205,9 @@ function CreateRecipeForm() {
         proteins: 0,
         fats: 0,
         carbohydrates: 0,
+        instructions: '',
+        cookingTime: 0,
+        difficulty: '',
         ingredients: [{ name: '', amount: 0, amountType: 'гр' }],
       })
       setIngredientSearch([''])
@@ -648,6 +1329,42 @@ function CreateRecipeForm() {
               required
             />
           </Group>
+
+          <Divider />
+
+          {/* Дополнительная информация */}
+          <Title order={3}>Дополнительная информация</Title>
+          
+          <Group grow>
+            <NumberInput
+              label="Время приготовления (мин)"
+              placeholder="0"
+              value={formData.cookingTime}
+              onChange={(value) => setFormData((prev) => ({ ...prev, cookingTime: Number(value) || 0 }))}
+              min={0}
+            />
+            <Select
+              label="Сложность"
+              placeholder="Выберите сложность"
+              value={formData.difficulty}
+              onChange={(value) => setFormData((prev) => ({ ...prev, difficulty: value || '' }))}
+              data={[
+                { value: 'easy', label: '🟢 Легко' },
+                { value: 'medium', label: '🟡 Средне' },
+                { value: 'hard', label: '🔴 Сложно' }
+              ]}
+              clearable
+            />
+          </Group>
+
+          <Textarea
+            label="Инструкции приготовления"
+            placeholder="Опишите пошагово процесс приготовления..."
+            value={formData.instructions}
+            onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setFormData((prev) => ({ ...prev, instructions: e.target.value }))}
+            minRows={4}
+            maxRows={8}
+          />
 
           <Divider />
 
@@ -795,6 +1512,8 @@ function CalendarPage() {
   const [selectedDate, setSelectedDate] = React.useState<Date | null>(null)
   const [selectedRecipe, setSelectedRecipe] = React.useState<number | null>(null)
   const [currentMonth, setCurrentMonth] = React.useState(new Date())
+  const [searchQuery, setSearchQuery] = React.useState('')
+  const [quickMealType, setQuickMealType] = React.useState<string | null>(null)
 
   const handleAddToCalendar = () => {
     if (selectedDate && selectedRecipe) {
@@ -808,7 +1527,53 @@ function CalendarPage() {
   }
 
   const handleDateClick = (date: Date) => {
-    setSelectedDate(date)
+    // Если кликаем на уже выбранный день, отменяем выбор
+    if (selectedDate && selectedDate.toDateString() === date.toDateString()) {
+      setSelectedDate(null)
+      setSelectedRecipe(null)
+    } else {
+      setSelectedDate(date)
+    }
+  }
+
+  const handleCancelSelection = () => {
+    setSelectedDate(null)
+    setSelectedRecipe(null)
+    setQuickMealType(null)
+  }
+
+  const handleQuickMeal = (mealType: string) => {
+    setQuickMealType(mealType)
+    // Автоматически выбираем первый подходящий рецепт
+    const filteredRecipes = recipes.filter(recipe => 
+      recipe.name.toLowerCase().includes(searchQuery.toLowerCase())
+    )
+    if (filteredRecipes.length > 0 && filteredRecipes[0]) {
+      setSelectedRecipe(filteredRecipes[0].id)
+    }
+  }
+
+  const filteredRecipes = recipes.filter(recipe => 
+    recipe.name.toLowerCase().includes(searchQuery.toLowerCase())
+  )
+
+  const getWeekStats = () => {
+    const today = new Date()
+    const weekStart = new Date(today)
+    weekStart.setDate(today.getDate() - today.getDay() + 1)
+    
+    let totalCalories = 0
+    let totalRecipes = 0
+    
+    for (let i = 0; i < 7; i++) {
+      const date = new Date(weekStart)
+      date.setDate(weekStart.getDate() + i)
+      const events = getEventsForDate(date)
+      totalCalories += events.reduce((sum, event) => sum + event.recipe.calories, 0)
+      totalRecipes += events.length
+    }
+    
+    return { totalCalories, totalRecipes }
   }
 
   const getEventsForDate = (date: Date) => {
@@ -823,30 +1588,57 @@ function CalendarPage() {
     const events = getEventsForDate(date)
     const isToday = new Date().toDateString() === date.toDateString()
     const isSelected = selectedDate && selectedDate.toDateString() === date.toDateString()
+    const isWeekend = date.getDay() === 0 || date.getDay() === 6
+    const totalCalories = events.reduce((sum, event) => sum + event.recipe.calories, 0)
+    
+    // Проверяем, принадлежит ли дата текущему месяцу
+    const isCurrentMonth = date.getMonth() === currentMonth.getMonth() && date.getFullYear() === currentMonth.getFullYear()
 
     return (
       <Box
         style={{
           position: 'relative',
-          minHeight: 80,
-          padding: 4,
-          cursor: 'pointer',
-          backgroundColor: isSelected ? 'var(--mantine-color-blue-1)' : 'transparent',
+          minHeight: 100,
+          padding: 8,
+          cursor: isCurrentMonth ? 'pointer' : 'default',
+          backgroundColor: isSelected 
+            ? 'var(--mantine-color-blue-1)' 
+            : isWeekend 
+              ? 'var(--mantine-color-gray-0)' 
+              : 'transparent',
           border: isToday ? '2px solid var(--mantine-color-blue-6)' : '1px solid var(--mantine-color-gray-3)',
           borderRadius: 4,
+          transition: 'all 0.2s ease',
+          opacity: isCurrentMonth ? 1 : 0.4,
         }}
-        onClick={() => handleDateClick(date)}
+        onMouseEnter={(e) => {
+          if (!isSelected && isCurrentMonth) {
+            e.currentTarget.style.transform = 'scale(1.02)'
+            e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.1)'
+          }
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.transform = 'scale(1)'
+          e.currentTarget.style.boxShadow = 'none'
+        }}
+        onClick={() => isCurrentMonth && handleDateClick(date)}
       >
-        <Text
-          size="sm"
-          fw={isToday ? 700 : 500}
-          c={isToday ? 'blue' : 'inherit'}
-          mb={4}
-        >
-          {date.getDate()}
-        </Text>
+        <Group justify="space-between" align="flex-start" mb={4}>
+          <Text
+            size="sm"
+            fw={isToday ? 700 : 500}
+            c={isToday ? 'blue' : isWeekend ? 'dimmed' : isCurrentMonth ? 'inherit' : 'dimmed'}
+          >
+            {date.getDate()}
+          </Text>
+          {totalCalories > 0 && isCurrentMonth && (
+            <Text size="xs" c="dimmed" fw={500}>
+              {totalCalories} ккал
+            </Text>
+          )}
+        </Group>
         
-        {events.length > 0 && (
+        {events.length > 0 && isCurrentMonth && (
           <Stack gap={2}>
             {events.slice(0, 2).map((event) => (
               <Badge
@@ -854,9 +1646,19 @@ function CalendarPage() {
                 size="xs"
                 variant="filled"
                 color="blue"
-                style={{ fontSize: '10px', padding: '2px 4px' }}
+                style={{ 
+                  fontSize: '10px', 
+                  padding: '2px 4px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '2px'
+                }}
               >
-                {event.recipe.name}
+                <span style={{ fontSize: '8px' }}>🍽️</span>
+                {event.recipe.name.length > 12 
+                  ? event.recipe.name.substring(0, 12) + '...' 
+                  : event.recipe.name
+                }
               </Badge>
             ))}
             {events.length > 2 && (
@@ -890,7 +1692,16 @@ function CalendarPage() {
     return days
   }
 
+  const getWeeks = (days: Date[]) => {
+    const weeks = []
+    for (let i = 0; i < days.length; i += 7) {
+      weeks.push(days.slice(i, i + 7))
+    }
+    return weeks
+  }
+
   const monthDays = getMonthDays(currentMonth)
+  const weeks = getWeeks(monthDays)
   const weekDays = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс']
 
   return (
@@ -898,7 +1709,17 @@ function CalendarPage() {
       <LoadingOverlay visible={loading} />
 
       <Group justify="space-between" align="center">
-        <Title>Календарь планирования питания</Title>
+        <div>
+          <Title>Календарь планирования питания</Title>
+          {(() => {
+            const stats = getWeekStats()
+            return (
+              <Text size="sm" c="dimmed" mt={4}>
+                На этой неделе: {stats.totalRecipes} рецептов, {stats.totalCalories} ккал
+              </Text>
+            )
+          })()}
+        </div>
         <Group gap="xs">
           <Button 
             variant="light" 
@@ -917,62 +1738,81 @@ function CalendarPage() {
       <Text c="dimmed">
         Планируйте свое питание на месяц. Кликните на день, чтобы добавить рецепт.
         Все рецепты из календаря можно добавить в корзину одним кликом.
+        Выходные дни выделены серым цветом, а суббота и воскресенье - красным.
       </Text>
 
       <Grid>
-        <Grid.Col span={8}>
-          <Card withBorder p="md">
-            <Group justify="space-between" mb="md">
-              <Title order={3}>
-                {currentMonth.toLocaleDateString('ru-RU', { 
-                  month: 'long', 
-                  year: 'numeric' 
-                })}
-              </Title>
-              <Group gap="xs">
-                <Button 
-                  variant="light" 
-                  size="sm"
-                  onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1))}
-                >
-                  ←
-                </Button>
-                <Button 
-                  variant="light" 
-                  size="sm"
-                  onClick={() => setCurrentMonth(new Date())}
-                >
-                  Сегодня
-                </Button>
-                <Button 
-                  variant="light" 
-                  size="sm"
-                  onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1))}
-                >
-                  →
-                </Button>
-              </Group>
+        <Grid.Col span={9}>
+          {/* Навигация календаря */}
+          <Group justify="space-between" mb="md">
+            <Title order={3}>
+              {currentMonth.toLocaleDateString('ru-RU', { 
+                month: 'long', 
+                year: 'numeric' 
+              })}
+            </Title>
+            <Group gap="xs">
+              <Button 
+                variant="light" 
+                size="sm"
+                onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1))}
+              >
+                ←
+              </Button>
+              <Button 
+                variant="light" 
+                size="sm"
+                onClick={() => setCurrentMonth(new Date())}
+              >
+                Сегодня
+              </Button>
+              <Button 
+                variant="light" 
+                size="sm"
+                onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1))}
+              >
+                →
+              </Button>
             </Group>
+          </Group>
 
-            <Grid>
-              {weekDays.map((day) => (
-                <Grid.Col key={day} span={1}>
-                  <Text ta="center" fw={600} size="sm" c="dimmed">
-                    {day}
-                  </Text>
-                </Grid.Col>
-              ))}
+          {/* Календарь */}
+          <Card withBorder p="md" style={{ width: '100%' }}>
+            <Stack gap="md" style={{ width: '100%' }}>
+              {/* Заголовки дней недели */}
+              <Grid columns={7} style={{ width: '100%' }}>
+                {weekDays.map((day, index) => (
+                  <Grid.Col key={day} span={1}>
+                    <Text 
+                      ta="center" 
+                      fw={600} 
+                      size="md" 
+                      c={index === 5 || index === 6 ? 'red' : 'dimmed'} 
+                      py="xs"
+                    >
+                      {day}
+                    </Text>
+                  </Grid.Col>
+                ))}
+              </Grid>
               
-              {monthDays.map((date, index) => (
-                <Grid.Col key={index} span={1}>
-                  {renderDay(date)}
-                </Grid.Col>
-              ))}
-            </Grid>
+              {/* Календарные дни */}
+              <Stack gap="md">
+                {weeks.map((week, weekIndex) => (
+                  <Grid columns={7} key={weekIndex} style={{ width: '100%' }}>
+                    {week.map((date, dayIndex) => (
+                      <Grid.Col key={dayIndex} span={1}>
+                        {renderDay(date)}
+                      </Grid.Col>
+                    ))}
+                  </Grid>
+                ))}
+              </Stack>
+            </Stack>
           </Card>
         </Grid.Col>
 
-        <Grid.Col span={4}>
+        <Grid.Col span={3}>
           <Stack gap="md">
             {selectedDate && (
               <Card withBorder p="md">
@@ -1009,23 +1849,88 @@ function CalendarPage() {
                 <Divider mb="md" />
 
                 <Title order={5} mb="sm">Добавить рецепт</Title>
+                
+                {/* Быстрые действия */}
+                <Group gap="xs" mb="sm">
+                  <Button 
+                    variant={quickMealType === 'breakfast' ? 'filled' : 'light'}
+                    size="xs"
+                    onClick={() => handleQuickMeal('breakfast')}
+                    color="orange"
+                  >
+                    🍳 Завтрак
+                  </Button>
+                  <Button 
+                    variant={quickMealType === 'lunch' ? 'filled' : 'light'}
+                    size="xs"
+                    onClick={() => handleQuickMeal('lunch')}
+                    color="green"
+                  >
+                    🍽️ Обед
+                  </Button>
+                  <Button 
+                    variant={quickMealType === 'dinner' ? 'filled' : 'light'}
+                    size="xs"
+                    onClick={() => handleQuickMeal('dinner')}
+                    color="blue"
+                  >
+                    🌙 Ужин
+                  </Button>
+                </Group>
+
+                {/* Поиск рецептов */}
+                <TextInput
+                  placeholder="Поиск рецептов..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  mb="sm"
+                  leftSection={<span style={{ fontSize: '12px' }}>🔍</span>}
+                />
+                
                 <Select
                   placeholder="Выберите рецепт"
                   value={selectedRecipe?.toString() || ''}
                   onChange={(value) => setSelectedRecipe(value ? Number(value) : null)}
-                  data={recipes.map(recipe => ({
+                  data={filteredRecipes.map(recipe => ({
                     value: recipe.id.toString(),
-                    label: recipe.name
+                    label: `${recipe.name} (${recipe.calories} ккал)`
                   }))}
                   mb="sm"
+                  searchable
                 />
+                {selectedRecipe && (() => {
+                  const recipe = recipes.find(r => r.id === selectedRecipe)
+                  return recipe ? (
+                    <Card withBorder p="xs" mb="sm" style={{ backgroundColor: 'var(--mantine-color-blue-0)' }}>
+                      <Text size="sm" fw={500} mb={4}>{recipe.name}</Text>
+                      <Group gap="xs">
+                        <Badge size="xs" color="blue">{recipe.calories} ккал</Badge>
+                        <Badge size="xs" color="green">{recipe.proteins}г белка</Badge>
+                        <Badge size="xs" color="orange">{recipe.fats}г жиров</Badge>
+                        <Badge size="xs" color="purple">{recipe.carbohydrates}г углеводов</Badge>
+                      </Group>
+                    </Card>
+                  ) : null
+                })()}
+                
                 <Button 
                   onClick={handleAddToCalendar}
                   disabled={!selectedRecipe}
                   size="sm"
                   fullWidth
+                  mb="sm"
                 >
-                  Добавить
+                  {quickMealType ? `Добавить на ${quickMealType === 'breakfast' ? 'завтрак' : quickMealType === 'lunch' ? 'обед' : 'ужин'}` : 'Добавить'}
+                </Button>
+                
+                <Button 
+                  variant="light"
+                  color="gray"
+                  onClick={handleCancelSelection}
+                  size="sm"
+                  fullWidth
+                >
+                  Отменить выбор
                 </Button>
               </Card>
             )}
@@ -1049,51 +1954,297 @@ function Recipe() {
   const id: number = Number(params.id)
   const recipes = useStore($recipes)
   const recipe = recipes.find((r) => r.id === id)
+  const [servings, setServings] = React.useState(1)
+  const [isFavorite, setIsFavorite] = React.useState(false)
 
   if (!recipe) {
     return 'Not found'
   }
 
+  // Расчет ингредиентов с учетом количества порций
+  const scaledIngredients = recipe.ingredients.map(ingredient => ({
+    ...ingredient,
+    scaledAmount: ingredient.amount * servings
+  }))
+
+  // Расчет КБЖУ с учетом количества порций
+  const scaledNutrition = {
+    calories: recipe.calories * servings,
+    proteins: recipe.proteins * servings,
+    fats: recipe.fats * servings,
+    carbohydrates: recipe.carbohydrates * servings
+  }
+
+  // Процент готовности (наличие ингредиентов)
+  const availableIngredients = scaledIngredients.filter(ingredient => {
+    const available = getIngredientStock(ingredient.name)
+    return available >= ingredient.scaledAmount
+  })
+  const readinessPercentage = Math.round((availableIngredients.length / scaledIngredients.length) * 100)
+
   return (
-    <>
-      <Group>
-        <Title component="h1">{recipe.name}</Title>
-        <Text c="gray.7" fw={500}>
-          КБЖУ {recipe.calories}/{recipe.proteins}/{recipe.fats}/{recipe.carbohydrates}
-        </Text>
+    <Stack gap="lg">
+      {/* Навигация */}
+      <Group justify="space-between" align="center">
+        <Button component={Link} to="/" variant="light" leftSection="←">
+          Назад к рецептам
+        </Button>
+        <Group gap="xs">
+          <ActionIcon 
+            variant={isFavorite ? "filled" : "light"}
+            color="red"
+            onClick={() => setIsFavorite(!isFavorite)}
+          >
+            ❤️
+          </ActionIcon>
+          <Button 
+            variant="light" 
+            color="blue"
+            onClick={() => addToCart(recipe.id)}
+          >
+            Добавить в корзину
+          </Button>
+        </Group>
       </Group>
 
-      <Title mt="sm" component="h2" size="xl">
-        Ингредиенты
-      </Title>
+      {/* Основная карточка рецепта */}
+      <Card withBorder p="xl" radius="md">
+        <Stack gap="lg">
+          {/* Заголовок и основная информация */}
+          <Group justify="space-between" align="flex-start">
+            <div style={{ flex: 1 }}>
+              <Title order={1} mb="md">{recipe.name}</Title>
+              
+              {/* КБЖУ с учетом порций */}
+              <Group gap="md" mb="md">
+                <Badge size="lg" color="blue" variant="filled">
+                  {scaledNutrition.calories} ккал
+                </Badge>
+                <Badge size="lg" color="green" variant="filled">
+                  {scaledNutrition.proteins}г белка
+                </Badge>
+                <Badge size="lg" color="orange" variant="filled">
+                  {scaledNutrition.fats}г жиров
+                </Badge>
+                <Badge size="lg" color="purple" variant="filled">
+                  {scaledNutrition.carbohydrates}г углеводов
+                </Badge>
+              </Group>
 
-      <List mt="xs">
-        {recipe.ingredients.map((ingredient) => {
-          const available = getIngredientStock(ingredient.name)
-          const hasEnough = available >= ingredient.amount
-          const icon = hasEnough ? (
-            <CheckCircleFillIcon size={16} fill="var(--mantine-color-green-8)" />
-          ) : (
-            <XCircleFillIcon size={16} fill="var(--mantine-color-red-8)" />
-          )
+              {/* Прогресс готовности */}
+              <div style={{ marginBottom: '1rem' }}>
+                <Group justify="space-between" mb="xs">
+                  <Text size="sm" fw={500}>Готовность к приготовлению:</Text>
+                  <Text size="sm" fw={700} c={readinessPercentage === 100 ? 'green' : readinessPercentage > 50 ? 'orange' : 'red'}>
+                    {readinessPercentage}%
+                  </Text>
+                </Group>
+                <div style={{
+                  width: '100%',
+                  height: '8px',
+                  backgroundColor: 'var(--mantine-color-gray-2)',
+                  borderRadius: '4px',
+                  overflow: 'hidden'
+                }}>
+                  <div style={{
+                    width: `${readinessPercentage}%`,
+                    height: '100%',
+                    backgroundColor: readinessPercentage === 100 ? 'var(--mantine-color-green-6)' : 
+                                   readinessPercentage > 50 ? 'var(--mantine-color-orange-6)' : 'var(--mantine-color-red-6)',
+                    transition: 'width 0.3s ease'
+                  }} />
+                </div>
+              </div>
+            </div>
 
-          return (
-            <List.Item key={ingredient.name} icon={icon}>
-              {ingredient.name}{' '}
-              <Amount>
-                {ingredient.amount} {ingredient.amountType}
-              </Amount>
-              {available > 0 && (
-                <Text component="span" c="dimmed" size="sm">
-                  {' '}
-                  (есть {available})
-                </Text>
-              )}
-            </List.Item>
-          )
-        })}
-      </List>
-    </>
+            {/* Калькулятор порций */}
+            <Card withBorder p="md" style={{ minWidth: '200px' }}>
+              <Text size="sm" fw={500} mb="sm">Количество порций:</Text>
+              <Group gap="xs" align="center">
+                <ActionIcon 
+                  variant="light" 
+                  onClick={() => setServings(Math.max(1, servings - 1))}
+                  disabled={servings <= 1}
+                >
+                  -
+                </ActionIcon>
+                <NumberInput
+                  value={servings}
+                  onChange={(value) => setServings(Math.max(1, Number(value) || 1))}
+                  min={1}
+                  max={20}
+                  w={80}
+                  size="sm"
+                />
+                <ActionIcon 
+                  variant="light" 
+                  onClick={() => setServings(Math.min(20, servings + 1))}
+                  disabled={servings >= 20}
+                >
+                  +
+                </ActionIcon>
+              </Group>
+              <Text size="xs" c="dimmed" mt="xs">
+                Все значения пересчитываются автоматически
+              </Text>
+            </Card>
+          </Group>
+
+          <Divider />
+
+          {/* Ингредиенты */}
+          <div>
+            <Title order={3} mb="md">Ингредиенты ({scaledIngredients.length})</Title>
+            <Grid>
+              {scaledIngredients.map((ingredient) => {
+                const available = getIngredientStock(ingredient.name)
+                const hasEnough = available >= ingredient.scaledAmount
+                const icon = hasEnough ? (
+                  <CheckCircleFillIcon size={16} fill="var(--mantine-color-green-8)" />
+                ) : (
+                  <XCircleFillIcon size={16} fill="var(--mantine-color-red-8)" />
+                )
+
+                return (
+                  <Grid.Col key={ingredient.name} span={6}>
+                    <Card 
+                      withBorder 
+                      p="sm" 
+                      style={{ 
+                        backgroundColor: hasEnough ? 'var(--mantine-color-green-0)' : 'var(--mantine-color-red-0)',
+                        borderColor: hasEnough ? 'var(--mantine-color-green-3)' : 'var(--mantine-color-red-3)'
+                      }}
+                    >
+                      <Group gap="sm">
+                        {icon}
+                        <div style={{ flex: 1 }}>
+                          <Text size="sm" fw={500}>{ingredient.name}</Text>
+                          <Text size="xs" c="dimmed">
+                            {ingredient.scaledAmount} {ingredient.amountType}
+                            {available > 0 && (
+                              <span> (есть {available})</span>
+                            )}
+                          </Text>
+                        </div>
+                      </Group>
+                    </Card>
+                  </Grid.Col>
+                )
+              })}
+            </Grid>
+          </div>
+
+                     <Divider />
+
+           {/* Информация о приготовлении */}
+           {(recipe.cookingTime || recipe.difficulty) && (
+             <div>
+               <Title order={3} mb="md">Информация о приготовлении</Title>
+               <Group gap="lg">
+                 {recipe.cookingTime && (
+                   <Card withBorder p="sm" style={{ minWidth: '150px' }}>
+                     <Text size="sm" fw={500} c="dimmed">Время приготовления</Text>
+                     <Text size="lg" fw={700}>⏱️ {recipe.cookingTime} мин</Text>
+                   </Card>
+                 )}
+                 {recipe.difficulty && (
+                   <Card withBorder p="sm" style={{ minWidth: '150px' }}>
+                     <Text size="sm" fw={500} c="dimmed">Сложность</Text>
+                     <Text size="lg" fw={700}>
+                       {recipe.difficulty === 'easy' ? '🟢 Легко' : 
+                        recipe.difficulty === 'medium' ? '🟡 Средне' : 
+                        recipe.difficulty === 'hard' ? '🔴 Сложно' : recipe.difficulty}
+                     </Text>
+                   </Card>
+                 )}
+               </Group>
+             </div>
+           )}
+
+           {/* Инструкции приготовления */}
+           {recipe.instructions && (
+             <div>
+               <Title order={3} mb="md">Инструкции приготовления</Title>
+               <Card withBorder p="md" style={{ backgroundColor: 'var(--mantine-color-gray-0)' }}>
+                 <Text style={{ whiteSpace: 'pre-line' }}>{recipe.instructions}</Text>
+               </Card>
+             </div>
+           )}
+
+           <Divider />
+
+           {/* Быстрые действия */}
+          <div>
+            <Title order={3} mb="md">Действия</Title>
+            <Group gap="md">
+              <Button 
+                variant="filled" 
+                color="blue" 
+                leftSection="🛒"
+                onClick={() => addToCart(recipe.id)}
+                size="lg"
+              >
+                Добавить в корзину
+              </Button>
+              <Button 
+                variant="light" 
+                color="green" 
+                leftSection="📅"
+                component={Link}
+                to={`/calendar?recipe=${recipe.id}`}
+                size="lg"
+              >
+                Добавить в календарь
+              </Button>
+              <Button 
+                variant="light" 
+                color="gray" 
+                leftSection="📋"
+                onClick={() => {
+                  // Копирование рецепта в буфер обмена
+                  const recipeText = `${recipe.name}\n\nКБЖУ: ${recipe.calories}/${recipe.proteins}/${recipe.fats}/${recipe.carbohydrates}\n\nИнгредиенты:\n${recipe.ingredients.map(i => `- ${i.name}: ${i.amount} ${i.amountType}`).join('\n')}`
+                  navigator.clipboard.writeText(recipeText)
+                }}
+                size="lg"
+              >
+                Копировать рецепт
+              </Button>
+            </Group>
+          </div>
+        </Stack>
+      </Card>
+
+      {/* Похожие рецепты */}
+      {recipes.length > 1 && (
+        <Card withBorder p="xl">
+          <Title order={3} mb="md">Похожие рецепты</Title>
+          <Grid>
+            {recipes
+              .filter(r => r.id !== recipe.id)
+              .slice(0, 3)
+              .map((similarRecipe) => (
+                <Grid.Col key={similarRecipe.id} span={4}>
+                  <Card 
+                    withBorder 
+                    p="md" 
+                    style={{ cursor: 'pointer' }}
+                    onClick={() => window.location.href = `/recipe/${similarRecipe.id}`}
+                  >
+                    <Title order={4} mb="sm">{similarRecipe.name}</Title>
+                    <Group gap="xs" mb="sm">
+                      <Badge size="sm" color="blue">{similarRecipe.calories} ккал</Badge>
+                      <Badge size="sm" color="green">{similarRecipe.proteins}г белка</Badge>
+                    </Group>
+                    <Text size="xs" c="dimmed" lineClamp={2}>
+                      {similarRecipe.ingredients.map(i => i.name).join(', ')}
+                    </Text>
+                  </Card>
+                </Grid.Col>
+              ))}
+          </Grid>
+        </Card>
+      )}
+    </Stack>
   )
 }
 

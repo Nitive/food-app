@@ -31,6 +31,9 @@ const app = new Elysia({ adapter: node() as any })
       proteins: recipe.proteins,
       fats: recipe.fats,
       carbohydrates: recipe.carbohydrates,
+      instructions: recipe.instructions,
+      cookingTime: recipe.cookingTime,
+      difficulty: recipe.difficulty,
       ingredients: recipe.ingredients.map((ri) => ({
         name: ri.ingredient.name,
         amount: ri.amount,
@@ -63,6 +66,9 @@ const app = new Elysia({ adapter: node() as any })
       proteins: recipe.proteins,
       fats: recipe.fats,
       carbohydrates: recipe.carbohydrates,
+      instructions: recipe.instructions,
+      cookingTime: recipe.cookingTime,
+      difficulty: recipe.difficulty,
       ingredients: recipe.ingredients.map((ri) => ({
         name: ri.ingredient.name,
         amount: ri.amount,
@@ -75,7 +81,7 @@ const app = new Elysia({ adapter: node() as any })
   .post(
     '/api/recipes',
     async ({ body }) => {
-      const { name, calories, proteins, fats, carbohydrates, ingredients } = body
+      const { name, calories, proteins, fats, carbohydrates, instructions, cookingTime, difficulty, ingredients } = body
 
       // Создаем рецепт
       const recipe = await prisma.recipe.create({
@@ -85,6 +91,9 @@ const app = new Elysia({ adapter: node() as any })
           proteins,
           fats,
           carbohydrates,
+          instructions: instructions || null,
+          cookingTime: cookingTime || null,
+          difficulty: difficulty || null,
         },
       })
 
@@ -129,6 +138,9 @@ const app = new Elysia({ adapter: node() as any })
         proteins: createdRecipe!.proteins,
         fats: createdRecipe!.fats,
         carbohydrates: createdRecipe!.carbohydrates,
+        instructions: createdRecipe!.instructions,
+        cookingTime: createdRecipe!.cookingTime,
+        difficulty: createdRecipe!.difficulty,
         ingredients: createdRecipe!.ingredients.map((ri) => ({
           name: ri.ingredient.name,
           amount: ri.amount,
@@ -143,6 +155,9 @@ const app = new Elysia({ adapter: node() as any })
         proteins: t.Number(),
         fats: t.Number(),
         carbohydrates: t.Number(),
+        instructions: t.Optional(t.String()),
+        cookingTime: t.Optional(t.Number()),
+        difficulty: t.Optional(t.String()),
         ingredients: t.Array(
           t.Object({
             name: t.String(),
