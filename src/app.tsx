@@ -25,9 +25,10 @@ import {
 } from '@mantine/core'
 import { Calendar } from '@mantine/dates'
 import { useStore } from '@nanostores/react'
-import { CheckCircleFillIcon, DashIcon, PlusIcon, TrashIcon, XCircleFillIcon } from '@primer/octicons-react'
+import { CheckCircleFillIcon, DashIcon, PlusIcon, TrashIcon, XCircleFillIcon, DownloadIcon } from '@primer/octicons-react'
 import { atom } from 'nanostores'
 import React from 'react'
+import jsPDF from 'jspdf'
 import { createRoot } from 'react-dom/client'
 import { BrowserRouter, Link, Route, Routes, useParams } from 'react-router'
 import { sumBy } from 'remeda'
@@ -43,10 +44,24 @@ import {
 } from './api-client.js'
 import { Login } from './components/Login.js'
 import { UserMenu } from './components/UserMenu.js'
+import { MainNavigation } from './components/MainNavigation.js'
+import { Breadcrumbs } from './components/Breadcrumbs.js'
+import { QuickActions } from './components/QuickActions.js'
+import { CartPage } from './pages/CartPage.js'
+import { ShoppingListPage } from './pages/ShoppingListPage.js'
+import { StatsPage } from './pages/StatsPage.js'
 
 function Providers(props: { children: React.ReactNode }) {
   return (
-    <MantineProvider>
+    <MantineProvider
+      theme={{
+        fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif',
+        fontFamilyMonospace: 'Monaco, Courier, monospace',
+        headings: {
+          fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif',
+        },
+      }}
+    >
       <BrowserRouter>{props.children}</BrowserRouter>
     </MantineProvider>
   )
@@ -277,6 +292,239 @@ function getIngredientStock(ingredientName: string): number {
   return stockItem?.amount || 0
 }
 
+// Функция экспорта списка покупок в PDF
+function exportShoppingListToPDF(shoppingList: ShoppingListItem[]) {
+  try {
+    const doc = new jsPDF()
+  
+  // Заголовок
+  doc.setFontSize(20)
+  doc.setFont('helvetica', 'bold')
+  doc.text('Список покупок', 20, 30)
+  
+  // Дата создания
+  doc.setFontSize(12)
+  doc.setFont('helvetica', 'normal')
+  const currentDate = new Date().toLocaleDateString('ru-RU', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  })
+  doc.text(`Создан: ${currentDate}`, 20, 45)
+  
+  // Список товаров
+  doc.setFontSize(14)
+  doc.setFont('helvetica', 'bold')
+  doc.text('Товары:', 20, 65)
+  
+  let yPosition = 80
+  doc.setFontSize(12)
+  doc.setFont('helvetica', 'normal')
+  
+  shoppingList.forEach((item, index) => {
+    // Проверяем, нужно ли добавить новую страницу
+    if (yPosition > 250) {
+      doc.addPage()
+      yPosition = 30
+    }
+    
+    const itemText = `${index + 1}. ${item.name}`
+    const amountText = `${item.amount} ${item.amountType}`
+    
+    doc.text(itemText, 25, yPosition)
+    doc.text(amountText, 150, yPosition)
+    
+    yPosition += 15
+  })
+  
+  // Итого
+  if (shoppingList.length > 0) {
+    doc.setFontSize(14)
+    doc.setFont('helvetica', 'bold')
+    doc.text(`Итого товаров: ${shoppingList.length}`, 20, yPosition + 10)
+  }
+  
+  // Сохраняем файл
+  const fileName = `shopping-list-${new Date().toISOString().split('T')[0]}.pdf`
+  doc.save(fileName)
+  } catch (error) {
+    console.error('Ошибка экспорта в PDF:', error)
+    alert('Ошибка при создании PDF файла')
+  }
+}
+
+// Функция экспорта корзины в PDF
+function exportCartToPDF(cartItems: CartItem[]) {
+  try {
+    const doc = new jsPDF()
+  
+  // Заголовок
+  doc.setFontSize(20)
+  doc.setFont('helvetica', 'bold')
+  doc.text('Корзина покупок', 20, 30)
+  
+  // Дата создания
+  doc.setFontSize(12)
+  doc.setFont('helvetica', 'normal')
+  const currentDate = new Date().toLocaleDateString('ru-RU', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  })
+  doc.text(`Создан: ${currentDate}`, 20, 45)
+  
+  // Список рецептов
+  doc.setFontSize(14)
+  doc.setFont('helvetica', 'bold')
+  doc.text('Рецепты:', 20, 65)
+  
+  let yPosition = 80
+  doc.setFontSize(12)
+  doc.setFont('helvetica', 'normal')
+  
+  cartItems.forEach((item, index) => {
+    // Проверяем, нужно ли добавить новую страницу
+    if (yPosition > 250) {
+      doc.addPage()
+      yPosition = 30
+    }
+    
+    const recipeText = `${index + 1}. ${item.recipe.name}`
+    const quantityText = `Количество: ${item.quantity}`
+    const caloriesText = `Калории: ${item.recipe.calories} ккал`
+    
+    doc.text(recipeText, 25, yPosition)
+    doc.text(quantityText, 25, yPosition + 8)
+    doc.text(caloriesText, 25, yPosition + 16)
+    
+    yPosition += 30
+  })
+  
+  // Итого
+  if (cartItems.length > 0) {
+    const totalCalories = cartItems.reduce((sum, item) => sum + (item.recipe.calories * item.quantity), 0)
+    const totalProteins = cartItems.reduce((sum, item) => sum + (item.recipe.proteins * item.quantity), 0)
+    const totalFats = cartItems.reduce((sum, item) => sum + (item.recipe.fats * item.quantity), 0)
+    const totalCarbs = cartItems.reduce((sum, item) => sum + (item.recipe.carbohydrates * item.quantity), 0)
+    
+    doc.setFontSize(14)
+    doc.setFont('helvetica', 'bold')
+    doc.text('Итого:', 20, yPosition + 10)
+    doc.setFontSize(12)
+    doc.setFont('helvetica', 'normal')
+    doc.text(`Рецептов: ${cartItems.length}`, 25, yPosition + 25)
+    doc.text(`Калории: ${totalCalories.toFixed(1)} ккал`, 25, yPosition + 35)
+    doc.text(`Белки: ${totalProteins.toFixed(1)}г`, 25, yPosition + 45)
+    doc.text(`Жиры: ${totalFats.toFixed(1)}г`, 25, yPosition + 55)
+    doc.text(`Углеводы: ${totalCarbs.toFixed(1)}г`, 25, yPosition + 65)
+  }
+  
+  // Сохраняем файл
+  const fileName = `cart-${new Date().toISOString().split('T')[0]}.pdf`
+  doc.save(fileName)
+  } catch (error) {
+    console.error('Ошибка экспорта корзины в PDF:', error)
+    alert('Ошибка при создании PDF файла')
+  }
+}
+
+// Функция экспорта календаря в PDF
+function exportCalendarToPDF(calendarItems: CalendarItem[]) {
+  try {
+    const doc = new jsPDF()
+  
+  // Заголовок
+  doc.setFontSize(20)
+  doc.setFont('helvetica', 'bold')
+  doc.text('План питания', 20, 30)
+  
+  // Дата создания
+  doc.setFontSize(12)
+  doc.setFont('helvetica', 'normal')
+  const currentDate = new Date().toLocaleDateString('ru-RU', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  })
+  doc.text(`Создан: ${currentDate}`, 20, 45)
+  
+  // Группируем по датам
+  const groupedByDate: Record<string, CalendarItem[]> = {}
+  calendarItems.forEach(item => {
+    const dateKey = new Date(item.date).toLocaleDateString('ru-RU')
+    if (!groupedByDate[dateKey]) {
+      groupedByDate[dateKey] = []
+    }
+    groupedByDate[dateKey].push(item)
+  })
+  
+  // Сортируем даты
+  const sortedDates = Object.keys(groupedByDate).sort((a, b) => 
+    new Date(a).getTime() - new Date(b).getTime()
+  )
+  
+  let yPosition = 65
+  doc.setFontSize(14)
+  doc.setFont('helvetica', 'bold')
+  
+  sortedDates.forEach((date, dateIndex) => {
+    // Проверяем, нужно ли добавить новую страницу
+    if (yPosition > 250) {
+      doc.addPage()
+      yPosition = 30
+    }
+    
+    // Дата
+    doc.text(date, 20, yPosition)
+    yPosition += 15
+    
+    doc.setFontSize(12)
+    doc.setFont('helvetica', 'normal')
+    
+    // Рецепты на эту дату
+    groupedByDate[date]?.forEach((item, itemIndex) => {
+      const recipeText = `${itemIndex + 1}. ${item.recipe.name}`
+      const caloriesText = `${item.recipe.calories} ккал`
+      
+      doc.text(recipeText, 25, yPosition)
+      doc.text(caloriesText, 150, yPosition)
+      
+      yPosition += 12
+    })
+    
+    yPosition += 10
+    doc.setFontSize(14)
+    doc.setFont('helvetica', 'bold')
+  })
+  
+  // Итого
+  if (calendarItems.length > 0) {
+    const totalCalories = calendarItems.reduce((sum, item) => sum + item.recipe.calories, 0)
+    const totalProteins = calendarItems.reduce((sum, item) => sum + item.recipe.proteins, 0)
+    const totalFats = calendarItems.reduce((sum, item) => sum + item.recipe.fats, 0)
+    const totalCarbs = calendarItems.reduce((sum, item) => sum + item.recipe.carbohydrates, 0)
+    
+    doc.setFontSize(14)
+    doc.setFont('helvetica', 'bold')
+    doc.text('Итого:', 20, yPosition + 10)
+    doc.setFontSize(12)
+    doc.setFont('helvetica', 'normal')
+    doc.text(`Рецептов: ${calendarItems.length}`, 25, yPosition + 25)
+    doc.text(`Калории: ${totalCalories.toFixed(1)} ккал`, 25, yPosition + 35)
+    doc.text(`Белки: ${totalProteins.toFixed(1)}г`, 25, yPosition + 45)
+    doc.text(`Жиры: ${totalFats.toFixed(1)}г`, 25, yPosition + 55)
+    doc.text(`Углеводы: ${totalCarbs.toFixed(1)}г`, 25, yPosition + 65)
+  }
+  
+  // Сохраняем файл
+  const fileName = `calendar-${new Date().toISOString().split('T')[0]}.pdf`
+  doc.save(fileName)
+  } catch (error) {
+    console.error('Ошибка экспорта календаря в PDF:', error)
+    alert('Ошибка при создании PDF файла')
+  }
+}
+
 function RecipesPage() {
   const recipes = useStore($recipes)
   const cartItems = useStore($cartItems)
@@ -353,41 +601,30 @@ function RecipesPage() {
       <LoadingOverlay visible={loading} />
 
       <Group justify="space-between" align="center">
-        <Title>Рецепты</Title>
+        <div>
+          <Title>Рецепты</Title>
+          <Text size="sm" c="dimmed" mt={4}>
+            Просматривайте и создавайте рецепты
+          </Text>
+        </div>
         <Group gap="xs">
-          {/* Мини-корзина */}
-          {cartItems.length > 0 && (
-            <Badge 
-              size="lg" 
-              color="blue" 
-              variant="filled"
-              style={{ cursor: 'pointer' }}
-              onClick={() => {
-                // Прокрутка к корзине
-                document.getElementById('cart-section')?.scrollIntoView({ behavior: 'smooth' })
+          <QuickActions
+            showCreateRecipe={true}
+          />
+          {user && (
+            <UserMenu 
+              user={user} 
+              cartItems={cartItems}
+              onLogout={handleLogout} 
+              onCartClick={() => {
+                window.location.href = '/cart'
               }}
-            >
-              🛒 {cartItems.length} в корзине ({stats.calories} ккал)
-            </Badge>
+            />
           )}
-          
-          <Button 
-            variant="light" 
-            color="green"
-            leftSection={<PlusIcon size={16} />}
-            onClick={() => $createRecipeModal.set(true)}
-          >
-            Создать рецепт
-          </Button>
-          <Button component={Link} to="/calendar" variant="light" color="blue">
-            Календарь
-          </Button>
-          <Button component={Link} to="/ingredients" variant="light">
-            Управление ингредиентами
-          </Button>
-          {user && <UserMenu user={user} onLogout={handleLogout} />}
         </Group>
       </Group>
+
+      <Breadcrumbs />
 
       {/* Панель поиска и фильтрации */}
       <Card withBorder p="md">
@@ -455,25 +692,25 @@ function RecipesPage() {
       <Grid>
         <Grid.Col span={3}>
           <Card withBorder p="md" style={{ textAlign: 'center' }}>
-            <Text size="xl" fw={700} c="blue">{allRecipesStats.total}</Text>
+            <Text size="xl" fw={700} c="teal">{allRecipesStats.total}</Text>
             <Text size="sm" c="dimmed">Всего рецептов</Text>
           </Card>
         </Grid.Col>
         <Grid.Col span={3}>
           <Card withBorder p="md" style={{ textAlign: 'center' }}>
-            <Text size="xl" fw={700} c="green">{allRecipesStats.avgCalories}</Text>
+            <Text size="xl" fw={700} c="sage">{allRecipesStats.avgCalories}</Text>
             <Text size="sm" c="dimmed">Средние калории</Text>
           </Card>
         </Grid.Col>
         <Grid.Col span={3}>
           <Card withBorder p="md" style={{ textAlign: 'center' }}>
-            <Text size="xl" fw={700} c="orange">{allRecipesStats.totalIngredients}</Text>
+            <Text size="xl" fw={700} c="amber">{allRecipesStats.totalIngredients}</Text>
             <Text size="sm" c="dimmed">Ингредиентов</Text>
           </Card>
         </Grid.Col>
         <Grid.Col span={3}>
           <Card withBorder p="md" style={{ textAlign: 'center' }}>
-            <Text size="xl" fw={700} c="purple">{allRecipesStats.inCart}</Text>
+            <Text size="xl" fw={700} c="indigo">{allRecipesStats.inCart}</Text>
             <Text size="sm" c="dimmed">В корзине</Text>
           </Card>
         </Grid.Col>
@@ -507,7 +744,7 @@ function RecipesPage() {
                     <Link
                       to={`/recipe/${recipe.id}`}
                       style={{ 
-                        color: 'var(--mantine-color-blue-6)', 
+                        color: 'var(--mantine-color-teal-6)', 
                         textDecoration: 'none',
                         flex: 1
                       }}
@@ -516,7 +753,7 @@ function RecipesPage() {
                     </Link>
                     <ActionIcon 
                       variant="light" 
-                      color="blue" 
+                      color="teal" 
                       onClick={(e) => {
                         e.preventDefault()
                         e.stopPropagation()
@@ -529,10 +766,10 @@ function RecipesPage() {
 
                   {/* КБЖУ */}
                   <Group gap="xs">
-                    <Badge size="sm" color="blue">{recipe.calories} ккал</Badge>
-                    <Badge size="sm" color="green">{recipe.proteins}г белка</Badge>
-                    <Badge size="sm" color="orange">{recipe.fats}г жиров</Badge>
-                    <Badge size="sm" color="purple">{recipe.carbohydrates}г углеводов</Badge>
+                    <Badge size="sm" color="teal" variant="light">{recipe.calories} ккал</Badge>
+                    <Badge size="sm" color="sage" variant="light">{recipe.proteins}г белка</Badge>
+                    <Badge size="sm" color="amber" variant="light">{recipe.fats}г жиров</Badge>
+                    <Badge size="sm" color="indigo" variant="light">{recipe.carbohydrates}г углеводов</Badge>
                   </Group>
 
                   {/* Ингредиенты */}
@@ -575,7 +812,7 @@ function RecipesPage() {
                 <Table.Td>
                   <Link
                     to={`/recipe/${recipe.id}`}
-                    style={{ color: 'var(--mantine-color-blue-6)', textDecoration: 'none' }}
+                    style={{ color: 'var(--mantine-color-teal-6)', textDecoration: 'none' }}
                   >
                     {recipe.name}
                   </Link>
@@ -592,9 +829,9 @@ function RecipesPage() {
                 </Table.Td>
                 <Table.Td>
                   <Group gap="xs">
-                    <ActionIcon variant="light" color="blue" onClick={() => addToCart(recipe.id)}>
-                      <PlusIcon size={16} />
-                    </ActionIcon>
+                                  <ActionIcon variant="light" color="teal" onClick={() => addToCart(recipe.id)}>
+                <PlusIcon size={16} />
+              </ActionIcon>
                   </Group>
                 </Table.Td>
               </Table.Tr>
@@ -603,93 +840,7 @@ function RecipesPage() {
         </Table>
       )}
 
-      {cartItems.length > 0 && (
-        <>
-          <Divider id="cart-section" />
 
-          <Title order={2}>Корзина</Title>
-
-          <Table>
-            <Table.Thead>
-              <Table.Tr>
-                <Table.Th>Рецепт</Table.Th>
-                <Table.Th>Количество</Table.Th>
-                <Table.Th>КБЖУ (на порцию)</Table.Th>
-                <Table.Th>Действия</Table.Th>
-              </Table.Tr>
-            </Table.Thead>
-            <Table.Tbody>
-              {cartItems.map((item) => (
-                <Table.Tr key={item.id}>
-                  <Table.Td>
-                    <Link
-                      to={`/recipe/${item.recipe.id}`}
-                      style={{ color: 'var(--mantine-color-blue-6)', textDecoration: 'none' }}
-                    >
-                      {item.recipe.name}
-                    </Link>
-                  </Table.Td>
-                  <Table.Td>
-                    <Group gap="xs">
-                      <ActionIcon
-                        variant="light"
-                        color="red"
-                        onClick={() => updateCartQuantity(item.id, item.quantity - 1)}
-                      >
-                        <DashIcon size={16} />
-                      </ActionIcon>
-                      <NumberInput
-                        value={item.quantity}
-                        onChange={(value) => updateCartQuantity(item.id, Number(value) || 0)}
-                        min={1}
-                        max={99}
-                        w={80}
-                        size="sm"
-                      />
-                    </Group>
-                  </Table.Td>
-                  <Table.Td>
-                    <Text size="sm">
-                      {item.recipe.calories}/{item.recipe.proteins}/{item.recipe.fats}/{item.recipe.carbohydrates}
-                    </Text>
-                  </Table.Td>
-                  <Table.Td>
-                    <ActionIcon variant="light" color="red" onClick={() => removeFromCart(item.id)}>
-                      <TrashIcon size={16} />
-                    </ActionIcon>
-                  </Table.Td>
-                </Table.Tr>
-              ))}
-            </Table.Tbody>
-          </Table>
-
-          <Group justify="space-between" align="center">
-            <Text fw={500}>
-              Общий КБЖУ: {stats.calories}/{stats.proteins}/{stats.fats}/{stats.carbohydrates}
-            </Text>
-            <Button variant="light" color="red" onClick={clearCart}>
-              Очистить корзину
-            </Button>
-          </Group>
-
-          <Divider />
-
-          <Title order={2}>Список покупок</Title>
-
-          <Paper p="md" withBorder>
-            <List icon={<CheckCircleFillIcon size={16} fill="var(--mantine-color-green-8)" />}>
-              {shoppingList.map((item) => (
-                <List.Item key={item.name}>
-                  <Text fw={500}>{item.name}</Text>
-                  <Amount>
-                    {item.amount} {item.amountType}
-                  </Amount>
-                </List.Item>
-              ))}
-            </List>
-          </Paper>
-        </>
-      )}
     </Stack>
   )
 }
@@ -697,6 +848,7 @@ function RecipesPage() {
 function IngredientsPage() {
   const ingredients = useStore($ingredients)
   const stockItems = useStore($stockItems)
+  const cartItems = useStore($cartItems)
   const loading = useStore($loading)
   const user = useStore($user)
   const [searchQuery, setSearchQuery] = React.useState('')
@@ -781,78 +933,60 @@ function IngredientsPage() {
       <Grid>
         <Grid.Col span={3}>
           <Card withBorder p="md" style={{ textAlign: 'center' }}>
-            <Text size="xl" fw={700} c="blue">{stats.total}</Text>
+            <Text size="xl" fw={700} c="teal">{stats.total}</Text>
             <Text size="sm" c="dimmed">Всего ингредиентов</Text>
           </Card>
         </Grid.Col>
         <Grid.Col span={3}>
           <Card withBorder p="md" style={{ textAlign: 'center' }}>
-            <Text size="xl" fw={700} c="green">{stats.inStock}</Text>
+            <Text size="xl" fw={700} c="sage">{stats.inStock}</Text>
             <Text size="sm" c="dimmed">В наличии</Text>
           </Card>
         </Grid.Col>
         <Grid.Col span={3}>
           <Card withBorder p="md" style={{ textAlign: 'center' }}>
-            <Text size="xl" fw={700} c="orange">{stats.lowStock}</Text>
+            <Text size="xl" fw={700} c="amber">{stats.lowStock}</Text>
             <Text size="sm" c="dimmed">Заканчиваются</Text>
           </Card>
         </Grid.Col>
         <Grid.Col span={3}>
           <Card withBorder p="md" style={{ textAlign: 'center' }}>
-            <Text size="xl" fw={700} c="purple">{stats.totalAmount}</Text>
+            <Text size="xl" fw={700} c="indigo">{stats.totalAmount}</Text>
             <Text size="sm" c="dimmed">Общее количество</Text>
           </Card>
         </Grid.Col>
       </Grid>
 
       <Group justify="space-between" align="center">
-        <Title>Управление ингредиентами</Title>
+        <div>
+          <Title>Управление ингредиентами</Title>
+          <Text size="sm" c="dimmed" mt={4}>
+            Создавайте и управляйте ингредиентами
+          </Text>
+        </div>
         <Group gap="xs">
-          <Button 
-            variant="light" 
-            color="green"
-            leftSection={<PlusIcon size={16} />}
-            onClick={() => $createIngredientModal.set(true)}
-            size="sm"
-          >
-            Создать ингредиент
-          </Button>
-          <Button variant="light" color="red" onClick={clearCart} size="sm">
-            Очистить все данные
-          </Button>
-          <Button 
-            variant="light" 
-            color="blue"
-            onClick={() => {
-              // Быстрое добавление популярных ингредиентов
-              const popularIngredients = [
-                { name: 'Мука', amountType: 'гр' },
-                { name: 'Сахар', amountType: 'гр' },
-                { name: 'Яйца', amountType: 'шт' },
-                { name: 'Молоко', amountType: 'мл' },
-                { name: 'Масло растительное', amountType: 'мл' },
-                { name: 'Соль', amountType: 'гр' }
-              ]
-              
-              popularIngredients.forEach(async (ingredient) => {
-                const exists = ingredients.find(i => i.name.toLowerCase() === ingredient.name.toLowerCase())
-                if (!exists) {
-                  await createIngredient({ name: ingredient.name, amountType: ingredient.amountType })
-                }
-              })
-            }}
-            size="sm"
-          >
-            📦 Добавить популярные
-          </Button>
-          <Button component={Link} to="/" variant="light">
-            Назад к рецептам
-          </Button>
-          {user && <UserMenu user={user} onLogout={handleLogout} />}
+          <QuickActions
+            showCreateIngredient={true}
+            showClear={true}
+            onClearData={clearCart}
+            clearLabel="Очистить все данные"
+          />
+          {user && (
+            <UserMenu 
+              user={user} 
+              cartItems={cartItems}
+              onLogout={handleLogout} 
+              onCartClick={() => {
+                window.location.href = '/cart'
+              }}
+            />
+          )}
         </Group>
       </Group>
 
-      <Card withBorder p="md" style={{ backgroundColor: 'var(--mantine-color-blue-0)' }}>
+      <Breadcrumbs />
+
+      <Card withBorder p="md" style={{ backgroundColor: 'var(--mantine-color-teal-0)' }}>
         <Group gap="md" align="flex-start">
           <div style={{ fontSize: '24px' }}>💡</div>
           <div style={{ flex: 1 }}>
@@ -860,7 +994,7 @@ function IngredientsPage() {
             <List size="sm" c="dimmed">
               <List.Item>• Используйте поиск и фильтры для быстрого нахождения ингредиентов</List.Item>
               <List.Item>• Переключайтесь между карточками и таблицей для удобного просмотра</List.Item>
-              <List.Item>• Ингредиенты с количеством менее 10 выделяются красным цветом</List.Item>
+              <List.Item>• Ингредиенты с количеством менее 10 выделяются розовым цветом</List.Item>
               <List.Item>• Используйте быстрые кнопки +10/-10 для изменения количества</List.Item>
               <List.Item>• Нажмите "Добавить популярные" для создания базовых ингредиентов</List.Item>
             </List>
@@ -944,8 +1078,8 @@ function IngredientsPage() {
                     style={{ 
                       height: '100%',
                       transition: 'all 0.2s ease',
-                      borderColor: isLowStock ? 'var(--mantine-color-red-3)' : 'var(--mantine-color-gray-3)',
-                      backgroundColor: isLowStock ? 'var(--mantine-color-red-0)' : 'transparent'
+                                  borderColor: isLowStock ? 'var(--mantine-color-rose-3)' : 'var(--mantine-color-gray-3)',
+            backgroundColor: isLowStock ? 'var(--mantine-color-rose-0)' : 'transparent'
                     }}
                     onMouseEnter={(e) => {
                       e.currentTarget.style.transform = 'translateY(-2px)'
@@ -1051,7 +1185,7 @@ function IngredientsPage() {
                   <Table.Tr 
                     key={ingredient.id}
                     style={{
-                      backgroundColor: isLowStock ? 'var(--mantine-color-red-0)' : 'transparent'
+                      backgroundColor: isLowStock ? 'var(--mantine-color-rose-0)' : 'transparent'
                     }}
                   >
                     <Table.Td>
@@ -1184,8 +1318,8 @@ function IngredientsPage() {
                     withBorder 
                     p="sm" 
                     style={{
-                      backgroundColor: isLowStock ? 'var(--mantine-color-orange-0)' : 'var(--mantine-color-green-0)',
-                      borderColor: isLowStock ? 'var(--mantine-color-orange-3)' : 'var(--mantine-color-green-3)'
+                                  backgroundColor: isLowStock ? 'var(--mantine-color-amber-0)' : 'var(--mantine-color-sage-0)',
+            borderColor: isLowStock ? 'var(--mantine-color-amber-3)' : 'var(--mantine-color-sage-3)'
                     }}
                   >
                     <Group justify="space-between" align="center">
@@ -1196,7 +1330,7 @@ function IngredientsPage() {
                         </Text>
                       </div>
                       <Badge 
-                        color={isLowStock ? 'orange' : 'green'} 
+                        color={isLowStock ? 'amber' : 'sage'} 
                         variant="light"
                         size="sm"
                       >
@@ -1422,7 +1556,7 @@ function CreateRecipeForm() {
 
           <Group justify="space-between" align="center">
             <Title order={3}>Ингредиенты</Title>
-            <Button type="button" variant="light" leftSection={<PlusIcon size={16} />} onClick={addIngredient}>
+            <Button type="button" variant="light" color="sage" leftSection={<PlusIcon size={16} />} onClick={addIngredient}>
               Добавить ингредиент
             </Button>
           </Group>
@@ -1459,7 +1593,7 @@ function CreateRecipeForm() {
                 required
               />
               {formData.ingredients.length > 1 && (
-                <ActionIcon variant="light" color="red" onClick={() => removeIngredient(index)} mb={4}>
+                <ActionIcon variant="light" color="rose" onClick={() => removeIngredient(index)} mb={4}>
                   <TrashIcon size={16} />
                 </ActionIcon>
               )}
@@ -1472,6 +1606,7 @@ function CreateRecipeForm() {
             </Button>
             <Button
               type="submit"
+              color="sage"
               loading={loading}
               disabled={!formData.name || formData.ingredients.some((ing) => !ing.name)}
             >
@@ -1560,6 +1695,7 @@ function CreateIngredientForm() {
 function CalendarPage() {
   const recipes = useStore($recipes)
   const calendarItems = useStore($calendarItems)
+  const cartItems = useStore($cartItems)
   const loading = useStore($loading)
   const user = useStore($user)
   const [selectedDate, setSelectedDate] = React.useState<Date | null>(null)
@@ -1655,11 +1791,11 @@ function CalendarPage() {
           padding: 8,
           cursor: isCurrentMonth ? 'pointer' : 'default',
           backgroundColor: isSelected 
-            ? 'var(--mantine-color-blue-1)' 
+            ? 'var(--mantine-color-teal-1)' 
             : isWeekend 
               ? 'var(--mantine-color-gray-0)' 
               : 'transparent',
-          border: isToday ? '2px solid var(--mantine-color-blue-6)' : '1px solid var(--mantine-color-gray-3)',
+          border: isToday ? '2px solid var(--mantine-color-teal-6)' : '1px solid var(--mantine-color-gray-3)',
           borderRadius: 4,
           transition: 'all 0.2s ease',
           opacity: isCurrentMonth ? 1 : 0.4,
@@ -1680,7 +1816,7 @@ function CalendarPage() {
           <Text
             size="sm"
             fw={isToday ? 700 : 500}
-            c={isToday ? 'blue' : isWeekend ? 'dimmed' : isCurrentMonth ? 'inherit' : 'dimmed'}
+            c={isToday ? 'teal' : isWeekend ? 'dimmed' : isCurrentMonth ? 'inherit' : 'dimmed'}
           >
             {date.getDate()}
           </Text>
@@ -1698,7 +1834,7 @@ function CalendarPage() {
                 key={event.id}
                 size="xs"
                 variant="filled"
-                color="blue"
+                color="teal"
                 style={{ 
                   fontSize: '10px', 
                   padding: '2px 4px',
@@ -1774,25 +1910,38 @@ function CalendarPage() {
           })()}
         </div>
         <Group gap="xs">
+          <QuickActions
+            showExport={calendarItems.length > 0}
+            onExportPDF={() => exportCalendarToPDF(calendarItems)}
+            exportLabel="Экспорт календаря"
+          />
           <Button 
             variant="light" 
-            color="blue"
+            color="teal"
             onClick={addCalendarToCart}
             disabled={calendarItems.length === 0}
           >
             Добавить все в корзину
           </Button>
-          <Button component={Link} to="/" variant="light">
-            Назад к рецептам
-          </Button>
-          {user && <UserMenu user={user} onLogout={handleLogout} />}
+          {user && (
+            <UserMenu 
+              user={user} 
+              cartItems={cartItems}
+              onLogout={handleLogout} 
+              onCartClick={() => {
+                window.location.href = '/cart'
+              }}
+            />
+          )}
         </Group>
       </Group>
+
+      <Breadcrumbs />
 
       <Text c="dimmed">
         Планируйте свое питание на месяц. Кликните на день, чтобы добавить рецепт.
         Все рецепты из календаря можно добавить в корзину одним кликом.
-        Выходные дни выделены серым цветом, а суббота и воскресенье - красным.
+        Выходные дни выделены серым цветом, а суббота и воскресенье - розовым.
       </Text>
 
       <Grid>
@@ -1841,7 +1990,7 @@ function CalendarPage() {
                       ta="center" 
                       fw={600} 
                       size="md" 
-                      c={index === 5 || index === 6 ? 'red' : 'dimmed'} 
+                      c={index === 5 || index === 6 ? 'rose' : 'dimmed'} 
                       py="xs"
                     >
                       {day}
@@ -2357,27 +2506,53 @@ function App() {
   }
 
   return (
-    <div
-      style={{
-        width: 900,
-        marginTop: 30,
-        marginLeft: 'auto',
-        marginRight: 'auto',
-        fontFamily: 'Inter',
-      }}
-    >
+    <div>
       <Providers>
-        <Routes>
-          <Route index element={<RecipesPage />} />
-          <Route path="ingredients" element={<IngredientsPage />} />
-          <Route path="calendar" element={<CalendarPage />} />
-          <Route path="recipe/:id" element={<Recipe />} />
-        </Routes>
+        <div style={{ display: 'flex', minHeight: '100vh' }}>
+          {/* Боковая навигация */}
+          <MainNavigation />
+          
+          {/* Основной контент */}
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+            <div className="main-content" style={{ flex: 1, padding: '20px' }}>
+              <Routes>
+                <Route index element={<RecipesPage />} />
+                <Route path="recipes" element={<RecipesPage />} />
+                <Route path="cart" element={<CartPage />} />
+                <Route path="shopping-list" element={<ShoppingListPage />} />
+                <Route path="ingredients" element={<IngredientsPage />} />
+                <Route path="calendar" element={<CalendarPage />} />
+                <Route path="stats" element={<StatsPage />} />
+                <Route path="recipe/:id" element={<Recipe />} />
+              </Routes>
+            </div>
+            
+
+          </div>
+        </div>
         <CreateRecipeForm />
         <CreateIngredientForm />
       </Providers>
     </div>
   )
+}
+
+// Экспорты для использования в других компонентах
+export {
+  $loading,
+  $recipes,
+  $cartItems,
+  $ingredients,
+  $stockItems,
+  $shoppingList,
+  $calendarItems,
+  $createRecipeModal,
+  $createIngredientModal,
+  $user,
+  $isAuthenticated,
+  exportShoppingListToPDF,
+  exportCartToPDF,
+  exportCalendarToPDF
 }
 
 export default App

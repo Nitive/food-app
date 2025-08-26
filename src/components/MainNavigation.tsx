@@ -1,0 +1,181 @@
+import React from 'react'
+import { Box, NavLink, Text, Group, Badge, ActionIcon, Drawer } from '@mantine/core'
+import { Link, useLocation } from 'react-router-dom'
+import { useStore } from '@nanostores/react'
+import { $recipes, $cartItems, $shoppingList, $calendarItems, $ingredients } from '../app.js'
+import { ThreeBarsIcon } from '@primer/octicons-react'
+
+interface NavigationItem {
+  path: string
+  icon: string
+  label: string
+  badge?: number
+  color?: string
+}
+
+export function MainNavigation() {
+  const location = useLocation()
+  const recipes = useStore($recipes)
+  const cartItems = useStore($cartItems)
+  const shoppingList = useStore($shoppingList)
+  const calendarItems = useStore($calendarItems)
+  const ingredients = useStore($ingredients)
+  const [mobileOpened, setMobileOpened] = React.useState(false)
+
+  const navigationItems: NavigationItem[] = [
+    { 
+      path: '/recipes', 
+      icon: '🏠', 
+      label: 'Рецепты', 
+      badge: recipes.length,
+      color: 'teal'
+    },
+    { 
+      path: '/cart', 
+      icon: '🛒', 
+      label: 'Корзина', 
+      badge: cartItems.length,
+      color: 'sage'
+    },
+    { 
+      path: '/shopping-list', 
+      icon: '📋', 
+      label: 'Список покупок', 
+      badge: shoppingList.length,
+      color: 'amber'
+    },
+    { 
+      path: '/calendar', 
+      icon: '📅', 
+      label: 'Календарь', 
+      badge: calendarItems.length,
+      color: 'indigo'
+    },
+    { 
+      path: '/ingredients', 
+      icon: '📦', 
+      label: 'Ингредиенты', 
+      badge: ingredients.length,
+      color: 'slate'
+    },
+    { 
+      path: '/stats', 
+      icon: '📊', 
+      label: 'Статистика',
+      color: 'rose'
+    },
+  ]
+
+  const NavigationContent = () => (
+    <>
+      <Box mb="md">
+        <Text size="lg" fw={700} mb="md" c="teal">
+          🍽️ Food App
+        </Text>
+      </Box>
+
+      <Box style={{ flex: 1 }}>
+        {navigationItems.map((item) => (
+          <NavLink
+            key={item.path}
+            component={Link}
+            to={item.path}
+            label={
+              <Group justify="space-between" w="100%">
+                <Text size="sm">{item.label}</Text>
+                {item.badge !== undefined && item.badge > 0 && (
+                  <Badge size="xs" color={item.color || 'teal'} variant="light">
+                    {item.badge}
+                  </Badge>
+                )}
+              </Group>
+            }
+            leftSection={<span style={{ fontSize: '16px' }}>{item.icon}</span>}
+            active={location.pathname === item.path}
+            variant="light"
+            color={item.color || 'teal'}
+            style={{
+              marginBottom: '4px',
+              borderRadius: '8px',
+              transition: 'all 0.2s ease'
+            }}
+            onClick={() => setMobileOpened(false)}
+          />
+        ))}
+      </Box>
+
+      <Box>
+        <Box p="xs" style={{ 
+          backgroundColor: 'var(--mantine-color-gray-0)', 
+          borderRadius: '8px',
+          border: '1px solid var(--mantine-color-gray-2)'
+        }}>
+          <Text size="xs" c="dimmed" ta="center">
+            Версия 1.0.0
+          </Text>
+        </Box>
+      </Box>
+    </>
+  )
+
+  return (
+    <>
+      {/* Десктопная навигация */}
+      <Box 
+        w={240} 
+        p="md" 
+        style={{ 
+          borderRight: '1px solid var(--mantine-color-gray-3)',
+          display: 'none'
+        }}
+        className="desktop-navigation"
+      >
+        <NavigationContent />
+      </Box>
+
+      {/* Мобильная кнопка меню */}
+      <Box
+        className="mobile-menu-button"
+        style={{
+          position: 'fixed',
+          top: '15px',
+          left: '15px',
+          zIndex: 1000
+        }}
+      >
+        <ActionIcon
+          variant="filled"
+          color="teal"
+          size="xl"
+          onClick={() => setMobileOpened(true)}
+          style={{
+            boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+            width: '48px',
+            height: '48px'
+          }}
+        >
+          <ThreeBarsIcon size={24} />
+        </ActionIcon>
+      </Box>
+
+      {/* Мобильная навигация в Drawer */}
+      <Drawer
+        opened={mobileOpened}
+        onClose={() => setMobileOpened(false)}
+        title="🍽️ Food App"
+        size="280px"
+        overlayProps={{ opacity: 0.5, blur: 4 }}
+        styles={{
+          header: {
+            backgroundColor: 'var(--mantine-color-teal-6)',
+            color: 'white'
+          }
+        }}
+      >
+        <Box p="md">
+          <NavigationContent />
+        </Box>
+      </Drawer>
+    </>
+  )
+}

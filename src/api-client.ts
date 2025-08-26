@@ -209,6 +209,6 @@ export const apiClient = {
 
   async logout(): Promise<{ success: boolean }> {
     const { data } = await client.api.auth.logout.post()
-    return data || { success: true }
+    return (data as unknown as { success: boolean }) || { success: true }
   },
 }

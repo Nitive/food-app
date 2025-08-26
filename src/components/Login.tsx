@@ -28,21 +28,22 @@ export function Login({ onLogin }: LoginProps) {
   return (
     <Container size="xs" style={{ marginTop: '10vh' }}>
       <Paper shadow="md" p="xl" radius="md">
-        <Stack align="center" spacing="lg">
-          <Title order={1} align="center">
+        <Stack align="center" gap="lg">
+          <Title order={1} ta="center">
             Добро пожаловать в Food App
           </Title>
           
-          <Text color="dimmed" align="center" size="lg">
+          <Text color="dimmed" ta="center" size="lg">
             Войдите в систему, чтобы управлять своими рецептами и планировать питание
           </Text>
 
           <Button
             size="lg"
             fullWidth
+            color="teal"
             onClick={handleGoogleLogin}
             loading={loading}
-            leftIcon={
+            leftSection={
               <svg width="20" height="20" viewBox="0 0 24 24">
                 <path
                   fill="currentColor"
