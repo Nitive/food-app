@@ -267,7 +267,7 @@ async function addToCalendar(date: string, recipeId: number, mealType: string) {
     console.log('Добавление в календарь:', { date, recipeId, mealType })
     const newCalendarItem = await apiClient.addToCalendar(date, recipeId, mealType)
     console.log('Получен новый элемент календаря:', newCalendarItem)
-    
+
     // Добавляем новый элемент в локальное состояние
     const currentCalendarItems = $calendarItems.get()
     console.log('Текущие элементы календаря:', currentCalendarItems)
@@ -281,10 +281,10 @@ async function addToCalendar(date: string, recipeId: number, mealType: string) {
 async function removeFromCalendar(id: number) {
   try {
     await apiClient.removeFromCalendar(id)
-    
+
     // Удаляем элемент из локального состояния
     const currentCalendarItems = $calendarItems.get()
-    $calendarItems.set(currentCalendarItems.filter(item => item.id !== id))
+    $calendarItems.set(currentCalendarItems.filter((item) => item.id !== id))
   } catch (error) {
     console.error('Ошибка удаления из календаря:', error)
   }
@@ -2025,7 +2025,7 @@ function CalendarPage() {
   const calendarItems = useStore($calendarItems)
   const loading = useStore($loading)
   const user = useStore($user)
-  
+
   // Отладочное логирование
   React.useEffect(() => {
     console.log('CalendarPage: calendarItems обновились:', calendarItems)
