@@ -36,32 +36,28 @@
 ### Поиск и фильтрация
 
 ```typescript
-const [searchQuery, setSearchQuery] = React.useState('');
-const [sortBy, setSortBy] = React.useState<'name' | 'calories' | 'proteins'>(
-  'name'
-);
+const [searchQuery, setSearchQuery] = React.useState('')
+const [sortBy, setSortBy] = React.useState<'name' | 'calories' | 'proteins'>('name')
 
 const filteredAndSortedRecipes = React.useMemo(() => {
-  let filtered = favoriteRecipes.filter(recipe =>
-    recipe.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  let filtered = favoriteRecipes.filter((recipe) => recipe.name.toLowerCase().includes(searchQuery.toLowerCase()))
 
   // Сортировка
   filtered.sort((a, b) => {
     switch (sortBy) {
       case 'name':
-        return a.name.localeCompare(b.name);
+        return a.name.localeCompare(b.name)
       case 'calories':
-        return a.calories - b.calories;
+        return a.calories - b.calories
       case 'proteins':
-        return b.proteins - a.proteins;
+        return b.proteins - a.proteins
       default:
-        return 0;
+        return 0
     }
-  });
+  })
 
-  return filtered;
-}, [favoriteRecipes, searchQuery, sortBy]);
+  return filtered
+}, [favoriteRecipes, searchQuery, sortBy])
 ```
 
 ### Панель поиска
@@ -154,10 +150,10 @@ const filteredAndSortedRecipes = React.useMemo(() => {
 
 ```typescript
 const handleAddAllToCart = () => {
-  filteredAndSortedRecipes.forEach(recipe => {
-    addToCart(recipe.id);
-  });
-};
+  filteredAndSortedRecipes.forEach((recipe) => {
+    addToCart(recipe.id)
+  })
+}
 ```
 
 ### Улучшенное пустое состояние
@@ -285,17 +281,13 @@ if (favoriteRecipes.length === 0) {
 
 ```javascript
 // Проверка состояния поиска
-console.log('Поисковый запрос:', searchQuery);
-console.log('Сортировка:', sortBy);
-console.log('Отфильтрованные рецепты:', filteredAndSortedRecipes);
+console.log('Поисковый запрос:', searchQuery)
+console.log('Сортировка:', sortBy)
+console.log('Отфильтрованные рецепты:', filteredAndSortedRecipes)
 
 // Проверка статистики
-console.log('Общее количество:', favoriteRecipes.length);
-console.log(
-  'Средние калории:',
-  favoriteRecipes.reduce((sum, r) => sum + r.calories, 0) /
-    favoriteRecipes.length
-);
+console.log('Общее количество:', favoriteRecipes.length)
+console.log('Средние калории:', favoriteRecipes.reduce((sum, r) => sum + r.calories, 0) / favoriteRecipes.length)
 ```
 
 ### Обработка ошибок

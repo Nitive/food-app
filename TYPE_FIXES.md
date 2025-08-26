@@ -15,21 +15,10 @@
 
 ```typescript
 // Было
-import {
-  HeartIcon,
-  HeartFillIcon,
-  PlusIcon,
-  TrashIcon,
-  ShoppingCartIcon,
-} from '@primer/octicons-react';
+import { HeartIcon, HeartFillIcon, PlusIcon, TrashIcon, ShoppingCartIcon } from '@primer/octicons-react'
 
 // Стало
-import {
-  HeartIcon,
-  HeartFillIcon,
-  PlusIcon,
-  TrashIcon,
-} from '@primer/octicons-react';
+import { HeartIcon, HeartFillIcon, PlusIcon, TrashIcon } from '@primer/octicons-react'
 ```
 
 **Замена иконки:**
@@ -69,23 +58,10 @@ import {
 
 ```typescript
 // Было
-import {
-  $favoriteRecipes,
-  $cartItems,
-  toggleFavoriteRecipe,
-  addToCart,
-  getIngredientStock,
-} from '../app.js';
+import { $favoriteRecipes, $cartItems, toggleFavoriteRecipe, addToCart, getIngredientStock } from '../app.js'
 
 // Стало
-import {
-  $favoriteRecipes,
-  $cartItems,
-  $user,
-  toggleFavoriteRecipe,
-  addToCart,
-  getIngredientStock,
-} from '../app.js';
+import { $favoriteRecipes, $cartItems, $user, toggleFavoriteRecipe, addToCart, getIngredientStock } from '../app.js'
 ```
 
 **Получение пользователя из состояния:**
@@ -124,14 +100,14 @@ export function FavoritesPage() {
 ```typescript
 // UserMenu ожидает обязательный User
 interface UserMenuProps {
-  user: User; // Не User | null
-  cartItems: CartItem[];
-  onLogout: () => void;
-  onCartClick: () => void;
+  user: User // Не User | null
+  cartItems: CartItem[]
+  onLogout: () => void
+  onCartClick: () => void
 }
 
 // В FavoritesPage пользователь может быть null
-const user = useStore($user); // User | null
+const user = useStore($user) // User | null
 ```
 
 ### Условный рендеринг
@@ -209,10 +185,10 @@ $ npx tsc --noEmit --skipLibCheck
 
 ```typescript
 // ✅ Правильно - проверяем существование экспорта
-import { HeartIcon, HeartFillIcon } from '@primer/octicons-react';
+import { HeartIcon, HeartFillIcon } from '@primer/octicons-react'
 
 // ❌ Неправильно - импортируем несуществующий экспорт
-import { NonExistentIcon } from '@primer/octicons-react';
+import { NonExistentIcon } from '@primer/octicons-react'
 ```
 
 ### Условный рендеринг
@@ -229,14 +205,12 @@ import { NonExistentIcon } from '@primer/octicons-react';
 
 ```typescript
 // ✅ Правильно - явные типы для состояния
-const [searchQuery, setSearchQuery] = React.useState<string>('');
-const [sortBy, setSortBy] = React.useState<'name' | 'calories' | 'proteins'>(
-  'name'
-);
+const [searchQuery, setSearchQuery] = React.useState<string>('')
+const [sortBy, setSortBy] = React.useState<'name' | 'calories' | 'proteins'>('name')
 
 // ❌ Неправильно - неявные типы
-const [searchQuery, setSearchQuery] = React.useState('');
-const [sortBy, setSortBy] = React.useState('name');
+const [searchQuery, setSearchQuery] = React.useState('')
+const [sortBy, setSortBy] = React.useState('name')
 ```
 
 ## 🔍 Отладка типов

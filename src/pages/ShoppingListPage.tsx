@@ -1,76 +1,62 @@
-import React from 'react';
-import {
-  Stack,
-  Title,
-  Text,
-  Group,
-  Card,
-  Paper,
-  List,
-  LoadingOverlay,
-  Button,
-  Badge,
-} from '@mantine/core';
-import { DateInput } from '@mantine/dates';
-import { CheckCircleFillIcon } from '@primer/octicons-react';
-import { Link } from 'react-router-dom';
-import { useStore } from '@nanostores/react';
-import { $shoppingList, $loading, $user } from '../app.js';
-import { UserMenu } from '../components/UserMenu.js';
-import { Breadcrumbs } from '../components/Breadcrumbs.js';
-import { QuickActions } from '../components/QuickActions.js';
-import { exportShoppingListToPDF } from '../app.js';
-import { apiClient } from '../api-client.js';
+import { Badge, Button, Card, Group, List, LoadingOverlay, Paper, Stack, Text, Title } from '@mantine/core'
+import { DateInput } from '@mantine/dates'
+import { useStore } from '@nanostores/react'
+import { CheckCircleFillIcon } from '@primer/octicons-react'
+import React from 'react'
+import { Link } from 'react-router-dom'
+import { apiClient } from '../api-client.js'
+import { $loading, $shoppingList, $user, exportShoppingListToPDF } from '../app.js'
+import { Breadcrumbs } from '../components/Breadcrumbs.js'
+import { QuickActions } from '../components/QuickActions.js'
+import { UserMenu } from '../components/UserMenu.js'
 
 export function ShoppingListPage() {
-  const shoppingList = useStore($shoppingList);
-  const loading = useStore($loading);
-  const user = useStore($user);
-  const [selectedDate, setSelectedDate] = React.useState<Date | null>(
-    new Date()
-  );
+  const shoppingList = useStore($shoppingList)
+  const loading = useStore($loading)
+  const user = useStore($user)
+  const [selectedDate, setSelectedDate] = React.useState<Date | null>(new Date())
 
   const handleLogout = () => {
     // Функция будет передана из основного компонента
-  };
+  }
 
   const handleDateChange = async (dateString: string | null) => {
     if (dateString) {
-      const date = new Date(dateString);
-      setSelectedDate(date);
+      const date = new Date(dateString)
+      setSelectedDate(date)
       try {
-        const newShoppingList = await apiClient.getShoppingList(dateString);
-        $shoppingList.set(newShoppingList);
+        const newShoppingList = await apiClient.getShoppingList(dateString)
+        $shoppingList.set(newShoppingList)
       } catch (error) {
-        console.error('Ошибка загрузки списка покупок:', error);
+        console.error('Ошибка загрузки списка покупок:', error)
       }
     }
-  };
+  }
 
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
+    const date = new Date(dateString)
     return date.toLocaleDateString('ru-RU', {
       weekday: 'long',
       year: 'numeric',
       month: 'long',
       day: 'numeric',
-    });
-  };
+    })
+  }
 
   const getMealTypeEmoji = (mealType: string) => {
     switch (mealType) {
       case 'breakfast':
-        return '🌅';
+        return '🌅'
       case 'lunch':
-        return '🍽️';
+        return '🍽️'
       case 'dinner':
-        return '🌙';
+        return '🌙'
       case 'snack':
-        return '🍎';
+        return '🍎'
       default:
-        return '🍽️';
+        return '🍽️'
     }
-  };
+  }
 
   return (
     <Stack gap="lg" pos="relative">
@@ -103,13 +89,7 @@ export function ShoppingListPage() {
             <Text size="sm" fw={500} mb="xs">
               Выберите дату:
             </Text>
-            <DateInput
-              value={selectedDate}
-              onChange={handleDateChange}
-              placeholder="Выберите дату"
-              clearable
-              w={200}
-            />
+            <DateInput value={selectedDate} onChange={handleDateChange} placeholder="Выберите дату" clearable w={200} />
           </div>
           {shoppingList.date && (
             <Text size="sm" c="dimmed">
@@ -137,14 +117,9 @@ export function ShoppingListPage() {
         <>
           {/* Информация о рецептах */}
           {shoppingList.recipes.length > 0 && (
-            <Card
-              withBorder
-              p="md"
-              style={{ backgroundColor: 'var(--mantine-color-teal-0)' }}
-            >
+            <Card withBorder p="md" style={{ backgroundColor: 'var(--mantine-color-teal-0)' }}>
               <Text fw={500} mb="sm">
-                📅 Запланированные рецепты на{' '}
-                {formatDate(shoppingList.date || '')}:
+                📅 Запланированные рецепты на {formatDate(shoppingList.date || '')}:
               </Text>
               <Group gap="xs">
                 {shoppingList.recipes.map((recipe, index) => (
@@ -157,11 +132,7 @@ export function ShoppingListPage() {
           )}
 
           {/* Информация о списке */}
-          <Card
-            withBorder
-            p="md"
-            style={{ backgroundColor: 'var(--mantine-color-amber-0)' }}
-          >
+          <Card withBorder p="md" style={{ backgroundColor: 'var(--mantine-color-amber-0)' }}>
             <Group gap="md" align="flex-start">
               <div style={{ fontSize: '24px' }}>💡</div>
               <div style={{ flex: 1 }}>
@@ -169,8 +140,7 @@ export function ShoppingListPage() {
                   Как использовать список покупок:
                 </Text>
                 <Text size="sm" c="dimmed">
-                  • Этот список автоматически генерируется на основе рецептов в
-                  календаре
+                  • Этот список автоматически генерируется на основе рецептов в календаре
                   <br />
                   • Учитываются имеющиеся ингредиенты на складе
                   <br />
@@ -189,15 +159,7 @@ export function ShoppingListPage() {
               </Text>
             </Group>
 
-            <List
-              icon={
-                <CheckCircleFillIcon
-                  size={16}
-                  fill="var(--mantine-color-sage-8)"
-                />
-              }
-              spacing="sm"
-            >
+            <List icon={<CheckCircleFillIcon size={16} fill="var(--mantine-color-sage-8)" />} spacing="sm">
               {shoppingList.items.map((item: any) => (
                 <List.Item
                   key={item.name}
@@ -207,23 +169,18 @@ export function ShoppingListPage() {
                     transition: 'all 0.2s ease',
                     cursor: 'pointer',
                   }}
-                  onMouseEnter={e => {
-                    e.currentTarget.style.backgroundColor =
-                      'var(--mantine-color-gray-0)';
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = 'var(--mantine-color-gray-0)'
                   }}
-                  onMouseLeave={e => {
-                    e.currentTarget.style.backgroundColor = 'transparent';
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = 'transparent'
                   }}
                 >
                   <Group justify="space-between" align="center">
                     <Text fw={500} style={{ flex: 1 }}>
                       {item.name}
                     </Text>
-                    <Text
-                      size="sm"
-                      c="dimmed"
-                      style={{ fontFamily: 'monospace' }}
-                    >
+                    <Text size="sm" c="dimmed" style={{ fontFamily: 'monospace' }}>
                       {item.amount} {item.amountType}
                     </Text>
                   </Group>
@@ -239,12 +196,7 @@ export function ShoppingListPage() {
                 Всего товаров: {shoppingList.items.length}
               </Text>
               <Group gap="xs">
-                <Button
-                  variant="light"
-                  color="indigo"
-                  component={Link}
-                  to="/calendar"
-                >
+                <Button variant="light" color="indigo" component={Link} to="/calendar">
                   Планировать питание
                 </Button>
               </Group>
@@ -253,5 +205,5 @@ export function ShoppingListPage() {
         </>
       )}
     </Stack>
-  );
+  )
 }

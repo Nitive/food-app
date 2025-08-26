@@ -1,36 +1,28 @@
-import React from 'react';
-import {
-  Button,
-  Paper,
-  Stack,
-  Title,
-  Text,
-  Container,
-  Avatar,
-} from '@mantine/core';
-import { apiClient, type User } from '../api-client.js';
+import { Button, Container, Paper, Stack, Text, Title } from '@mantine/core'
+import React from 'react'
+import { apiClient, type User } from '../api-client.js'
 
 interface LoginProps {
-  onLogin: (user: User) => void;
+  onLogin: (user: User) => void
 }
 
 export function Login({ onLogin }: LoginProps) {
-  const [loading, setLoading] = React.useState(false);
+  const [loading, setLoading] = React.useState(false)
 
   const handleGoogleLogin = async () => {
-    setLoading(true);
+    setLoading(true)
     try {
       // Получаем URL для авторизации
-      const { authUrl } = await apiClient.getGoogleAuthUrl();
+      const { authUrl } = await apiClient.getGoogleAuthUrl()
 
       // Делаем редирект на Google
-      window.location.href = authUrl;
+      window.location.href = authUrl
     } catch (error) {
-      console.error('Login error:', error);
-      alert('Ошибка при попытке входа');
-      setLoading(false);
+      console.error('Login error:', error)
+      alert('Ошибка при попытке входа')
+      setLoading(false)
     }
-  };
+  }
 
   return (
     <Container size="xs" style={{ marginTop: '10vh' }}>
@@ -41,8 +33,7 @@ export function Login({ onLogin }: LoginProps) {
           </Title>
 
           <Text color="dimmed" ta="center" size="lg">
-            Войдите в систему, чтобы управлять своими рецептами и планировать
-            питание
+            Войдите в систему, чтобы управлять своими рецептами и планировать питание
           </Text>
 
           <Button
@@ -77,5 +68,5 @@ export function Login({ onLogin }: LoginProps) {
         </Stack>
       </Paper>
     </Container>
-  );
+  )
 }

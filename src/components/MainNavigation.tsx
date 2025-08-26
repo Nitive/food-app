@@ -1,40 +1,26 @@
-import React from 'react';
-import {
-  Box,
-  NavLink,
-  Text,
-  Group,
-  Badge,
-  ActionIcon,
-  Drawer,
-} from '@mantine/core';
-import { Link, useLocation } from 'react-router-dom';
-import { useStore } from '@nanostores/react';
-import {
-  $recipes,
-  $shoppingList,
-  $calendarItems,
-  $ingredients,
-  $favoriteRecipes,
-} from '../app.js';
-import { ThreeBarsIcon } from '@primer/octicons-react';
+import { ActionIcon, Badge, Box, Drawer, Group, NavLink, Text } from '@mantine/core'
+import { useStore } from '@nanostores/react'
+import { ThreeBarsIcon } from '@primer/octicons-react'
+import React from 'react'
+import { Link, useLocation } from 'react-router-dom'
+import { $calendarItems, $favoriteRecipes, $ingredients, $recipes, $shoppingList } from '../app.js'
 
 interface NavigationItem {
-  path: string;
-  icon: string;
-  label: string;
-  badge?: number;
-  color?: string;
+  path: string
+  icon: string
+  label: string
+  badge?: number
+  color?: string
 }
 
 export function MainNavigation() {
-  const location = useLocation();
-  const recipes = useStore($recipes);
-  const shoppingList = useStore($shoppingList);
-  const calendarItems = useStore($calendarItems);
-  const ingredients = useStore($ingredients);
-  const favoriteRecipes = useStore($favoriteRecipes);
-  const [mobileOpened, setMobileOpened] = React.useState(false);
+  const location = useLocation()
+  const recipes = useStore($recipes)
+  const shoppingList = useStore($shoppingList)
+  const calendarItems = useStore($calendarItems)
+  const ingredients = useStore($ingredients)
+  const favoriteRecipes = useStore($favoriteRecipes)
+  const [mobileOpened, setMobileOpened] = React.useState(false)
 
   const navigationItems: NavigationItem[] = [
     {
@@ -84,7 +70,7 @@ export function MainNavigation() {
       label: 'Статистика',
       color: 'rose',
     },
-  ];
+  ]
 
   const NavigationContent = () => (
     <>
@@ -95,7 +81,7 @@ export function MainNavigation() {
       </Box>
 
       <Box style={{ flex: 1 }}>
-        {navigationItems.map(item => (
+        {navigationItems.map((item) => (
           <NavLink
             key={item.path}
             component={Link}
@@ -139,7 +125,7 @@ export function MainNavigation() {
         </Box>
       </Box>
     </>
-  );
+  )
 
   return (
     <>
@@ -200,5 +186,5 @@ export function MainNavigation() {
         </Box>
       </Drawer>
     </>
-  );
+  )
 }

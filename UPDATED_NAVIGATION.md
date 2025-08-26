@@ -100,7 +100,7 @@ style={{
 ### Состояние мобильного меню
 
 ```typescript
-const [mobileOpened, setMobileOpened] = React.useState(false);
+const [mobileOpened, setMobileOpened] = React.useState(false)
 ```
 
 ### Переиспользуемый контент

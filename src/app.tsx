@@ -1,16 +1,19 @@
-import '@mantine/core/styles.css';
+import '@mantine/core/styles.css'
 
 import {
   ActionIcon,
+  Badge,
+  Box,
   Button,
+  Card,
   Divider,
+  Grid,
   Group,
   List,
   LoadingOverlay,
   MantineProvider,
   Modal,
   NumberInput,
-  Paper,
   Select,
   Stack,
   Table,
@@ -18,68 +21,59 @@ import {
   TextInput,
   Textarea,
   Title,
-  Badge,
-  Box,
-  Grid,
-  Card,
-} from '@mantine/core';
-import { Calendar } from '@mantine/dates';
-import { useStore } from '@nanostores/react';
+} from '@mantine/core'
+import { useStore } from '@nanostores/react'
 import {
+  CalendarIcon,
   CheckCircleFillIcon,
-  DashIcon,
+  HeartFillIcon,
+  HeartIcon,
+  PencilIcon,
   PlusIcon,
   TrashIcon,
   XCircleFillIcon,
-  DownloadIcon,
-  HeartIcon,
-  HeartFillIcon,
-  CalendarIcon,
-  PencilIcon,
-} from '@primer/octicons-react';
-import { atom } from 'nanostores';
-import React from 'react';
-import jsPDF from 'jspdf';
-import { createRoot } from 'react-dom/client';
-import { BrowserRouter, Link, Route, Routes, useParams } from 'react-router';
-import { sumBy } from 'remeda';
+} from '@primer/octicons-react'
+import jsPDF from 'jspdf'
+import { atom } from 'nanostores'
+import React from 'react'
+import { BrowserRouter, Link, Route, Routes, useParams } from 'react-router'
 import {
   apiClient,
+  type CalendarItem,
   type Ingredient,
   type Recipe,
   type ShoppingListItem,
   type ShoppingListResponse,
   type StockItem,
-  type CalendarItem,
   type User,
-} from './api-client.js';
+} from './api-client.js'
+import { Breadcrumbs } from './components/Breadcrumbs.js'
+import { Login } from './components/Login.js'
+import { MainNavigation } from './components/MainNavigation.js'
+import { QuickActions } from './components/QuickActions.js'
+import { UserMenu } from './components/UserMenu.js'
 
 // Интерфейс для записей дневника питания
 interface FoodDiaryEntry {
-  id: string;
-  recipeId: number;
-  recipeName: string;
-  mealType: 'breakfast' | 'lunch' | 'dinner' | 'snack';
-  servingSize: number;
-  calories: number;
-  proteins: number;
-  fats: number;
-  carbohydrates: number;
-  timestamp: string;
-  date: string;
+  id: string
+  recipeId: number
+  recipeName: string
+  mealType: 'breakfast' | 'lunch' | 'dinner' | 'snack'
+  servingSize: number
+  calories: number
+  proteins: number
+  fats: number
+  carbohydrates: number
+  timestamp: string
+  date: string
 }
-import { Login } from './components/Login.js';
-import { UserMenu } from './components/UserMenu.js';
-import { MainNavigation } from './components/MainNavigation.js';
-import { Breadcrumbs } from './components/Breadcrumbs.js';
-import { QuickActions } from './components/QuickActions.js';
 
-import { ShoppingListPage } from './pages/ShoppingListPage.js';
-import { StatsPage } from './pages/StatsPage.js';
-import { FavoritesPage } from './pages/FavoritesPage.js';
-import { FoodDiaryPage } from './pages/FoodDiaryPage.js';
-import { AddToCalendarModal } from './components/AddToCalendarModal.js';
-import { EditRecipeForm } from './components/EditRecipeForm.js';
+import { AddToCalendarModal } from './components/AddToCalendarModal.js'
+import { EditRecipeForm } from './components/EditRecipeForm.js'
+import { FavoritesPage } from './pages/FavoritesPage.js'
+import { FoodDiaryPage } from './pages/FoodDiaryPage.js'
+import { ShoppingListPage } from './pages/ShoppingListPage.js'
+import { StatsPage } from './pages/StatsPage.js'
 
 function Providers(props: { children: React.ReactNode }) {
   return (
@@ -96,548 +90,518 @@ function Providers(props: { children: React.ReactNode }) {
     >
       <BrowserRouter>{props.children}</BrowserRouter>
     </MantineProvider>
-  );
+  )
 }
 
 // Состояние загрузки
-const $loading = atom(false);
+const $loading = atom(false)
 
 // Состояние рецептов
-const $recipes = atom<Recipe[]>([]);
+const $recipes = atom<Recipe[]>([])
 
 // Состояние ингредиентов
-const $ingredients = atom<Ingredient[]>([]);
+const $ingredients = atom<Ingredient[]>([])
 
 // Состояние наличия ингредиентов
-const $stockItems = atom<StockItem[]>([]);
+const $stockItems = atom<StockItem[]>([])
 
 // Состояние списка покупок
 const $shoppingList = atom<ShoppingListResponse>({
   items: [],
   date: '',
   recipes: [],
-});
+})
 
 // Состояние календаря
-const $calendarItems = atom<CalendarItem[]>([]);
+const $calendarItems = atom<CalendarItem[]>([])
 
 // Состояние любимых рецептов
-const $favoriteRecipes = atom<Recipe[]>([]);
+const $favoriteRecipes = atom<Recipe[]>([])
 
 // Состояние модального окна создания рецепта
-const $createRecipeModal = atom(false);
+const $createRecipeModal = atom(false)
 
 // Состояние модального окна создания ингредиента
-const $createIngredientModal = atom(false);
+const $createIngredientModal = atom(false)
 
 // Состояние модального окна добавления в календарь
-const $addToCalendarModal = atom(false);
-const $selectedRecipeForCalendar = atom<Recipe | null>(null);
+const $addToCalendarModal = atom(false)
+const $selectedRecipeForCalendar = atom<Recipe | null>(null)
 
 // Состояние модального окна редактирования рецепта
-const $editRecipeModal = atom(false);
-const $selectedRecipeForEdit = atom<Recipe | null>(null);
+const $editRecipeModal = atom(false)
+const $selectedRecipeForEdit = atom<Recipe | null>(null)
 
 // Состояние авторизации
-const $user = atom<User | null>(null);
-const $isAuthenticated = atom(false);
+const $user = atom<User | null>(null)
+const $isAuthenticated = atom(false)
 
 // Загрузка данных
 async function loadData() {
-  $loading.set(true);
+  $loading.set(true)
   try {
-    const [recipes, ingredients, stockItems, shoppingList, calendarItems] =
-      await Promise.all([
-        apiClient.getRecipes(),
-        apiClient.getIngredients(),
-        apiClient.getStock(),
-        apiClient.getShoppingList(), // По умолчанию для сегодняшней даты
-        apiClient.getCalendar(),
-      ]);
+    const [recipes, ingredients, stockItems, shoppingList, calendarItems] = await Promise.all([
+      apiClient.getRecipes(),
+      apiClient.getIngredients(),
+      apiClient.getStock(),
+      apiClient.getShoppingList(), // По умолчанию для сегодняшней даты
+      apiClient.getCalendar(),
+    ])
 
-    $recipes.set(recipes);
-    $ingredients.set(ingredients);
-    $stockItems.set(stockItems);
-    $shoppingList.set(shoppingList);
-    $calendarItems.set(calendarItems);
+    $recipes.set(recipes)
+    $ingredients.set(ingredients)
+    $stockItems.set(stockItems)
+    $shoppingList.set(shoppingList)
+    $calendarItems.set(calendarItems)
 
     // Загружаем любимые рецепты из localStorage
-    loadFavoriteRecipes();
+    loadFavoriteRecipes()
   } catch (error) {
-    console.error('Ошибка загрузки данных:', error);
+    console.error('Ошибка загрузки данных:', error)
   } finally {
-    $loading.set(false);
+    $loading.set(false)
   }
 }
 
 // Функции для работы с авторизацией
 async function checkAuth() {
   try {
-    const response = await apiClient.getMe();
+    const response = await apiClient.getMe()
     if (response.authenticated && response.user) {
-      $user.set(response.user);
-      $isAuthenticated.set(true);
-      return true;
+      $user.set(response.user)
+      $isAuthenticated.set(true)
+      return true
     } else {
-      $user.set(null);
-      $isAuthenticated.set(false);
-      return false;
+      $user.set(null)
+      $isAuthenticated.set(false)
+      return false
     }
   } catch (error) {
-    console.error('Ошибка проверки авторизации:', error);
-    $user.set(null);
-    $isAuthenticated.set(false);
-    return false;
+    console.error('Ошибка проверки авторизации:', error)
+    $user.set(null)
+    $isAuthenticated.set(false)
+    return false
   }
 }
 
 function handleLogin(user: User) {
-  $user.set(user);
-  $isAuthenticated.set(true);
-  loadData(); // Загружаем данные после входа
+  $user.set(user)
+  $isAuthenticated.set(true)
+  loadData() // Загружаем данные после входа
 }
 
 function handleLogout() {
-  $user.set(null);
-  $isAuthenticated.set(false);
+  $user.set(null)
+  $isAuthenticated.set(false)
   // Очищаем все данные
-  $recipes.set([]);
-  $ingredients.set([]);
-  $stockItems.set([]);
-  $shoppingList.set({ items: [], date: '', recipes: [] });
-  $calendarItems.set([]);
-  $favoriteRecipes.set([]);
+  $recipes.set([])
+  $ingredients.set([])
+  $stockItems.set([])
+  $shoppingList.set({ items: [], date: '', recipes: [] })
+  $calendarItems.set([])
+  $favoriteRecipes.set([])
   // Очищаем localStorage
-  localStorage.removeItem('user');
-  localStorage.removeItem('favoriteRecipes');
+  localStorage.removeItem('user')
+  localStorage.removeItem('favoriteRecipes')
 }
 
 // Функции для работы с наличием ингредиентов
 async function updateIngredientStock(ingredientId: number, amount: number) {
   try {
-    await apiClient.updateStock(ingredientId, amount);
-    await loadData(); // Перезагружаем данные
+    await apiClient.updateStock(ingredientId, amount)
+    await loadData() // Перезагружаем данные
   } catch (error) {
-    console.error('Ошибка обновления наличия:', error);
+    console.error('Ошибка обновления наличия:', error)
   }
 }
 
 async function clearAllData() {
   try {
-    await loadData(); // Перезагружаем данные
+    await loadData() // Перезагружаем данные
   } catch (error) {
-    console.error('Ошибка очистки данных:', error);
+    console.error('Ошибка очистки данных:', error)
   }
 }
 
 // Функция создания рецепта
 async function createRecipe(recipeData: {
-  name: string;
-  calories: number;
-  proteins: number;
-  fats: number;
-  carbohydrates: number;
-  ingredients: { name: string; amount: number; amountType: string }[];
+  name: string
+  calories: number
+  proteins: number
+  fats: number
+  carbohydrates: number
+  ingredients: { name: string; amount: number; amountType: string }[]
 }) {
   try {
-    await apiClient.createRecipe(recipeData);
-    await loadData(); // Перезагружаем данные
-    $createRecipeModal.set(false); // Закрываем модальное окно
+    await apiClient.createRecipe(recipeData)
+    await loadData() // Перезагружаем данные
+    $createRecipeModal.set(false) // Закрываем модальное окно
   } catch (error) {
-    console.error('Ошибка создания рецепта:', error);
+    console.error('Ошибка создания рецепта:', error)
   }
 }
 
 // Функция создания ингредиента
-async function createIngredient(ingredientData: {
-  name: string;
-  amountType: string;
-}) {
+async function createIngredient(ingredientData: { name: string; amountType: string }) {
   try {
-    await apiClient.createIngredient(ingredientData);
-    await loadData(); // Перезагружаем данные
+    await apiClient.createIngredient(ingredientData)
+    await loadData() // Перезагружаем данные
   } catch (error) {
-    console.error('Ошибка создания ингредиента:', error);
+    console.error('Ошибка создания ингредиента:', error)
   }
 }
 
 // Функция удаления ингредиента
 async function deleteIngredient(id: number) {
   try {
-    await apiClient.deleteIngredient(id);
-    await loadData(); // Перезагружаем данные
+    await apiClient.deleteIngredient(id)
+    await loadData() // Перезагружаем данные
   } catch (error) {
-    console.error('Ошибка удаления ингредиента:', error);
+    console.error('Ошибка удаления ингредиента:', error)
   }
 }
 
 // Функции для работы с календарем
 async function addToCalendar(date: string, recipeId: number, mealType: string) {
   try {
-    await apiClient.addToCalendar(date, recipeId, mealType);
-    await loadData(); // Перезагружаем данные
+    await apiClient.addToCalendar(date, recipeId, mealType)
+    await loadData() // Перезагружаем данные
   } catch (error) {
-    console.error('Ошибка добавления в календарь:', error);
+    console.error('Ошибка добавления в календарь:', error)
   }
 }
 
 async function removeFromCalendar(id: number) {
   try {
-    await apiClient.removeFromCalendar(id);
-    await loadData(); // Перезагружаем данные
+    await apiClient.removeFromCalendar(id)
+    await loadData() // Перезагружаем данные
   } catch (error) {
-    console.error('Ошибка удаления из календаря:', error);
+    console.error('Ошибка удаления из календаря:', error)
   }
 }
 
 // Функции для работы с модальным окном календаря
 function openAddToCalendarModal(recipe: Recipe) {
-  $selectedRecipeForCalendar.set(recipe);
-  $addToCalendarModal.set(true);
+  $selectedRecipeForCalendar.set(recipe)
+  $addToCalendarModal.set(true)
 }
 
 function closeAddToCalendarModal() {
-  $addToCalendarModal.set(false);
-  $selectedRecipeForCalendar.set(null);
+  $addToCalendarModal.set(false)
+  $selectedRecipeForCalendar.set(null)
 }
 
 async function handleAddToCalendarConfirm(date: string, mealType: string) {
-  const recipe = $selectedRecipeForCalendar.get();
+  const recipe = $selectedRecipeForCalendar.get()
   if (recipe) {
-    await addToCalendar(date, recipe.id, mealType);
-    closeAddToCalendarModal();
+    await addToCalendar(date, recipe.id, mealType)
+    closeAddToCalendarModal()
   }
 }
 
 // Функции для работы с редактированием рецептов
 function openEditRecipeModal(recipe: Recipe) {
-  $selectedRecipeForEdit.set(recipe);
-  $editRecipeModal.set(true);
+  $selectedRecipeForEdit.set(recipe)
+  $editRecipeModal.set(true)
 }
 
 function closeEditRecipeModal() {
-  $editRecipeModal.set(false);
-  $selectedRecipeForEdit.set(null);
+  $editRecipeModal.set(false)
+  $selectedRecipeForEdit.set(null)
 }
 
 async function handleEditRecipeSave(recipeData: {
-  name: string;
-  calories: number;
-  proteins: number;
-  fats: number;
-  carbohydrates: number;
-  instructions?: string;
-  cookingTime?: number;
-  difficulty?: string;
-  ingredients: { name: string; amount: number; amountType: string }[];
+  name: string
+  calories: number
+  proteins: number
+  fats: number
+  carbohydrates: number
+  instructions?: string
+  cookingTime?: number
+  difficulty?: string
+  ingredients: { name: string; amount: number; amountType: string }[]
 }) {
   try {
     if ($selectedRecipeForEdit.get()) {
-      await apiClient.updateRecipe(
-        $selectedRecipeForEdit.get()!.id,
-        recipeData
-      );
-      await loadData(); // Перезагружаем данные
-      closeEditRecipeModal();
+      await apiClient.updateRecipe($selectedRecipeForEdit.get()!.id, recipeData)
+      await loadData() // Перезагружаем данные
+      closeEditRecipeModal()
     }
   } catch (error) {
-    console.error('Ошибка обновления рецепта:', error);
-    alert('Ошибка при обновлении рецепта');
+    console.error('Ошибка обновления рецепта:', error)
+    alert('Ошибка при обновлении рецепта')
   }
 }
 
 async function handleDeleteRecipe(recipeId: number) {
-  if (confirm('Вы уверены, что хотите удалить этот рецепт?')) {
+  if (window.confirm('Вы уверены, что хотите удалить этот рецепт?')) {
     try {
-      await apiClient.deleteRecipe(recipeId);
-      await loadData(); // Перезагружаем данные
+      await apiClient.deleteRecipe(recipeId)
+      await loadData() // Перезагружаем данные
     } catch (error) {
-      console.error('Ошибка удаления рецепта:', error);
-      alert('Ошибка при удалении рецепта');
+      console.error('Ошибка удаления рецепта:', error)
+      alert('Ошибка при удалении рецепта')
     }
   }
 }
 
 // Функции для работы с любимыми рецептами
 function toggleFavoriteRecipe(recipe: Recipe) {
-  const currentFavorites = $favoriteRecipes.get();
-  const isFavorite = currentFavorites.some(fav => fav.id === recipe.id);
+  const currentFavorites = $favoriteRecipes.get()
+  const isFavorite = currentFavorites.some((fav) => fav.id === recipe.id)
 
   if (isFavorite) {
     // Удаляем из любимых
-    const updatedFavorites = currentFavorites.filter(
-      fav => fav.id !== recipe.id
-    );
-    $favoriteRecipes.set(updatedFavorites);
+    const updatedFavorites = currentFavorites.filter((fav) => fav.id !== recipe.id)
+    $favoriteRecipes.set(updatedFavorites)
     // Сохраняем в localStorage
-    localStorage.setItem('favoriteRecipes', JSON.stringify(updatedFavorites));
+    localStorage.setItem('favoriteRecipes', JSON.stringify(updatedFavorites))
   } else {
     // Добавляем в любимые
-    const updatedFavorites = [...currentFavorites, recipe];
-    $favoriteRecipes.set(updatedFavorites);
+    const updatedFavorites = [...currentFavorites, recipe]
+    $favoriteRecipes.set(updatedFavorites)
     // Сохраняем в localStorage
-    localStorage.setItem('favoriteRecipes', JSON.stringify(updatedFavorites));
+    localStorage.setItem('favoriteRecipes', JSON.stringify(updatedFavorites))
   }
 }
 
 function isRecipeFavorite(recipeId: number): boolean {
-  const favorites = $favoriteRecipes.get();
-  return favorites.some(fav => fav.id === recipeId);
+  const favorites = $favoriteRecipes.get()
+  return favorites.some((fav) => fav.id === recipeId)
 }
 
 function loadFavoriteRecipes() {
   try {
-    const savedFavorites = localStorage.getItem('favoriteRecipes');
+    const savedFavorites = localStorage.getItem('favoriteRecipes')
     if (savedFavorites) {
-      const favorites = JSON.parse(savedFavorites);
-      $favoriteRecipes.set(favorites);
+      const favorites = JSON.parse(savedFavorites)
+      $favoriteRecipes.set(favorites)
     }
   } catch (error) {
-    console.error('Ошибка загрузки любимых рецептов:', error);
+    console.error('Ошибка загрузки любимых рецептов:', error)
   }
 }
 
 function getIngredientStock(ingredientName: string): number {
-  const stockItem = $stockItems
-    .get()
-    .find(item => item.ingredient.name === ingredientName);
-  return stockItem?.amount || 0;
+  const stockItem = $stockItems.get().find((item) => item.ingredient.name === ingredientName)
+  return stockItem?.amount || 0
 }
 
 // Функция экспорта списка покупок в PDF
 function exportShoppingListToPDF(shoppingList: ShoppingListItem[]) {
   try {
-    const doc = new jsPDF();
+    const doc = new jsPDF()
 
     // Заголовок
-    doc.setFontSize(20);
-    doc.setFont('helvetica', 'bold');
-    doc.text('Список покупок', 20, 30);
+    doc.setFontSize(20)
+    doc.setFont('helvetica', 'bold')
+    doc.text('Список покупок', 20, 30)
 
     // Дата создания
-    doc.setFontSize(12);
-    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(12)
+    doc.setFont('helvetica', 'normal')
     const currentDate = new Date().toLocaleDateString('ru-RU', {
       year: 'numeric',
       month: 'long',
       day: 'numeric',
-    });
-    doc.text(`Создан: ${currentDate}`, 20, 45);
+    })
+    doc.text(`Создан: ${currentDate}`, 20, 45)
 
     // Список товаров
-    doc.setFontSize(14);
-    doc.setFont('helvetica', 'bold');
-    doc.text('Товары:', 20, 65);
+    doc.setFontSize(14)
+    doc.setFont('helvetica', 'bold')
+    doc.text('Товары:', 20, 65)
 
-    let yPosition = 80;
-    doc.setFontSize(12);
-    doc.setFont('helvetica', 'normal');
+    let yPosition = 80
+    doc.setFontSize(12)
+    doc.setFont('helvetica', 'normal')
 
     shoppingList.forEach((item, index) => {
       // Проверяем, нужно ли добавить новую страницу
       if (yPosition > 250) {
-        doc.addPage();
-        yPosition = 30;
+        doc.addPage()
+        yPosition = 30
       }
 
-      const itemText = `${index + 1}. ${item.name}`;
-      const amountText = `${item.amount} ${item.amountType}`;
+      const itemText = `${index + 1}. ${item.name}`
+      const amountText = `${item.amount} ${item.amountType}`
 
-      doc.text(itemText, 25, yPosition);
-      doc.text(amountText, 150, yPosition);
+      doc.text(itemText, 25, yPosition)
+      doc.text(amountText, 150, yPosition)
 
-      yPosition += 15;
-    });
+      yPosition += 15
+    })
 
     // Итого
     if (shoppingList.length > 0) {
-      doc.setFontSize(14);
-      doc.setFont('helvetica', 'bold');
-      doc.text(`Итого товаров: ${shoppingList.length}`, 20, yPosition + 10);
+      doc.setFontSize(14)
+      doc.setFont('helvetica', 'bold')
+      doc.text(`Итого товаров: ${shoppingList.length}`, 20, yPosition + 10)
     }
 
     // Сохраняем файл
-    const fileName = `shopping-list-${new Date().toISOString().split('T')[0]}.pdf`;
-    doc.save(fileName);
+    const fileName = `shopping-list-${new Date().toISOString().split('T')[0]}.pdf`
+    doc.save(fileName)
   } catch (error) {
-    console.error('Ошибка экспорта в PDF:', error);
-    alert('Ошибка при создании PDF файла');
+    console.error('Ошибка экспорта в PDF:', error)
+    alert('Ошибка при создании PDF файла')
   }
 }
 
 // Функция экспорта календаря в PDF
 function exportCalendarToPDF(calendarItems: CalendarItem[]) {
   try {
-    const doc = new jsPDF();
+    const doc = new jsPDF()
 
     // Заголовок
-    doc.setFontSize(20);
-    doc.setFont('helvetica', 'bold');
-    doc.text('План питания', 20, 30);
+    doc.setFontSize(20)
+    doc.setFont('helvetica', 'bold')
+    doc.text('План питания', 20, 30)
 
     // Дата создания
-    doc.setFontSize(12);
-    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(12)
+    doc.setFont('helvetica', 'normal')
     const currentDate = new Date().toLocaleDateString('ru-RU', {
       year: 'numeric',
       month: 'long',
       day: 'numeric',
-    });
-    doc.text(`Создан: ${currentDate}`, 20, 45);
+    })
+    doc.text(`Создан: ${currentDate}`, 20, 45)
 
     // Группируем по датам
-    const groupedByDate: Record<string, CalendarItem[]> = {};
-    calendarItems.forEach(item => {
-      const dateKey = new Date(item.date).toLocaleDateString('ru-RU');
+    const groupedByDate: Record<string, CalendarItem[]> = {}
+    calendarItems.forEach((item) => {
+      const dateKey = new Date(item.date).toLocaleDateString('ru-RU')
       if (!groupedByDate[dateKey]) {
-        groupedByDate[dateKey] = [];
+        groupedByDate[dateKey] = []
       }
-      groupedByDate[dateKey].push(item);
-    });
+      groupedByDate[dateKey].push(item)
+    })
 
     // Сортируем даты
-    const sortedDates = Object.keys(groupedByDate).sort(
-      (a, b) => new Date(a).getTime() - new Date(b).getTime()
-    );
+    const sortedDates = Object.keys(groupedByDate).sort((a, b) => new Date(a).getTime() - new Date(b).getTime())
 
-    let yPosition = 65;
-    doc.setFontSize(14);
-    doc.setFont('helvetica', 'bold');
+    let yPosition = 65
+    doc.setFontSize(14)
+    doc.setFont('helvetica', 'bold')
 
     sortedDates.forEach((date, dateIndex) => {
       // Проверяем, нужно ли добавить новую страницу
       if (yPosition > 250) {
-        doc.addPage();
-        yPosition = 30;
+        doc.addPage()
+        yPosition = 30
       }
 
       // Дата
-      doc.text(date, 20, yPosition);
-      yPosition += 15;
+      doc.text(date, 20, yPosition)
+      yPosition += 15
 
-      doc.setFontSize(12);
-      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(12)
+      doc.setFont('helvetica', 'normal')
 
       // Рецепты на эту дату
       groupedByDate[date]?.forEach((item, itemIndex) => {
-        const recipeText = `${itemIndex + 1}. ${item.recipe.name}`;
-        const caloriesText = `${item.recipe.calories} ккал`;
+        const recipeText = `${itemIndex + 1}. ${item.recipe.name}`
+        const caloriesText = `${item.recipe.calories} ккал`
 
-        doc.text(recipeText, 25, yPosition);
-        doc.text(caloriesText, 150, yPosition);
+        doc.text(recipeText, 25, yPosition)
+        doc.text(caloriesText, 150, yPosition)
 
-        yPosition += 12;
-      });
+        yPosition += 12
+      })
 
-      yPosition += 10;
-      doc.setFontSize(14);
-      doc.setFont('helvetica', 'bold');
-    });
+      yPosition += 10
+      doc.setFontSize(14)
+      doc.setFont('helvetica', 'bold')
+    })
 
     // Итого
     if (calendarItems.length > 0) {
-      const totalCalories = calendarItems.reduce(
-        (sum, item) => sum + item.recipe.calories,
-        0
-      );
-      const totalProteins = calendarItems.reduce(
-        (sum, item) => sum + item.recipe.proteins,
-        0
-      );
-      const totalFats = calendarItems.reduce(
-        (sum, item) => sum + item.recipe.fats,
-        0
-      );
-      const totalCarbs = calendarItems.reduce(
-        (sum, item) => sum + item.recipe.carbohydrates,
-        0
-      );
+      const totalCalories = calendarItems.reduce((sum, item) => sum + item.recipe.calories, 0)
+      const totalProteins = calendarItems.reduce((sum, item) => sum + item.recipe.proteins, 0)
+      const totalFats = calendarItems.reduce((sum, item) => sum + item.recipe.fats, 0)
+      const totalCarbs = calendarItems.reduce((sum, item) => sum + item.recipe.carbohydrates, 0)
 
-      doc.setFontSize(14);
-      doc.setFont('helvetica', 'bold');
-      doc.text('Итого:', 20, yPosition + 10);
-      doc.setFontSize(12);
-      doc.setFont('helvetica', 'normal');
-      doc.text(`Рецептов: ${calendarItems.length}`, 25, yPosition + 25);
-      doc.text(`Калории: ${totalCalories.toFixed(1)} ккал`, 25, yPosition + 35);
-      doc.text(`Белки: ${totalProteins.toFixed(1)}г`, 25, yPosition + 45);
-      doc.text(`Жиры: ${totalFats.toFixed(1)}г`, 25, yPosition + 55);
-      doc.text(`Углеводы: ${totalCarbs.toFixed(1)}г`, 25, yPosition + 65);
+      doc.setFontSize(14)
+      doc.setFont('helvetica', 'bold')
+      doc.text('Итого:', 20, yPosition + 10)
+      doc.setFontSize(12)
+      doc.setFont('helvetica', 'normal')
+      doc.text(`Рецептов: ${calendarItems.length}`, 25, yPosition + 25)
+      doc.text(`Калории: ${totalCalories.toFixed(1)} ккал`, 25, yPosition + 35)
+      doc.text(`Белки: ${totalProteins.toFixed(1)}г`, 25, yPosition + 45)
+      doc.text(`Жиры: ${totalFats.toFixed(1)}г`, 25, yPosition + 55)
+      doc.text(`Углеводы: ${totalCarbs.toFixed(1)}г`, 25, yPosition + 65)
     }
 
     // Сохраняем файл
-    const fileName = `calendar-${new Date().toISOString().split('T')[0]}.pdf`;
-    doc.save(fileName);
+    const fileName = `calendar-${new Date().toISOString().split('T')[0]}.pdf`
+    doc.save(fileName)
   } catch (error) {
-    console.error('Ошибка экспорта календаря в PDF:', error);
-    alert('Ошибка при создании PDF файла');
+    console.error('Ошибка экспорта календаря в PDF:', error)
+    alert('Ошибка при создании PDF файла')
   }
 }
 
 // Функция экспорта дневника питания в PDF
-function exportFoodDiaryToPDF(
-  foodEntries: FoodDiaryEntry[],
-  startDate: Date,
-  endDate: Date
-) {
+function exportFoodDiaryToPDF(foodEntries: FoodDiaryEntry[], startDate: Date, endDate: Date) {
   try {
-    const doc = new jsPDF();
+    const doc = new jsPDF()
 
     // Заголовок
-    doc.setFontSize(20);
-    doc.setFont('helvetica', 'bold');
-    doc.text('Дневник питания', 20, 30);
+    doc.setFontSize(20)
+    doc.setFont('helvetica', 'bold')
+    doc.text('Дневник питания', 20, 30)
 
     // Период отчета
-    doc.setFontSize(12);
-    doc.setFont('helvetica', 'normal');
-    const startDateStr = startDate.toLocaleDateString('ru-RU');
-    const endDateStr = endDate.toLocaleDateString('ru-RU');
-    doc.text(`Период: ${startDateStr} - ${endDateStr}`, 20, 45);
+    doc.setFontSize(12)
+    doc.setFont('helvetica', 'normal')
+    const startDateStr = startDate.toLocaleDateString('ru-RU')
+    const endDateStr = endDate.toLocaleDateString('ru-RU')
+    doc.text(`Период: ${startDateStr} - ${endDateStr}`, 20, 45)
 
     // Дата создания
     const currentDate = new Date().toLocaleDateString('ru-RU', {
       year: 'numeric',
       month: 'long',
       day: 'numeric',
-    });
-    doc.text(`Создан: ${currentDate}`, 20, 55);
+    })
+    doc.text(`Создан: ${currentDate}`, 20, 55)
 
     // Группируем записи по датам
-    const groupedByDate: Record<string, FoodDiaryEntry[]> = {};
-    foodEntries.forEach(entry => {
-      const dateKey = new Date(entry.date).toLocaleDateString('ru-RU');
+    const groupedByDate: Record<string, FoodDiaryEntry[]> = {}
+    foodEntries.forEach((entry) => {
+      const dateKey = new Date(entry.date).toLocaleDateString('ru-RU')
       if (!groupedByDate[dateKey]) {
-        groupedByDate[dateKey] = [];
+        groupedByDate[dateKey] = []
       }
-      groupedByDate[dateKey].push(entry);
-    });
+      groupedByDate[dateKey].push(entry)
+    })
 
     // Сортируем даты
     const sortedDates = Object.keys(groupedByDate).sort(
       (a, b) =>
-        new Date(a.split('.').reverse().join('-')).getTime() -
-        new Date(b.split('.').reverse().join('-')).getTime()
-    );
+        new Date(a.split('.').reverse().join('-')).getTime() - new Date(b.split('.').reverse().join('-')).getTime()
+    )
 
-    let yPosition = 80;
-    let pageNumber = 1;
+    let yPosition = 80
+    let pageNumber = 1
 
     sortedDates.forEach((date, dateIndex) => {
-      const entries = groupedByDate[date] || [];
+      const entries = groupedByDate[date] || []
 
       // Проверяем, нужно ли добавить новую страницу
       if (yPosition > 250) {
-        doc.addPage();
-        yPosition = 30;
-        pageNumber++;
+        doc.addPage()
+        yPosition = 30
+        pageNumber++
       }
 
       // Заголовок даты
-      doc.setFontSize(16);
-      doc.setFont('helvetica', 'bold');
-      doc.text(`📅 ${date}`, 20, yPosition);
-      yPosition += 15;
+      doc.setFontSize(16)
+      doc.setFont('helvetica', 'bold')
+      doc.text(`📅 ${date}`, 20, yPosition)
+      yPosition += 15
 
       // Статистика дня
       const dayStats = entries.reduce(
@@ -649,42 +613,38 @@ function exportFoodDiaryToPDF(
           count: stats.count + 1,
         }),
         { calories: 0, proteins: 0, fats: 0, carbohydrates: 0, count: 0 }
-      );
+      )
 
-      doc.setFontSize(12);
-      doc.setFont('helvetica', 'bold');
-      doc.text('📊 Статистика дня:', 25, yPosition);
-      yPosition += 10;
+      doc.setFontSize(12)
+      doc.setFont('helvetica', 'bold')
+      doc.text('📊 Статистика дня:', 25, yPosition)
+      yPosition += 10
 
-      doc.setFontSize(10);
-      doc.setFont('helvetica', 'normal');
-      doc.text(`Калории: ${dayStats.calories.toFixed(1)} ккал`, 30, yPosition);
-      yPosition += 8;
-      doc.text(`Белки: ${dayStats.proteins.toFixed(1)}г`, 30, yPosition);
-      yPosition += 8;
-      doc.text(`Жиры: ${dayStats.fats.toFixed(1)}г`, 30, yPosition);
-      yPosition += 8;
-      doc.text(
-        `Углеводы: ${dayStats.carbohydrates.toFixed(1)}г`,
-        30,
-        yPosition
-      );
-      yPosition += 8;
-      doc.text(`Приемов пищи: ${dayStats.count}`, 30, yPosition);
-      yPosition += 15;
+      doc.setFontSize(10)
+      doc.setFont('helvetica', 'normal')
+      doc.text(`Калории: ${dayStats.calories.toFixed(1)} ккал`, 30, yPosition)
+      yPosition += 8
+      doc.text(`Белки: ${dayStats.proteins.toFixed(1)}г`, 30, yPosition)
+      yPosition += 8
+      doc.text(`Жиры: ${dayStats.fats.toFixed(1)}г`, 30, yPosition)
+      yPosition += 8
+      doc.text(`Углеводы: ${dayStats.carbohydrates.toFixed(1)}г`, 30, yPosition)
+      yPosition += 8
+      doc.text(`Приемов пищи: ${dayStats.count}`, 30, yPosition)
+      yPosition += 15
 
       // Список приемов пищи
-      doc.setFontSize(12);
-      doc.setFont('helvetica', 'bold');
-      doc.text('🍽️ Приемы пищи:', 25, yPosition);
-      yPosition += 10;
+      doc.setFontSize(12)
+      doc.setFont('helvetica', 'bold')
+      doc.text('🍽️ Приемы пищи:', 25, yPosition)
+      yPosition += 10
 
       entries.forEach((entry, entryIndex) => {
         // Проверяем, нужно ли добавить новую страницу
         if (yPosition > 250) {
-          doc.addPage();
-          yPosition = 30;
-          pageNumber++;
+          doc.addPage()
+          yPosition = 30
+          pageNumber++
         }
 
         const mealTypeEmoji =
@@ -693,7 +653,7 @@ function exportFoodDiaryToPDF(
             lunch: '🍽️',
             dinner: '🌙',
             snack: '🍎',
-          }[entry.mealType] || '🍽️';
+          }[entry.mealType] || '🍽️'
 
         const mealTypeLabel =
           {
@@ -701,44 +661,40 @@ function exportFoodDiaryToPDF(
             lunch: 'Обед',
             dinner: 'Ужин',
             snack: 'Перекус',
-          }[entry.mealType] || 'Прием пищи';
+          }[entry.mealType] || 'Прием пищи'
 
-        doc.setFontSize(11);
-        doc.setFont('helvetica', 'bold');
-        doc.text(`${mealTypeEmoji} ${mealTypeLabel}`, 30, yPosition);
-        yPosition += 8;
+        doc.setFontSize(11)
+        doc.setFont('helvetica', 'bold')
+        doc.text(`${mealTypeEmoji} ${mealTypeLabel}`, 30, yPosition)
+        yPosition += 8
 
-        doc.setFontSize(10);
-        doc.setFont('helvetica', 'normal');
-        doc.text(
-          `• ${entry.recipeName} (${entry.servingSize} порция)`,
-          35,
-          yPosition
-        );
-        yPosition += 8;
+        doc.setFontSize(10)
+        doc.setFont('helvetica', 'normal')
+        doc.text(`• ${entry.recipeName} (${entry.servingSize} порция)`, 35, yPosition)
+        yPosition += 8
         doc.text(
           `  Калории: ${entry.calories.toFixed(1)} ккал, Белки: ${entry.proteins.toFixed(1)}г, Жиры: ${entry.fats.toFixed(1)}г, Углеводы: ${entry.carbohydrates.toFixed(1)}г`,
           35,
           yPosition
-        );
-        yPosition += 12;
-      });
+        )
+        yPosition += 12
+      })
 
       // Разделитель между днями
       if (dateIndex < sortedDates.length - 1) {
-        yPosition += 5;
-        doc.setLineWidth(0.5);
-        doc.line(20, yPosition, 190, yPosition);
-        yPosition += 10;
+        yPosition += 5
+        doc.setLineWidth(0.5)
+        doc.line(20, yPosition, 190, yPosition)
+        yPosition += 10
       }
-    });
+    })
 
     // Общая статистика за период
     if (foodEntries.length > 0) {
       // Проверяем, нужно ли добавить новую страницу
       if (yPosition > 200) {
-        doc.addPage();
-        yPosition = 30;
+        doc.addPage()
+        yPosition = 30
       }
 
       const totalStats = foodEntries.reduce(
@@ -750,167 +706,126 @@ function exportFoodDiaryToPDF(
           count: stats.count + 1,
         }),
         { calories: 0, proteins: 0, fats: 0, carbohydrates: 0, count: 0 }
-      );
+      )
 
       const avgStats = {
         calories: totalStats.calories / sortedDates.length,
         proteins: totalStats.proteins / sortedDates.length,
         fats: totalStats.fats / sortedDates.length,
         carbohydrates: totalStats.carbohydrates / sortedDates.length,
-      };
+      }
 
-      doc.setFontSize(16);
-      doc.setFont('helvetica', 'bold');
-      doc.text('📈 Общая статистика за период', 20, yPosition);
-      yPosition += 15;
+      doc.setFontSize(16)
+      doc.setFont('helvetica', 'bold')
+      doc.text('📈 Общая статистика за период', 20, yPosition)
+      yPosition += 15
 
-      doc.setFontSize(12);
-      doc.setFont('helvetica', 'bold');
-      doc.text('Итого:', 25, yPosition);
-      yPosition += 10;
+      doc.setFontSize(12)
+      doc.setFont('helvetica', 'bold')
+      doc.text('Итого:', 25, yPosition)
+      yPosition += 10
 
-      doc.setFontSize(11);
-      doc.setFont('helvetica', 'normal');
-      doc.text(`Дней: ${sortedDates.length}`, 30, yPosition);
-      yPosition += 8;
-      doc.text(`Записей: ${totalStats.count}`, 30, yPosition);
-      yPosition += 8;
-      doc.text(
-        `Общие калории: ${totalStats.calories.toFixed(1)} ккал`,
-        30,
-        yPosition
-      );
-      yPosition += 8;
-      doc.text(
-        `Общие белки: ${totalStats.proteins.toFixed(1)}г`,
-        30,
-        yPosition
-      );
-      yPosition += 8;
-      doc.text(`Общие жиры: ${totalStats.fats.toFixed(1)}г`, 30, yPosition);
-      yPosition += 8;
-      doc.text(
-        `Общие углеводы: ${totalStats.carbohydrates.toFixed(1)}г`,
-        30,
-        yPosition
-      );
-      yPosition += 15;
+      doc.setFontSize(11)
+      doc.setFont('helvetica', 'normal')
+      doc.text(`Дней: ${sortedDates.length}`, 30, yPosition)
+      yPosition += 8
+      doc.text(`Записей: ${totalStats.count}`, 30, yPosition)
+      yPosition += 8
+      doc.text(`Общие калории: ${totalStats.calories.toFixed(1)} ккал`, 30, yPosition)
+      yPosition += 8
+      doc.text(`Общие белки: ${totalStats.proteins.toFixed(1)}г`, 30, yPosition)
+      yPosition += 8
+      doc.text(`Общие жиры: ${totalStats.fats.toFixed(1)}г`, 30, yPosition)
+      yPosition += 8
+      doc.text(`Общие углеводы: ${totalStats.carbohydrates.toFixed(1)}г`, 30, yPosition)
+      yPosition += 15
 
-      doc.setFontSize(12);
-      doc.setFont('helvetica', 'bold');
-      doc.text('Среднее за день:', 25, yPosition);
-      yPosition += 10;
+      doc.setFontSize(12)
+      doc.setFont('helvetica', 'bold')
+      doc.text('Среднее за день:', 25, yPosition)
+      yPosition += 10
 
-      doc.setFontSize(11);
-      doc.setFont('helvetica', 'normal');
-      doc.text(`Калории: ${avgStats.calories.toFixed(1)} ккал`, 30, yPosition);
-      yPosition += 8;
-      doc.text(`Белки: ${avgStats.proteins.toFixed(1)}г`, 30, yPosition);
-      yPosition += 8;
-      doc.text(`Жиры: ${avgStats.fats.toFixed(1)}г`, 30, yPosition);
-      yPosition += 8;
-      doc.text(
-        `Углеводы: ${avgStats.carbohydrates.toFixed(1)}г`,
-        30,
-        yPosition
-      );
+      doc.setFontSize(11)
+      doc.setFont('helvetica', 'normal')
+      doc.text(`Калории: ${avgStats.calories.toFixed(1)} ккал`, 30, yPosition)
+      yPosition += 8
+      doc.text(`Белки: ${avgStats.proteins.toFixed(1)}г`, 30, yPosition)
+      yPosition += 8
+      doc.text(`Жиры: ${avgStats.fats.toFixed(1)}г`, 30, yPosition)
+      yPosition += 8
+      doc.text(`Углеводы: ${avgStats.carbohydrates.toFixed(1)}г`, 30, yPosition)
     }
 
     // Сохраняем файл
-    const fileName = `food-diary-${startDate.toISOString().split('T')[0]}-to-${endDate.toISOString().split('T')[0]}.pdf`;
-    doc.save(fileName);
+    const fileName = `food-diary-${startDate.toISOString().split('T')[0]}-to-${endDate.toISOString().split('T')[0]}.pdf`
+    doc.save(fileName)
   } catch (error) {
-    console.error('Ошибка экспорта дневника питания в PDF:', error);
-    alert('Ошибка при создании PDF файла');
+    console.error('Ошибка экспорта дневника питания в PDF:', error)
+    alert('Ошибка при создании PDF файла')
   }
 }
 
 function RecipesPage() {
-  const recipes = useStore($recipes);
-  const shoppingList = useStore($shoppingList);
-  const favoriteRecipes = useStore($favoriteRecipes);
-  const loading = useStore($loading);
-  const user = useStore($user);
-  const [searchQuery, setSearchQuery] = React.useState('');
-  const [sortBy, setSortBy] = React.useState<
-    'name' | 'calories' | 'popularity'
-  >('name');
-  const [filterCategory, setFilterCategory] = React.useState<string | null>(
-    null
-  );
-  const [viewMode, setViewMode] = React.useState<'cards' | 'table'>('cards');
+  const recipes = useStore($recipes)
+  const shoppingList = useStore($shoppingList)
+  const favoriteRecipes = useStore($favoriteRecipes)
+  const loading = useStore($loading)
+  const user = useStore($user)
+  const [searchQuery, setSearchQuery] = React.useState('')
+  const [sortBy, setSortBy] = React.useState<'name' | 'calories' | 'popularity'>('name')
+  const [filterCategory, setFilterCategory] = React.useState<string | null>(null)
+  const [viewMode, setViewMode] = React.useState<'cards' | 'table'>('cards')
 
   // Фильтрация и сортировка рецептов
   const filteredAndSortedRecipes = React.useMemo(() => {
-    let filtered = recipes.filter(recipe =>
-      recipe.name.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    let filtered = recipes.filter((recipe) => recipe.name.toLowerCase().includes(searchQuery.toLowerCase()))
 
     // Фильтр по категории (простая логика на основе названия)
     if (filterCategory) {
-      filtered = filtered.filter(recipe => {
-        const name = recipe.name.toLowerCase();
+      filtered = filtered.filter((recipe) => {
+        const name = recipe.name.toLowerCase()
         switch (filterCategory) {
           case 'breakfast':
             return (
-              name.includes('омлет') ||
-              name.includes('блины') ||
-              name.includes('сырники') ||
-              name.includes('яичница')
-            );
+              name.includes('омлет') || name.includes('блины') || name.includes('сырники') || name.includes('яичница')
+            )
           case 'lunch':
-            return (
-              name.includes('суп') ||
-              name.includes('салат') ||
-              name.includes('паста')
-            );
+            return name.includes('суп') || name.includes('салат') || name.includes('паста')
           case 'dinner':
-            return (
-              name.includes('мясо') ||
-              name.includes('рыба') ||
-              name.includes('курица')
-            );
+            return name.includes('мясо') || name.includes('рыба') || name.includes('курица')
           case 'dessert':
-            return (
-              name.includes('торт') ||
-              name.includes('пирог') ||
-              name.includes('мороженое')
-            );
+            return name.includes('торт') || name.includes('пирог') || name.includes('мороженое')
           default:
-            return true;
+            return true
         }
-      });
+      })
     }
 
     // Сортировка
     filtered.sort((a, b) => {
       switch (sortBy) {
         case 'name':
-          return a.name.localeCompare(b.name);
+          return a.name.localeCompare(b.name)
         case 'calories':
-          return a.calories - b.calories;
+          return a.calories - b.calories
         case 'popularity':
           // Простая логика популярности на основе калорий
-          return b.calories - a.calories;
+          return b.calories - a.calories
         default:
-          return 0;
+          return 0
       }
-    });
+    })
 
-    return filtered;
-  }, [recipes, searchQuery, filterCategory, sortBy]);
+    return filtered
+  }, [recipes, searchQuery, filterCategory, sortBy])
 
   // Статистика всех рецептов
   const allRecipesStats = {
     total: recipes.length,
     avgCalories:
-      recipes.length > 0
-        ? (
-            recipes.reduce((sum, r) => sum + r.calories, 0) / recipes.length
-          ).toFixed(0)
-        : '0',
+      recipes.length > 0 ? (recipes.reduce((sum, r) => sum + r.calories, 0) / recipes.length).toFixed(0) : '0',
     totalIngredients: recipes.reduce((sum, r) => sum + r.ingredients.length, 0),
-  };
+  }
 
   return (
     <Stack gap="lg" pos="relative">
@@ -938,14 +853,14 @@ function RecipesPage() {
             <TextInput
               placeholder="Поиск рецептов..."
               value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
+              onChange={(e) => setSearchQuery(e.target.value)}
               style={{ flex: 1 }}
               leftSection={<span style={{ fontSize: '12px' }}>🔍</span>}
             />
             <Select
               placeholder="Категория"
               value={filterCategory || ''}
-              onChange={value => setFilterCategory(value || null)}
+              onChange={(value) => setFilterCategory(value || null)}
               data={[
                 { value: '', label: 'Все категории' },
                 { value: 'breakfast', label: '🍳 Завтрак' },
@@ -959,7 +874,7 @@ function RecipesPage() {
             <Select
               placeholder="Сортировка"
               value={sortBy}
-              onChange={value => setSortBy(value as any)}
+              onChange={(value) => setSortBy(value as any)}
               data={[
                 { value: 'name', label: 'По названию' },
                 { value: 'calories', label: 'По калориям' },
@@ -1030,7 +945,7 @@ function RecipesPage() {
       {/* Отображение рецептов */}
       {viewMode === 'cards' ? (
         <Grid>
-          {filteredAndSortedRecipes.map(recipe => (
+          {filteredAndSortedRecipes.map((recipe) => (
             <Grid.Col key={recipe.id} span={4}>
               <Card
                 withBorder
@@ -1040,14 +955,13 @@ function RecipesPage() {
                   transition: 'all 0.2s ease',
                   cursor: 'pointer',
                 }}
-                onMouseEnter={e => {
-                  e.currentTarget.style.transform = 'translateY(-2px)';
-                  e.currentTarget.style.boxShadow =
-                    '0 4px 12px rgba(0,0,0,0.1)';
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = 'translateY(-2px)'
+                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)'
                 }}
-                onMouseLeave={e => {
-                  e.currentTarget.style.transform = 'translateY(0)';
-                  e.currentTarget.style.boxShadow = 'none';
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = 'translateY(0)'
+                  e.currentTarget.style.boxShadow = 'none'
                 }}
               >
                 <Stack gap="sm">
@@ -1069,13 +983,13 @@ function RecipesPage() {
                       <ActionIcon
                         variant="subtle"
                         color="pink"
-                        onClick={e => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          toggleFavoriteRecipe(recipe);
+                        onClick={(e) => {
+                          e.preventDefault()
+                          e.stopPropagation()
+                          toggleFavoriteRecipe(recipe)
                         }}
                       >
-                        {favoriteRecipes.some(fav => fav.id === recipe.id) ? (
+                        {favoriteRecipes.some((fav) => fav.id === recipe.id) ? (
                           <HeartFillIcon size={16} />
                         ) : (
                           <HeartIcon size={16} />
@@ -1084,10 +998,10 @@ function RecipesPage() {
                       <ActionIcon
                         variant="subtle"
                         color="blue"
-                        onClick={e => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          openEditRecipeModal(recipe);
+                        onClick={(e) => {
+                          e.preventDefault()
+                          e.stopPropagation()
+                          openEditRecipeModal(recipe)
                         }}
                       >
                         <PencilIcon size={16} />
@@ -1095,10 +1009,10 @@ function RecipesPage() {
                       <ActionIcon
                         variant="subtle"
                         color="red"
-                        onClick={e => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          handleDeleteRecipe(recipe.id);
+                        onClick={(e) => {
+                          e.preventDefault()
+                          e.stopPropagation()
+                          handleDeleteRecipe(recipe.id)
                         }}
                       >
                         <TrashIcon size={16} />
@@ -1128,18 +1042,13 @@ function RecipesPage() {
                       Ингредиенты:
                     </Text>
                     <Text size="xs" c="dimmed" lineClamp={3}>
-                      {recipe.ingredients.map(i => i.name).join(', ')}
+                      {recipe.ingredients.map((i) => i.name).join(', ')}
                     </Text>
                   </div>
 
                   {/* Быстрые действия */}
                   <Group gap="xs" mt="auto">
-                    <Button
-                      variant="light"
-                      size="xs"
-                      fullWidth
-                      onClick={() => openAddToCalendarModal(recipe)}
-                    >
+                    <Button variant="light" size="xs" fullWidth onClick={() => openAddToCalendarModal(recipe)}>
                       Добавить в календарь
                     </Button>
                   </Group>
@@ -1159,7 +1068,7 @@ function RecipesPage() {
             </Table.Tr>
           </Table.Thead>
           <Table.Tbody>
-            {filteredAndSortedRecipes.map(recipe => (
+            {filteredAndSortedRecipes.map((recipe) => (
               <Table.Tr key={recipe.id}>
                 <Table.Td>
                   <Link
@@ -1174,47 +1083,30 @@ function RecipesPage() {
                 </Table.Td>
                 <Table.Td>
                   <Text size="sm">
-                    {recipe.calories}/{recipe.proteins}/{recipe.fats}/
-                    {recipe.carbohydrates}
+                    {recipe.calories}/{recipe.proteins}/{recipe.fats}/{recipe.carbohydrates}
                   </Text>
                 </Table.Td>
                 <Table.Td>
                   <Text size="sm" lineClamp={2}>
-                    {recipe.ingredients.map(i => i.name).join(', ')}
+                    {recipe.ingredients.map((i) => i.name).join(', ')}
                   </Text>
                 </Table.Td>
                 <Table.Td>
                   <Group gap="xs">
-                    <ActionIcon
-                      variant="subtle"
-                      color="pink"
-                      onClick={() => toggleFavoriteRecipe(recipe)}
-                    >
-                      {favoriteRecipes.some(fav => fav.id === recipe.id) ? (
+                    <ActionIcon variant="subtle" color="pink" onClick={() => toggleFavoriteRecipe(recipe)}>
+                      {favoriteRecipes.some((fav) => fav.id === recipe.id) ? (
                         <HeartFillIcon size={16} />
                       ) : (
                         <HeartIcon size={16} />
                       )}
                     </ActionIcon>
-                    <ActionIcon
-                      variant="light"
-                      color="teal"
-                      onClick={() => openAddToCalendarModal(recipe)}
-                    >
+                    <ActionIcon variant="light" color="teal" onClick={() => openAddToCalendarModal(recipe)}>
                       <CalendarIcon size={16} />
                     </ActionIcon>
-                    <ActionIcon
-                      variant="subtle"
-                      color="blue"
-                      onClick={() => openEditRecipeModal(recipe)}
-                    >
+                    <ActionIcon variant="subtle" color="blue" onClick={() => openEditRecipeModal(recipe)}>
                       <PencilIcon size={16} />
                     </ActionIcon>
-                    <ActionIcon
-                      variant="subtle"
-                      color="red"
-                      onClick={() => handleDeleteRecipe(recipe.id)}
-                    >
+                    <ActionIcon variant="subtle" color="red" onClick={() => handleDeleteRecipe(recipe.id)}>
                       <TrashIcon size={16} />
                     </ActionIcon>
                   </Group>
@@ -1225,26 +1117,22 @@ function RecipesPage() {
         </Table>
       )}
     </Stack>
-  );
+  )
 }
 
 function IngredientsPage() {
-  const ingredients = useStore($ingredients);
-  const stockItems = useStore($stockItems);
-  const loading = useStore($loading);
-  const user = useStore($user);
-  const [searchQuery, setSearchQuery] = React.useState('');
-  const [filterCategory, setFilterCategory] = React.useState<string | null>(
-    null
-  );
-  const [sortBy, setSortBy] = React.useState<'name' | 'amount' | 'category'>(
-    'name'
-  );
-  const [viewMode, setViewMode] = React.useState<'cards' | 'table'>('cards');
+  const ingredients = useStore($ingredients)
+  const stockItems = useStore($stockItems)
+  const loading = useStore($loading)
+  const user = useStore($user)
+  const [searchQuery, setSearchQuery] = React.useState('')
+  const [filterCategory, setFilterCategory] = React.useState<string | null>(null)
+  const [sortBy, setSortBy] = React.useState<'name' | 'amount' | 'category'>('name')
+  const [viewMode, setViewMode] = React.useState<'cards' | 'table'>('cards')
 
   // Функция для определения категории ингредиента
   const getIngredientCategory = (name: string): string => {
-    const lowerName = name.toLowerCase();
+    const lowerName = name.toLowerCase()
     if (
       lowerName.includes('молоко') ||
       lowerName.includes('творог') ||
@@ -1252,14 +1140,14 @@ function IngredientsPage() {
       lowerName.includes('сметана') ||
       lowerName.includes('масло')
     ) {
-      return 'dairy';
+      return 'dairy'
     } else if (
       lowerName.includes('мясо') ||
       lowerName.includes('курица') ||
       lowerName.includes('рыба') ||
       lowerName.includes('колбаса')
     ) {
-      return 'meat';
+      return 'meat'
     } else if (
       lowerName.includes('помидор') ||
       lowerName.includes('огурец') ||
@@ -1267,70 +1155,62 @@ function IngredientsPage() {
       lowerName.includes('лук') ||
       lowerName.includes('картофель')
     ) {
-      return 'vegetables';
+      return 'vegetables'
     } else if (
       lowerName.includes('яблоко') ||
       lowerName.includes('банан') ||
       lowerName.includes('апельсин') ||
       lowerName.includes('виноград')
     ) {
-      return 'fruits';
+      return 'fruits'
     } else if (
       lowerName.includes('мука') ||
       lowerName.includes('сахар') ||
       lowerName.includes('масло растительное') ||
       lowerName.includes('яйцо')
     ) {
-      return 'basics';
+      return 'basics'
     } else {
-      return 'other';
+      return 'other'
     }
-  };
+  }
 
   // Фильтрация и сортировка ингредиентов
   const filteredAndSortedIngredients = React.useMemo(() => {
-    let filtered = ingredients.filter(ingredient =>
-      ingredient.name.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    let filtered = ingredients.filter((ingredient) => ingredient.name.toLowerCase().includes(searchQuery.toLowerCase()))
 
     // Фильтр по категории
     if (filterCategory) {
-      filtered = filtered.filter(
-        ingredient => getIngredientCategory(ingredient.name) === filterCategory
-      );
+      filtered = filtered.filter((ingredient) => getIngredientCategory(ingredient.name) === filterCategory)
     }
 
     // Сортировка
     filtered.sort((a, b) => {
-      const stockA =
-        stockItems.find(s => s.ingredient.id === a.id)?.amount || 0;
-      const stockB =
-        stockItems.find(s => s.ingredient.id === b.id)?.amount || 0;
+      const stockA = stockItems.find((s) => s.ingredient.id === a.id)?.amount || 0
+      const stockB = stockItems.find((s) => s.ingredient.id === b.id)?.amount || 0
 
       switch (sortBy) {
         case 'name':
-          return a.name.localeCompare(b.name);
+          return a.name.localeCompare(b.name)
         case 'amount':
-          return stockB - stockA;
+          return stockB - stockA
         case 'category':
-          return getIngredientCategory(a.name).localeCompare(
-            getIngredientCategory(b.name)
-          );
+          return getIngredientCategory(a.name).localeCompare(getIngredientCategory(b.name))
         default:
-          return 0;
+          return 0
       }
-    });
+    })
 
-    return filtered;
-  }, [ingredients, stockItems, searchQuery, filterCategory, sortBy]);
+    return filtered
+  }, [ingredients, stockItems, searchQuery, filterCategory, sortBy])
 
   // Статистика
   const stats = {
     total: ingredients.length,
     inStock: stockItems.length,
-    lowStock: stockItems.filter(item => item.amount < 10).length,
+    lowStock: stockItems.filter((item) => item.amount < 10).length,
     totalAmount: stockItems.reduce((sum, item) => sum + item.amount, 0),
-  };
+  }
 
   // Категории для фильтрации
   const categories = [
@@ -1340,7 +1220,7 @@ function IngredientsPage() {
     { value: 'fruits', label: '🍎 Фрукты' },
     { value: 'basics', label: '🧂 Основные продукты' },
     { value: 'other', label: '📦 Прочее' },
-  ];
+  ]
 
   return (
     <Stack gap="lg" pos="relative">
@@ -1398,22 +1278,14 @@ function IngredientsPage() {
           </Text>
         </div>
         <Group gap="xs">
-          <QuickActions
-            showCreateIngredient={true}
-            showClear={true}
-            clearLabel="Очистить все данные"
-          />
+          <QuickActions showCreateIngredient={true} showClear={true} clearLabel="Очистить все данные" />
           {user && <UserMenu user={user} onLogout={handleLogout} />}
         </Group>
       </Group>
 
       <Breadcrumbs />
 
-      <Card
-        withBorder
-        p="md"
-        style={{ backgroundColor: 'var(--mantine-color-teal-0)' }}
-      >
+      <Card withBorder p="md" style={{ backgroundColor: 'var(--mantine-color-teal-0)' }}>
         <Group gap="md" align="flex-start">
           <div style={{ fontSize: '24px' }}>💡</div>
           <div style={{ flex: 1 }}>
@@ -1421,24 +1293,11 @@ function IngredientsPage() {
               Советы по управлению ингредиентами:
             </Text>
             <List size="sm" c="dimmed">
-              <List.Item>
-                • Используйте поиск и фильтры для быстрого нахождения
-                ингредиентов
-              </List.Item>
-              <List.Item>
-                • Переключайтесь между карточками и таблицей для удобного
-                просмотра
-              </List.Item>
-              <List.Item>
-                • Ингредиенты с количеством менее 10 выделяются розовым цветом
-              </List.Item>
-              <List.Item>
-                • Используйте быстрые кнопки +10/-10 для изменения количества
-              </List.Item>
-              <List.Item>
-                • Нажмите "Добавить популярные" для создания базовых
-                ингредиентов
-              </List.Item>
+              <List.Item>• Используйте поиск и фильтры для быстрого нахождения ингредиентов</List.Item>
+              <List.Item>• Переключайтесь между карточками и таблицей для удобного просмотра</List.Item>
+              <List.Item>• Ингредиенты с количеством менее 10 выделяются розовым цветом</List.Item>
+              <List.Item>• Используйте быстрые кнопки +10/-10 для изменения количества</List.Item>
+              <List.Item>• Нажмите "Добавить популярные" для создания базовых ингредиентов</List.Item>
             </List>
           </div>
         </Group>
@@ -1451,14 +1310,14 @@ function IngredientsPage() {
             <TextInput
               placeholder="Поиск ингредиентов..."
               value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
+              onChange={(e) => setSearchQuery(e.target.value)}
               style={{ flex: 1 }}
               leftSection={<span style={{ fontSize: '12px' }}>🔍</span>}
             />
             <Select
               placeholder="Категория"
               value={filterCategory || ''}
-              onChange={value => setFilterCategory(value || null)}
+              onChange={(value) => setFilterCategory(value || null)}
               data={[{ value: '', label: 'Все категории' }, ...categories]}
               clearable
               w={200}
@@ -1466,7 +1325,7 @@ function IngredientsPage() {
             <Select
               placeholder="Сортировка"
               value={sortBy}
-              onChange={value => setSortBy(value as any)}
+              onChange={(value) => setSortBy(value as any)}
               data={[
                 { value: 'name', label: 'По названию' },
                 { value: 'amount', label: 'По количеству' },
@@ -1504,12 +1363,10 @@ function IngredientsPage() {
       <div>
         {viewMode === 'cards' ? (
           <Grid>
-            {filteredAndSortedIngredients.map(ingredient => {
-              const currentStock =
-                stockItems.find(s => s.ingredient.id === ingredient.id)
-                  ?.amount || 0;
-              const category = getIngredientCategory(ingredient.name);
-              const isLowStock = currentStock < 10;
+            {filteredAndSortedIngredients.map((ingredient) => {
+              const currentStock = stockItems.find((s) => s.ingredient.id === ingredient.id)?.amount || 0
+              const category = getIngredientCategory(ingredient.name)
+              const isLowStock = currentStock < 10
 
               return (
                 <Grid.Col key={ingredient.id} span={4}>
@@ -1519,21 +1376,16 @@ function IngredientsPage() {
                     style={{
                       height: '100%',
                       transition: 'all 0.2s ease',
-                      borderColor: isLowStock
-                        ? 'var(--mantine-color-rose-3)'
-                        : 'var(--mantine-color-gray-3)',
-                      backgroundColor: isLowStock
-                        ? 'var(--mantine-color-rose-0)'
-                        : 'transparent',
+                      borderColor: isLowStock ? 'var(--mantine-color-rose-3)' : 'var(--mantine-color-gray-3)',
+                      backgroundColor: isLowStock ? 'var(--mantine-color-rose-0)' : 'transparent',
                     }}
-                    onMouseEnter={e => {
-                      e.currentTarget.style.transform = 'translateY(-2px)';
-                      e.currentTarget.style.boxShadow =
-                        '0 4px 12px rgba(0,0,0,0.1)';
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.transform = 'translateY(-2px)'
+                      e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)'
                     }}
-                    onMouseLeave={e => {
-                      e.currentTarget.style.transform = 'translateY(0)';
-                      e.currentTarget.style.boxShadow = 'none';
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.transform = 'translateY(0)'
+                      e.currentTarget.style.boxShadow = 'none'
                     }}
                   >
                     <Stack gap="sm">
@@ -1544,8 +1396,7 @@ function IngredientsPage() {
                             {ingredient.name}
                           </Title>
                           <Text size="xs" c="dimmed" mt={4}>
-                            {categories.find(c => c.value === category)
-                              ?.label || '📦 Прочее'}
+                            {categories.find((c) => c.value === category)?.label || '📦 Прочее'}
                           </Text>
                         </div>
                         <ActionIcon
@@ -1571,12 +1422,7 @@ function IngredientsPage() {
                         <Group gap="xs" align="center">
                           <NumberInput
                             value={currentStock}
-                            onChange={value =>
-                              updateIngredientStock(
-                                ingredient.id,
-                                Number(value) || 0
-                              )
-                            }
+                            onChange={(value) => updateIngredientStock(ingredient.id, Number(value) || 0)}
                             min={0}
                             max={9999}
                             w={100}
@@ -1594,24 +1440,14 @@ function IngredientsPage() {
                         <Button
                           variant="light"
                           size="xs"
-                          onClick={() =>
-                            updateIngredientStock(
-                              ingredient.id,
-                              currentStock + 10
-                            )
-                          }
+                          onClick={() => updateIngredientStock(ingredient.id, currentStock + 10)}
                         >
                           +10
                         </Button>
                         <Button
                           variant="light"
                           size="xs"
-                          onClick={() =>
-                            updateIngredientStock(
-                              ingredient.id,
-                              Math.max(0, currentStock - 10)
-                            )
-                          }
+                          onClick={() => updateIngredientStock(ingredient.id, Math.max(0, currentStock - 10))}
                         >
                           -10
                         </Button>
@@ -1619,9 +1455,7 @@ function IngredientsPage() {
                           variant="light"
                           size="xs"
                           color="red"
-                          onClick={() =>
-                            updateIngredientStock(ingredient.id, 0)
-                          }
+                          onClick={() => updateIngredientStock(ingredient.id, 0)}
                         >
                           Очистить
                         </Button>
@@ -1629,7 +1463,7 @@ function IngredientsPage() {
                     </Stack>
                   </Card>
                 </Grid.Col>
-              );
+              )
             })}
           </Grid>
         ) : (
@@ -1644,20 +1478,16 @@ function IngredientsPage() {
               </Table.Tr>
             </Table.Thead>
             <Table.Tbody>
-              {filteredAndSortedIngredients.map(ingredient => {
-                const currentStock =
-                  stockItems.find(s => s.ingredient.id === ingredient.id)
-                    ?.amount || 0;
-                const category = getIngredientCategory(ingredient.name);
-                const isLowStock = currentStock < 10;
+              {filteredAndSortedIngredients.map((ingredient) => {
+                const currentStock = stockItems.find((s) => s.ingredient.id === ingredient.id)?.amount || 0
+                const category = getIngredientCategory(ingredient.name)
+                const isLowStock = currentStock < 10
 
                 return (
                   <Table.Tr
                     key={ingredient.id}
                     style={{
-                      backgroundColor: isLowStock
-                        ? 'var(--mantine-color-rose-0)'
-                        : 'transparent',
+                      backgroundColor: isLowStock ? 'var(--mantine-color-rose-0)' : 'transparent',
                     }}
                   >
                     <Table.Td>
@@ -1665,8 +1495,7 @@ function IngredientsPage() {
                     </Table.Td>
                     <Table.Td>
                       <Badge size="sm" color="gray" variant="light">
-                        {categories.find(c => c.value === category)?.label ||
-                          '📦 Прочее'}
+                        {categories.find((c) => c.value === category)?.label || '📦 Прочее'}
                       </Badge>
                     </Table.Td>
                     <Table.Td>
@@ -1676,12 +1505,7 @@ function IngredientsPage() {
                       <Group gap="xs" align="center">
                         <NumberInput
                           value={currentStock}
-                          onChange={value =>
-                            updateIngredientStock(
-                              ingredient.id,
-                              Number(value) || 0
-                            )
-                          }
+                          onChange={(value) => updateIngredientStock(ingredient.id, Number(value) || 0)}
                           min={0}
                           max={9999}
                           w={100}
@@ -1692,24 +1516,14 @@ function IngredientsPage() {
                           <Button
                             variant="light"
                             size="xs"
-                            onClick={() =>
-                              updateIngredientStock(
-                                ingredient.id,
-                                currentStock + 10
-                              )
-                            }
+                            onClick={() => updateIngredientStock(ingredient.id, currentStock + 10)}
                           >
                             +10
                           </Button>
                           <Button
                             variant="light"
                             size="xs"
-                            onClick={() =>
-                              updateIngredientStock(
-                                ingredient.id,
-                                Math.max(0, currentStock - 10)
-                              )
-                            }
+                            onClick={() => updateIngredientStock(ingredient.id, Math.max(0, currentStock - 10))}
                           >
                             -10
                           </Button>
@@ -1717,17 +1531,12 @@ function IngredientsPage() {
                       </Group>
                     </Table.Td>
                     <Table.Td>
-                      <ActionIcon
-                        variant="light"
-                        color="red"
-                        onClick={() => deleteIngredient(ingredient.id)}
-                        size="sm"
-                      >
+                      <ActionIcon variant="light" color="red" onClick={() => deleteIngredient(ingredient.id)} size="sm">
                         <TrashIcon size={16} />
                       </ActionIcon>
                     </Table.Td>
                   </Table.Tr>
-                );
+                )
               })}
             </Table.Tbody>
           </Table>
@@ -1745,9 +1554,9 @@ function IngredientsPage() {
             color="green"
             onClick={() => {
               // Добавить +10 ко всем ингредиентам в наличии
-              stockItems.forEach(item => {
-                updateIngredientStock(item.ingredient.id, item.amount + 10);
-              });
+              stockItems.forEach((item) => {
+                updateIngredientStock(item.ingredient.id, item.amount + 10)
+              })
             }}
             size="sm"
           >
@@ -1759,10 +1568,10 @@ function IngredientsPage() {
             onClick={() => {
               // Очистить все низкие запасы
               stockItems
-                .filter(item => item.amount < 10)
-                .forEach(item => {
-                  updateIngredientStock(item.ingredient.id, 0);
-                });
+                .filter((item) => item.amount < 10)
+                .forEach((item) => {
+                  updateIngredientStock(item.ingredient.id, 0)
+                })
             }}
             size="sm"
           >
@@ -1773,17 +1582,15 @@ function IngredientsPage() {
             color="blue"
             onClick={() => {
               // Показать только ингредиенты с низкими запасами
-              setFilterCategory(null);
-              setSearchQuery('');
+              setFilterCategory(null)
+              setSearchQuery('')
               // Фильтруем только те, у которых количество < 10
-              const lowStockIngredients = ingredients.filter(ingredient => {
-                const stock =
-                  stockItems.find(s => s.ingredient.id === ingredient.id)
-                    ?.amount || 0;
-                return stock < 10;
-              });
+              const lowStockIngredients = ingredients.filter((ingredient) => {
+                const stock = stockItems.find((s) => s.ingredient.id === ingredient.id)?.amount || 0
+                return stock < 10
+              })
               if (lowStockIngredients.length > 0) {
-                setSearchQuery(lowStockIngredients.map(i => i.name).join(' '));
+                setSearchQuery(lowStockIngredients.map((i) => i.name).join(' '))
               }
             }}
             size="sm"
@@ -1800,9 +1607,9 @@ function IngredientsPage() {
         </Title>
         {stockItems.length > 0 ? (
           <Grid>
-            {stockItems.map(item => {
-              const isLowStock = item.amount < 10;
-              const category = getIngredientCategory(item.ingredient.name);
+            {stockItems.map((item) => {
+              const isLowStock = item.amount < 10
+              const category = getIngredientCategory(item.ingredient.name)
 
               return (
                 <Grid.Col key={item.ingredient.name} span={4}>
@@ -1810,12 +1617,8 @@ function IngredientsPage() {
                     withBorder
                     p="sm"
                     style={{
-                      backgroundColor: isLowStock
-                        ? 'var(--mantine-color-amber-0)'
-                        : 'var(--mantine-color-sage-0)',
-                      borderColor: isLowStock
-                        ? 'var(--mantine-color-amber-3)'
-                        : 'var(--mantine-color-sage-3)',
+                      backgroundColor: isLowStock ? 'var(--mantine-color-amber-0)' : 'var(--mantine-color-sage-0)',
+                      borderColor: isLowStock ? 'var(--mantine-color-amber-3)' : 'var(--mantine-color-sage-3)',
                     }}
                   >
                     <Group justify="space-between" align="center">
@@ -1824,21 +1627,16 @@ function IngredientsPage() {
                           {item.ingredient.name}
                         </Text>
                         <Text size="xs" c="dimmed">
-                          {categories.find(c => c.value === category)?.label ||
-                            '📦 Прочее'}
+                          {categories.find((c) => c.value === category)?.label || '📦 Прочее'}
                         </Text>
                       </div>
-                      <Badge
-                        color={isLowStock ? 'amber' : 'sage'}
-                        variant="light"
-                        size="sm"
-                      >
+                      <Badge color={isLowStock ? 'amber' : 'sage'} variant="light" size="sm">
                         {item.amount} {item.ingredient.amountType}
                       </Badge>
                     </Group>
                   </Card>
                 </Grid.Col>
-              );
+              )
             })}
           </Grid>
         ) : (
@@ -1848,7 +1646,7 @@ function IngredientsPage() {
         )}
       </Card>
     </Stack>
-  );
+  )
 }
 
 function Amount(props: { children: React.ReactNode }) {
@@ -1856,7 +1654,7 @@ function Amount(props: { children: React.ReactNode }) {
     <Text component="span" c="gray.6" fw={500}>
       {props.children}{' '}
     </Text>
-  );
+  )
 }
 
 function CreateRecipeForm() {
@@ -1870,21 +1668,19 @@ function CreateRecipeForm() {
     cookingTime: 0,
     difficulty: '',
     ingredients: [{ name: '', amount: 0, amountType: 'гр' }],
-  });
+  })
 
-  const [loading, setLoading] = React.useState(false);
-  const [ingredientSearch, setIngredientSearch] = React.useState<string[]>([
-    '',
-  ]);
-  const modalOpened = useStore($createRecipeModal);
-  const ingredients = useStore($ingredients);
+  const [loading, setLoading] = React.useState(false)
+  const [ingredientSearch, setIngredientSearch] = React.useState<string[]>([''])
+  const modalOpened = useStore($createRecipeModal)
+  const ingredients = useStore($ingredients)
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
+    e.preventDefault()
+    setLoading(true)
 
     try {
-      await createRecipe(formData);
+      await createRecipe(formData)
       // Сбрасываем форму
       setFormData({
         name: '',
@@ -1896,119 +1692,92 @@ function CreateRecipeForm() {
         cookingTime: 0,
         difficulty: '',
         ingredients: [{ name: '', amount: 0, amountType: 'гр' }],
-      });
-      setIngredientSearch(['']);
+      })
+      setIngredientSearch([''])
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
   const addIngredient = () => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      ingredients: [
-        ...prev.ingredients,
-        { name: '', amount: 0, amountType: 'гр' },
-      ],
-    }));
-    setIngredientSearch(prev => [...prev, '']);
-  };
+      ingredients: [...prev.ingredients, { name: '', amount: 0, amountType: 'гр' }],
+    }))
+    setIngredientSearch((prev) => [...prev, ''])
+  }
 
   const removeIngredient = (index: number) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       ingredients: prev.ingredients.filter((_, i) => i !== index),
-    }));
-    setIngredientSearch(prev => prev.filter((_, i) => i !== index));
-  };
+    }))
+    setIngredientSearch((prev) => prev.filter((_, i) => i !== index))
+  }
 
-  const updateIngredient = (
-    index: number,
-    field: string,
-    value: string | number
-  ) => {
-    setFormData(prev => ({
+  const updateIngredient = (index: number, field: string, value: string | number) => {
+    setFormData((prev) => ({
       ...prev,
-      ingredients: prev.ingredients.map((ing, i) =>
-        i === index ? { ...ing, [field]: value } : ing
-      ),
-    }));
-  };
+      ingredients: prev.ingredients.map((ing, i) => (i === index ? { ...ing, [field]: value } : ing)),
+    }))
+  }
 
   const handleIngredientSearch = (index: number, searchValue: string) => {
-    setIngredientSearch(prev =>
-      prev.map((val, i) => (i === index ? searchValue : val))
-    );
-  };
+    setIngredientSearch((prev) => prev.map((val, i) => (i === index ? searchValue : val)))
+  }
 
-  const handleIngredientSelect = async (
-    index: number,
-    selectedValue: string | null
-  ) => {
-    if (!selectedValue) return;
+  const handleIngredientSelect = async (index: number, selectedValue: string | null) => {
+    if (!selectedValue) return
 
     // Проверяем, является ли это новым ингредиентом
     if (selectedValue.startsWith('Создать: ')) {
-      const newIngredientName = selectedValue.replace('Создать: ', '');
-      const currentAmountType = formData.ingredients[index]?.amountType || 'гр';
+      const newIngredientName = selectedValue.replace('Создать: ', '')
+      const currentAmountType = formData.ingredients[index]?.amountType || 'гр'
 
       try {
         await createIngredient({
           name: newIngredientName,
           amountType: currentAmountType,
-        });
+        })
         // Обновляем форму с новым ингредиентом
-        updateIngredient(index, 'name', newIngredientName);
-        setIngredientSearch(prev =>
-          prev.map((val, i) => (i === index ? '' : val))
-        );
+        updateIngredient(index, 'name', newIngredientName)
+        setIngredientSearch((prev) => prev.map((val, i) => (i === index ? '' : val)))
       } catch (error) {
-        console.error('Ошибка создания ингредиента:', error);
+        console.error('Ошибка создания ингредиента:', error)
       }
     } else {
       // Выбираем существующий ингредиент
-      updateIngredient(index, 'name', selectedValue);
-      setIngredientSearch(prev =>
-        prev.map((val, i) => (i === index ? '' : val))
-      );
+      updateIngredient(index, 'name', selectedValue)
+      setIngredientSearch((prev) => prev.map((val, i) => (i === index ? '' : val)))
     }
-  };
+  }
 
   const getFilteredIngredients = (searchValue: string, index: number) => {
-    if (!searchValue) return ingredients.map(ing => ing.name);
+    if (!searchValue) return ingredients.map((ing) => ing.name)
 
     const filtered = ingredients
-      .filter(ing => ing.name.toLowerCase().includes(searchValue.toLowerCase()))
-      .map(ing => ing.name);
+      .filter((ing) => ing.name.toLowerCase().includes(searchValue.toLowerCase()))
+      .map((ing) => ing.name)
 
     // Добавляем опцию создания нового ингредиента, если он не найден
-    const exactMatch = ingredients.some(
-      ing => ing.name.toLowerCase() === searchValue.toLowerCase()
-    );
+    const exactMatch = ingredients.some((ing) => ing.name.toLowerCase() === searchValue.toLowerCase())
 
     if (!exactMatch && searchValue.trim()) {
-      filtered.push(`Создать: ${searchValue}`);
+      filtered.push(`Создать: ${searchValue}`)
     }
 
-    return filtered;
-  };
+    return filtered
+  }
 
   return (
-    <Modal
-      opened={modalOpened}
-      onClose={() => $createRecipeModal.set(false)}
-      title="Создать новый рецепт"
-      size="lg"
-    >
+    <Modal opened={modalOpened} onClose={() => $createRecipeModal.set(false)} title="Создать новый рецепт" size="lg">
       <form onSubmit={handleSubmit}>
         <Stack gap="md">
           <TextInput
             label="Название рецепта"
             placeholder="Введите название рецепта"
             value={formData.name}
-            onChange={e =>
-              setFormData(prev => ({ ...prev, name: e.target.value }))
-            }
+            onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
             required
           />
 
@@ -2017,9 +1786,7 @@ function CreateRecipeForm() {
               label="Калории"
               placeholder="0"
               value={formData.calories}
-              onChange={value =>
-                setFormData(prev => ({ ...prev, calories: Number(value) || 0 }))
-              }
+              onChange={(value) => setFormData((prev) => ({ ...prev, calories: Number(value) || 0 }))}
               min={0}
               required
             />
@@ -2027,9 +1794,7 @@ function CreateRecipeForm() {
               label="Белки (г)"
               placeholder="0"
               value={formData.proteins}
-              onChange={value =>
-                setFormData(prev => ({ ...prev, proteins: Number(value) || 0 }))
-              }
+              onChange={(value) => setFormData((prev) => ({ ...prev, proteins: Number(value) || 0 }))}
               min={0}
               required
             />
@@ -2037,9 +1802,7 @@ function CreateRecipeForm() {
               label="Жиры (г)"
               placeholder="0"
               value={formData.fats}
-              onChange={value =>
-                setFormData(prev => ({ ...prev, fats: Number(value) || 0 }))
-              }
+              onChange={(value) => setFormData((prev) => ({ ...prev, fats: Number(value) || 0 }))}
               min={0}
               required
             />
@@ -2047,8 +1810,8 @@ function CreateRecipeForm() {
               label="Углеводы (г)"
               placeholder="0"
               value={formData.carbohydrates}
-              onChange={value =>
-                setFormData(prev => ({
+              onChange={(value) =>
+                setFormData((prev) => ({
                   ...prev,
                   carbohydrates: Number(value) || 0,
                 }))
@@ -2068,8 +1831,8 @@ function CreateRecipeForm() {
               label="Время приготовления (мин)"
               placeholder="0"
               value={formData.cookingTime}
-              onChange={value =>
-                setFormData(prev => ({
+              onChange={(value) =>
+                setFormData((prev) => ({
                   ...prev,
                   cookingTime: Number(value) || 0,
                 }))
@@ -2080,9 +1843,7 @@ function CreateRecipeForm() {
               label="Сложность"
               placeholder="Выберите сложность"
               value={formData.difficulty}
-              onChange={value =>
-                setFormData(prev => ({ ...prev, difficulty: value || '' }))
-              }
+              onChange={(value) => setFormData((prev) => ({ ...prev, difficulty: value || '' }))}
               data={[
                 { value: 'easy', label: '🟢 Легко' },
                 { value: 'medium', label: '🟡 Средне' },
@@ -2097,7 +1858,7 @@ function CreateRecipeForm() {
             placeholder="Опишите пошагово процесс приготовления..."
             value={formData.instructions}
             onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
-              setFormData(prev => ({ ...prev, instructions: e.target.value }))
+              setFormData((prev) => ({ ...prev, instructions: e.target.value }))
             }
             minRows={4}
             maxRows={8}
@@ -2124,13 +1885,10 @@ function CreateRecipeForm() {
                 label="Название"
                 placeholder="Начните вводить название ингредиента"
                 value={ingredient.name}
-                onChange={value => handleIngredientSelect(index, value)}
-                data={getFilteredIngredients(
-                  ingredientSearch[index] || '',
-                  index
-                )}
+                onChange={(value) => handleIngredientSelect(index, value)}
+                data={getFilteredIngredients(ingredientSearch[index] || '', index)}
                 searchValue={ingredientSearch[index] || ''}
-                onSearchChange={value => handleIngredientSearch(index, value)}
+                onSearchChange={(value) => handleIngredientSearch(index, value)}
                 searchable
                 style={{ flex: 1 }}
                 required
@@ -2139,9 +1897,7 @@ function CreateRecipeForm() {
                 label="Количество"
                 placeholder="0"
                 value={ingredient.amount}
-                onChange={value =>
-                  updateIngredient(index, 'amount', Number(value) || 0)
-                }
+                onChange={(value) => updateIngredient(index, 'amount', Number(value) || 0)}
                 min={0}
                 w={120}
                 required
@@ -2149,20 +1905,13 @@ function CreateRecipeForm() {
               <Select
                 label="Единица"
                 value={ingredient.amountType}
-                onChange={value =>
-                  updateIngredient(index, 'amountType', value || 'гр')
-                }
+                onChange={(value) => updateIngredient(index, 'amountType', value || 'гр')}
                 data={['гр', 'мл', 'шт', 'по вкусу']}
                 w={120}
                 required
               />
               {formData.ingredients.length > 1 && (
-                <ActionIcon
-                  variant="light"
-                  color="rose"
-                  onClick={() => removeIngredient(index)}
-                  mb={4}
-                >
+                <ActionIcon variant="light" color="rose" onClick={() => removeIngredient(index)} mb={4}>
                   <TrashIcon size={16} />
                 </ActionIcon>
               )}
@@ -2170,20 +1919,14 @@ function CreateRecipeForm() {
           ))}
 
           <Group justify="flex-end" mt="md">
-            <Button
-              variant="light"
-              onClick={() => $createRecipeModal.set(false)}
-              disabled={loading}
-            >
+            <Button variant="light" onClick={() => $createRecipeModal.set(false)} disabled={loading}>
               Отмена
             </Button>
             <Button
               type="submit"
               color="sage"
               loading={loading}
-              disabled={
-                !formData.name || formData.ingredients.some(ing => !ing.name)
-              }
+              disabled={!formData.name || formData.ingredients.some((ing) => !ing.name)}
             >
               Создать рецепт
             </Button>
@@ -2191,34 +1934,34 @@ function CreateRecipeForm() {
         </Stack>
       </form>
     </Modal>
-  );
+  )
 }
 
 function CreateIngredientForm() {
   const [formData, setFormData] = React.useState({
     name: '',
     amountType: 'гр',
-  });
+  })
 
-  const [loading, setLoading] = React.useState(false);
-  const modalOpened = useStore($createIngredientModal);
+  const [loading, setLoading] = React.useState(false)
+  const modalOpened = useStore($createIngredientModal)
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
+    e.preventDefault()
+    setLoading(true)
 
     try {
-      await createIngredient(formData);
+      await createIngredient(formData)
       // Сбрасываем форму
       setFormData({
         name: '',
         amountType: 'гр',
-      });
-      $createIngredientModal.set(false); // Закрываем модальное окно
+      })
+      $createIngredientModal.set(false) // Закрываем модальное окно
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
   return (
     <Modal
@@ -2233,28 +1976,20 @@ function CreateIngredientForm() {
             label="Название ингредиента"
             placeholder="Введите название ингредиента"
             value={formData.name}
-            onChange={e =>
-              setFormData(prev => ({ ...prev, name: e.target.value }))
-            }
+            onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
             required
           />
 
           <Select
             label="Единица измерения"
             value={formData.amountType}
-            onChange={value =>
-              setFormData(prev => ({ ...prev, amountType: value || 'гр' }))
-            }
+            onChange={(value) => setFormData((prev) => ({ ...prev, amountType: value || 'гр' }))}
             data={['гр', 'мл', 'шт', 'по вкусу']}
             required
           />
 
           <Group justify="flex-end" mt="md">
-            <Button
-              variant="light"
-              onClick={() => $createIngredientModal.set(false)}
-              disabled={loading}
-            >
+            <Button variant="light" onClick={() => $createIngredientModal.set(false)} disabled={loading}>
               Отмена
             </Button>
             <Button type="submit" loading={loading} disabled={!formData.name}>
@@ -2264,224 +1999,197 @@ function CreateIngredientForm() {
         </Stack>
       </form>
     </Modal>
-  );
+  )
 }
 
 function CalendarPage() {
-  const recipes = useStore($recipes);
-  const calendarItems = useStore($calendarItems);
-  const loading = useStore($loading);
-  const user = useStore($user);
-  const [selectedDate, setSelectedDate] = React.useState<Date | null>(null);
-  const [selectedRecipe, setSelectedRecipe] = React.useState<number | null>(
-    null
-  );
-  const [currentWeek, setCurrentWeek] = React.useState(new Date());
-  const [searchQuery, setSearchQuery] = React.useState('');
-  const [quickMealType, setQuickMealType] = React.useState<string | null>(null);
+  const recipes = useStore($recipes)
+  const calendarItems = useStore($calendarItems)
+  const loading = useStore($loading)
+  const user = useStore($user)
+  const [selectedDate, setSelectedDate] = React.useState<Date | null>(null)
+  const [selectedRecipe, setSelectedRecipe] = React.useState<number | null>(null)
+  const [currentWeek, setCurrentWeek] = React.useState(new Date())
+  const [searchQuery, setSearchQuery] = React.useState('')
+  const [quickMealType, setQuickMealType] = React.useState<string | null>(null)
 
   // Состояние для drag & drop
-  const [draggedItem, setDraggedItem] = React.useState<CalendarItem | null>(
-    null
-  );
-  const [dragOverDate, setDragOverDate] = React.useState<Date | null>(null);
+  const [draggedItem, setDraggedItem] = React.useState<CalendarItem | null>(null)
+  const [dragOverDate, setDragOverDate] = React.useState<Date | null>(null)
 
   const handleAddToCalendar = () => {
     if (selectedDate && selectedRecipe) {
-      const dateString = selectedDate.toISOString().split('T')[0];
+      const dateString = selectedDate.toISOString().split('T')[0]
       if (dateString) {
         // Используем выбранный тип приема пищи или 'lunch' по умолчанию
-        const mealType = quickMealType || 'lunch';
-        addToCalendar(dateString, selectedRecipe, mealType);
-        setSelectedRecipe(null);
-        setQuickMealType(null);
+        const mealType = quickMealType || 'lunch'
+        addToCalendar(dateString, selectedRecipe, mealType)
+        setSelectedRecipe(null)
+        setQuickMealType(null)
         // НЕ сбрасываем selectedDate, чтобы можно было добавлять еще рецепты на тот же день
       }
     }
-  };
+  }
 
   const handleDateClick = (date: Date) => {
     // Если кликаем на уже выбранный день, отменяем выбор
     if (selectedDate && selectedDate.toDateString() === date.toDateString()) {
-      setSelectedDate(null);
-      setSelectedRecipe(null);
+      setSelectedDate(null)
+      setSelectedRecipe(null)
     } else {
-      setSelectedDate(date);
+      setSelectedDate(date)
     }
-  };
+  }
 
   const handleCancelSelection = () => {
-    setSelectedRecipe(null);
-    setQuickMealType(null);
+    setSelectedRecipe(null)
+    setQuickMealType(null)
     // НЕ сбрасываем selectedDate, чтобы можно было добавлять еще рецепты на тот же день
-  };
+  }
 
   const handleCancelDateSelection = () => {
-    setSelectedDate(null);
-    setSelectedRecipe(null);
-    setQuickMealType(null);
-  };
+    setSelectedDate(null)
+    setSelectedRecipe(null)
+    setQuickMealType(null)
+  }
 
   const handleQuickMeal = (mealType: string) => {
-    setQuickMealType(mealType);
+    setQuickMealType(mealType)
     // Если выбранная дата не установлена, используем сегодняшний день
     if (!selectedDate) {
-      setSelectedDate(new Date());
+      setSelectedDate(new Date())
     }
     // Автоматически выбираем первый подходящий рецепт
-    const filteredRecipes = recipes.filter(recipe =>
-      recipe.name.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    const filteredRecipes = recipes.filter((recipe) => recipe.name.toLowerCase().includes(searchQuery.toLowerCase()))
     if (filteredRecipes.length > 0 && filteredRecipes[0]) {
-      setSelectedRecipe(filteredRecipes[0].id);
+      setSelectedRecipe(filteredRecipes[0].id)
     }
-  };
+  }
 
-  const filteredRecipes = recipes.filter(recipe =>
-    recipe.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredRecipes = recipes.filter((recipe) => recipe.name.toLowerCase().includes(searchQuery.toLowerCase()))
 
   const getWeekStats = () => {
-    const weekStart = getWeekStart(currentWeek);
-    let totalCalories = 0;
-    let totalRecipes = 0;
+    const weekStart = getWeekStart(currentWeek)
+    let totalCalories = 0
+    let totalRecipes = 0
 
     for (let i = 0; i < 7; i++) {
-      const date = new Date(weekStart);
-      date.setDate(weekStart.getDate() + i);
-      const events = getEventsForDate(date);
-      totalCalories += events.reduce(
-        (sum, event) => sum + event.recipe.calories,
-        0
-      );
-      totalRecipes += events.length;
+      const date = new Date(weekStart)
+      date.setDate(weekStart.getDate() + i)
+      const events = getEventsForDate(date)
+      totalCalories += events.reduce((sum, event) => sum + event.recipe.calories, 0)
+      totalRecipes += events.length
     }
 
-    return { totalCalories, totalRecipes };
-  };
+    return { totalCalories, totalRecipes }
+  }
 
   const getSelectedDayStats = () => {
     if (!selectedDate) {
-      return { totalCalories: 0, totalRecipes: 0, totalProteins: 0 };
+      return { totalCalories: 0, totalRecipes: 0, totalProteins: 0 }
     }
 
-    const events = getEventsForDate(selectedDate);
-    const totalCalories = events.reduce(
-      (sum, event) => sum + event.recipe.calories,
-      0
-    );
-    const totalProteins = events.reduce(
-      (sum, event) => sum + event.recipe.proteins,
-      0
-    );
-    const totalRecipes = events.length;
+    const events = getEventsForDate(selectedDate)
+    const totalCalories = events.reduce((sum, event) => sum + event.recipe.calories, 0)
+    const totalProteins = events.reduce((sum, event) => sum + event.recipe.proteins, 0)
+    const totalRecipes = events.length
 
-    return { totalCalories, totalRecipes, totalProteins };
-  };
+    return { totalCalories, totalRecipes, totalProteins }
+  }
 
   const getWeekStart = (date: Date) => {
-    const weekStart = new Date(date);
-    const dayOfWeek = date.getDay();
-    const diff = date.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
-    weekStart.setDate(diff);
-    return weekStart;
-  };
+    const weekStart = new Date(date)
+    const dayOfWeek = date.getDay()
+    const diff = date.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1)
+    weekStart.setDate(diff)
+    return weekStart
+  }
 
   const getWeekDays = (weekStart: Date) => {
-    const days = [];
+    const days = []
     for (let i = 0; i < 7; i++) {
-      const date = new Date(weekStart);
-      date.setDate(weekStart.getDate() + i);
-      days.push(date);
+      const date = new Date(weekStart)
+      date.setDate(weekStart.getDate() + i)
+      days.push(date)
     }
-    return days;
-  };
+    return days
+  }
 
   // Функции для drag & drop
   const handleDragStart = (e: React.DragEvent, item: CalendarItem) => {
-    setDraggedItem(item);
-    e.dataTransfer.effectAllowed = 'move';
-    e.dataTransfer.setData('text/plain', item.id.toString());
-  };
+    setDraggedItem(item)
+    e.dataTransfer.effectAllowed = 'move'
+    e.dataTransfer.setData('text/plain', item.id.toString())
+  }
 
   const handleDragOver = (e: React.DragEvent, date: Date) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
-    setDragOverDate(date);
-  };
+    e.preventDefault()
+    e.dataTransfer.dropEffect = 'move'
+    setDragOverDate(date)
+  }
 
   const handleDragLeave = (e: React.DragEvent) => {
-    e.preventDefault();
-    setDragOverDate(null);
-  };
+    e.preventDefault()
+    setDragOverDate(null)
+  }
 
   const handleDrop = async (e: React.DragEvent, targetDate: Date) => {
-    e.preventDefault();
-    setDragOverDate(null);
+    e.preventDefault()
+    setDragOverDate(null)
 
     if (draggedItem) {
-      const targetDateString = targetDate.toISOString().split('T')[0] || '';
-      const originalDateString =
-        new Date(draggedItem.date).toISOString().split('T')[0] || '';
+      const targetDateString = targetDate.toISOString().split('T')[0] || ''
+      const originalDateString = new Date(draggedItem.date).toISOString().split('T')[0] || ''
 
       // Если дата не изменилась, ничего не делаем
       if (targetDateString === originalDateString) {
-        setDraggedItem(null);
-        return;
+        setDraggedItem(null)
+        return
       }
 
       try {
         // Удаляем рецепт с исходной даты
-        await removeFromCalendar(draggedItem.id);
+        await removeFromCalendar(draggedItem.id)
 
         // Добавляем рецепт на новую дату
-        await addToCalendar(
-          targetDateString,
-          draggedItem.recipeId,
-          draggedItem.mealType
-        );
+        await addToCalendar(targetDateString, draggedItem.recipeId, draggedItem.mealType)
 
-        setDraggedItem(null);
+        setDraggedItem(null)
       } catch (error) {
-        console.error('Ошибка при перемещении рецепта:', error);
-        alert('Ошибка при перемещении рецепта');
-        setDraggedItem(null);
+        console.error('Ошибка при перемещении рецепта:', error)
+        alert('Ошибка при перемещении рецепта')
+        setDraggedItem(null)
       }
     }
-  };
+  }
 
   const handleDragEnd = () => {
-    setDraggedItem(null);
-    setDragOverDate(null);
-  };
+    setDraggedItem(null)
+    setDragOverDate(null)
+  }
 
   const getEventsForDate = (date: Date) => {
-    const dateString = date.toISOString().split('T')[0];
-    return calendarItems.filter(item => {
-      const itemDate = new Date(item.date).toISOString().split('T')[0];
-      return itemDate === dateString;
-    });
-  };
+    const dateString = date.toISOString().split('T')[0]
+    return calendarItems.filter((item) => {
+      const itemDate = new Date(item.date).toISOString().split('T')[0]
+      return itemDate === dateString
+    })
+  }
 
   const renderDay = (date: Date) => {
-    const events = getEventsForDate(date);
-    const isToday = new Date().toDateString() === date.toDateString();
-    const isSelected =
-      selectedDate && selectedDate.toDateString() === date.toDateString();
-    const isWeekend = date.getDay() === 0 || date.getDay() === 6;
-    const totalCalories = events.reduce(
-      (sum, event) => sum + event.recipe.calories,
-      0
-    );
+    const events = getEventsForDate(date)
+    const isToday = new Date().toDateString() === date.toDateString()
+    const isSelected = selectedDate && selectedDate.toDateString() === date.toDateString()
+    const isWeekend = date.getDay() === 0 || date.getDay() === 6
+    const totalCalories = events.reduce((sum, event) => sum + event.recipe.calories, 0)
 
     // Проверяем, принадлежит ли дата текущей неделе
-    const weekStart = getWeekStart(currentWeek);
-    const weekEnd = new Date(weekStart);
-    weekEnd.setDate(weekStart.getDate() + 6);
-    const isCurrentWeek = date >= weekStart && date <= weekEnd;
+    const weekStart = getWeekStart(currentWeek)
+    const weekEnd = new Date(weekStart)
+    weekEnd.setDate(weekStart.getDate() + 6)
+    const isCurrentWeek = date >= weekStart && date <= weekEnd
 
-    const isDragOver =
-      dragOverDate && dragOverDate.toDateString() === date.toDateString();
+    const isDragOver = dragOverDate && dragOverDate.toDateString() === date.toDateString()
 
     return (
       <Box
@@ -2506,34 +2214,26 @@ function CalendarPage() {
           transition: 'all 0.2s ease',
           opacity: isCurrentWeek ? 1 : 0.4,
         }}
-        onMouseEnter={e => {
+        onMouseEnter={(e) => {
           if (!isSelected && isCurrentWeek) {
-            e.currentTarget.style.transform = 'scale(1.02)';
-            e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.1)';
+            e.currentTarget.style.transform = 'scale(1.02)'
+            e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.1)'
           }
         }}
-        onMouseLeave={e => {
-          e.currentTarget.style.transform = 'scale(1)';
-          e.currentTarget.style.boxShadow = 'none';
+        onMouseLeave={(e) => {
+          e.currentTarget.style.transform = 'scale(1)'
+          e.currentTarget.style.boxShadow = 'none'
         }}
         onClick={() => isCurrentWeek && handleDateClick(date)}
-        onDragOver={e => isCurrentWeek && handleDragOver(e, date)}
-        onDragLeave={e => isCurrentWeek && handleDragLeave(e)}
-        onDrop={e => isCurrentWeek && handleDrop(e, date)}
+        onDragOver={(e) => isCurrentWeek && handleDragOver(e, date)}
+        onDragLeave={(e) => isCurrentWeek && handleDragLeave(e)}
+        onDrop={(e) => isCurrentWeek && handleDrop(e, date)}
       >
         <Group justify="space-between" align="flex-start" mb={4}>
           <Text
             size="sm"
             fw={isToday ? 700 : 500}
-            c={
-              isToday
-                ? 'teal'
-                : isWeekend
-                  ? 'dimmed'
-                  : isCurrentWeek
-                    ? 'inherit'
-                    : 'dimmed'
-            }
+            c={isToday ? 'teal' : isWeekend ? 'dimmed' : isCurrentWeek ? 'inherit' : 'dimmed'}
           >
             {date.getDate()}
           </Text>
@@ -2546,16 +2246,16 @@ function CalendarPage() {
 
         {events.length > 0 && isCurrentWeek && (
           <Stack gap={2}>
-            {events.slice(0, 2).map(event => {
+            {events.slice(0, 2).map((event) => {
               const mealTypeEmoji =
                 {
                   breakfast: '🌅',
                   lunch: '🍽️',
                   dinner: '🌙',
                   snack: '🍎',
-                }[event.mealType] || '🍽️';
+                }[event.mealType] || '🍽️'
 
-              const isDragging = draggedItem && draggedItem.id === event.id;
+              const isDragging = draggedItem && draggedItem.id === event.id
 
               return (
                 <Badge
@@ -2574,15 +2274,13 @@ function CalendarPage() {
                     transform: isDragging ? 'rotate(5deg)' : 'none',
                   }}
                   draggable
-                  onDragStart={e => handleDragStart(e, event)}
+                  onDragStart={(e) => handleDragStart(e, event)}
                   onDragEnd={handleDragEnd}
                 >
                   <span style={{ fontSize: '8px' }}>{mealTypeEmoji}</span>
-                  {event.recipe.name.length > 10
-                    ? event.recipe.name.substring(0, 10) + '...'
-                    : event.recipe.name}
+                  {event.recipe.name.length > 10 ? event.recipe.name.substring(0, 10) + '...' : event.recipe.name}
                 </Badge>
-              );
+              )
             })}
             {events.length > 2 && (
               <Text size="xs" c="dimmed">
@@ -2592,11 +2290,11 @@ function CalendarPage() {
           </Stack>
         )}
       </Box>
-    );
-  };
+    )
+  }
 
-  const weekDays = getWeekDays(getWeekStart(currentWeek));
-  const weekDayLabels = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
+  const weekDays = getWeekDays(getWeekStart(currentWeek))
+  const weekDayLabels = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс']
 
   return (
     <Stack gap="lg" pos="relative">
@@ -2606,24 +2304,22 @@ function CalendarPage() {
         <div>
           <Title>Календарь планирования питания</Title>
           {(() => {
-            const selectedStats = getSelectedDayStats();
-            const weekStats = getWeekStats();
+            const selectedStats = getSelectedDayStats()
+            const weekStats = getWeekStats()
 
             if (selectedDate) {
               return (
                 <Text size="sm" c="dimmed" mt={4}>
-                  Выбранный день ({selectedDate.toLocaleDateString('ru-RU')}):{' '}
-                  {selectedStats.totalRecipes} рецептов,{' '}
+                  Выбранный день ({selectedDate.toLocaleDateString('ru-RU')}): {selectedStats.totalRecipes} рецептов,{' '}
                   {selectedStats.totalCalories} ккал
                 </Text>
-              );
+              )
             } else {
               return (
                 <Text size="sm" c="dimmed" mt={4}>
-                  На этой неделе: {weekStats.totalRecipes} рецептов,{' '}
-                  {weekStats.totalCalories} ккал
+                  На этой неделе: {weekStats.totalRecipes} рецептов, {weekStats.totalCalories} ккал
                 </Text>
-              );
+              )
             }
           })()}
         </div>
@@ -2641,10 +2337,9 @@ function CalendarPage() {
       <Breadcrumbs />
 
       <Text c="dimmed">
-        Планируйте свое питание на неделю. Кликните на день, чтобы добавить
-        рецепт. Перетаскивайте рецепты между днями для быстрого планирования.
-        Все рецепты из календаря можно добавить в корзину одним кликом. Выходные
-        дни выделены серым цветом, а суббота и воскресенье - розовым.
+        Планируйте свое питание на неделю. Кликните на день, чтобы добавить рецепт. Перетаскивайте рецепты между днями
+        для быстрого планирования. Все рецепты из календаря можно добавить в корзину одним кликом. Выходные дни выделены
+        серым цветом, а суббота и воскресенье - розовым.
       </Text>
 
       <Grid>
@@ -2657,9 +2352,7 @@ function CalendarPage() {
                 month: 'long',
               })}{' '}
               -{' '}
-              {new Date(
-                getWeekStart(currentWeek).getTime() + 6 * 24 * 60 * 60 * 1000
-              ).toLocaleDateString('ru-RU', {
+              {new Date(getWeekStart(currentWeek).getTime() + 6 * 24 * 60 * 60 * 1000).toLocaleDateString('ru-RU', {
                 day: 'numeric',
                 month: 'long',
                 year: 'numeric',
@@ -2670,27 +2363,23 @@ function CalendarPage() {
                 variant="light"
                 size="sm"
                 onClick={() => {
-                  const prevWeek = new Date(currentWeek);
-                  prevWeek.setDate(currentWeek.getDate() - 7);
-                  setCurrentWeek(prevWeek);
+                  const prevWeek = new Date(currentWeek)
+                  prevWeek.setDate(currentWeek.getDate() - 7)
+                  setCurrentWeek(prevWeek)
                 }}
               >
                 ←
               </Button>
-              <Button
-                variant="light"
-                size="sm"
-                onClick={() => setCurrentWeek(new Date())}
-              >
+              <Button variant="light" size="sm" onClick={() => setCurrentWeek(new Date())}>
                 Сегодня
               </Button>
               <Button
                 variant="light"
                 size="sm"
                 onClick={() => {
-                  const nextWeek = new Date(currentWeek);
-                  nextWeek.setDate(currentWeek.getDate() + 7);
-                  setCurrentWeek(nextWeek);
+                  const nextWeek = new Date(currentWeek)
+                  nextWeek.setDate(currentWeek.getDate() + 7)
+                  setCurrentWeek(nextWeek)
                 }}
               >
                 →
@@ -2705,13 +2394,7 @@ function CalendarPage() {
               <Grid columns={7} style={{ width: '100%' }}>
                 {weekDayLabels.map((day, index) => (
                   <Grid.Col key={day} span={1}>
-                    <Text
-                      ta="center"
-                      fw={600}
-                      size="md"
-                      c={index === 5 || index === 6 ? 'rose' : 'dimmed'}
-                      py="xs"
-                    >
+                    <Text ta="center" fw={600} size="md" c={index === 5 || index === 6 ? 'rose' : 'dimmed'} py="xs">
                       {day}
                     </Text>
                   </Grid.Col>
@@ -2740,7 +2423,7 @@ function CalendarPage() {
                     📊 Статистика дня
                   </Title>
                   {(() => {
-                    const stats = getSelectedDayStats();
+                    const stats = getSelectedDayStats()
                     return (
                       <Stack gap="xs">
                         <Group justify="space-between">
@@ -2784,7 +2467,7 @@ function CalendarPage() {
                           </Stack>
                         )}
                       </Stack>
-                    );
+                    )
                   })()}
                 </Card>
 
@@ -2822,14 +2505,14 @@ function CalendarPage() {
                   )}
 
                   <Stack gap="xs" mb="md">
-                    {getEventsForDate(selectedDate).map(item => {
+                    {getEventsForDate(selectedDate).map((item) => {
                       const mealTypeEmoji =
                         {
                           breakfast: '🌅',
                           lunch: '🍽️',
                           dinner: '🌙',
                           snack: '🍎',
-                        }[item.mealType] || '🍽️';
+                        }[item.mealType] || '🍽️'
 
                       const mealTypeLabel =
                         {
@@ -2837,10 +2520,9 @@ function CalendarPage() {
                           lunch: 'Обед',
                           dinner: 'Ужин',
                           snack: 'Перекус',
-                        }[item.mealType] || 'Прием пищи';
+                        }[item.mealType] || 'Прием пищи'
 
-                      const isDragging =
-                        draggedItem && draggedItem.id === item.id;
+                      const isDragging = draggedItem && draggedItem.id === item.id
 
                       return (
                         <Group
@@ -2850,15 +2532,13 @@ function CalendarPage() {
                           style={{
                             padding: '8px',
                             borderRadius: '4px',
-                            backgroundColor: isDragging
-                              ? 'var(--mantine-color-gray-1)'
-                              : 'transparent',
+                            backgroundColor: isDragging ? 'var(--mantine-color-gray-1)' : 'transparent',
                             cursor: 'grab',
                             opacity: isDragging ? 0.5 : 1,
                             transform: isDragging ? 'rotate(2deg)' : 'none',
                           }}
                           draggable
-                          onDragStart={e => handleDragStart(e, item)}
+                          onDragStart={(e) => handleDragStart(e, item)}
                           onDragEnd={handleDragEnd}
                         >
                           <div>
@@ -2871,21 +2551,15 @@ function CalendarPage() {
                               {item.recipe.name}
                             </Text>
                             <Text size="xs" c="dimmed">
-                              КБЖУ: {item.recipe.calories}/
-                              {item.recipe.proteins}/{item.recipe.fats}/
+                              КБЖУ: {item.recipe.calories}/{item.recipe.proteins}/{item.recipe.fats}/
                               {item.recipe.carbohydrates}
                             </Text>
                           </div>
-                          <ActionIcon
-                            variant="light"
-                            color="red"
-                            size="sm"
-                            onClick={() => removeFromCalendar(item.id)}
-                          >
+                          <ActionIcon variant="light" color="red" size="sm" onClick={() => removeFromCalendar(item.id)}>
                             <TrashIcon size={12} />
                           </ActionIcon>
                         </Group>
-                      );
+                      )
                     })}
                   </Stack>
 
@@ -2898,9 +2572,7 @@ function CalendarPage() {
                   {/* Быстрые действия */}
                   <Group gap="xs" mb="sm">
                     <Button
-                      variant={
-                        quickMealType === 'breakfast' ? 'filled' : 'light'
-                      }
+                      variant={quickMealType === 'breakfast' ? 'filled' : 'light'}
                       size="xs"
                       onClick={() => handleQuickMeal('breakfast')}
                       color="orange"
@@ -2937,7 +2609,7 @@ function CalendarPage() {
                   <TextInput
                     placeholder="Поиск рецептов..."
                     value={searchQuery}
-                    onChange={e => setSearchQuery(e.target.value)}
+                    onChange={(e) => setSearchQuery(e.target.value)}
                     mb="sm"
                     leftSection={<span style={{ fontSize: '12px' }}>🔍</span>}
                   />
@@ -2945,10 +2617,8 @@ function CalendarPage() {
                   <Select
                     placeholder="Выберите рецепт"
                     value={selectedRecipe?.toString() || ''}
-                    onChange={value =>
-                      setSelectedRecipe(value ? Number(value) : null)
-                    }
-                    data={filteredRecipes.map(recipe => ({
+                    onChange={(value) => setSelectedRecipe(value ? Number(value) : null)}
+                    data={filteredRecipes.map((recipe) => ({
                       value: recipe.id.toString(),
                       label: `${recipe.name} (${recipe.calories} ккал)`,
                     }))}
@@ -2957,7 +2627,7 @@ function CalendarPage() {
                   />
                   {selectedRecipe &&
                     (() => {
-                      const recipe = recipes.find(r => r.id === selectedRecipe);
+                      const recipe = recipes.find((r) => r.id === selectedRecipe)
                       return recipe ? (
                         <Card
                           withBorder
@@ -2985,29 +2655,17 @@ function CalendarPage() {
                             </Badge>
                           </Group>
                         </Card>
-                      ) : null;
+                      ) : null
                     })()}
 
-                  <Button
-                    onClick={handleAddToCalendar}
-                    disabled={!selectedRecipe}
-                    size="sm"
-                    fullWidth
-                    mb="sm"
-                  >
+                  <Button onClick={handleAddToCalendar} disabled={!selectedRecipe} size="sm" fullWidth mb="sm">
                     {quickMealType
                       ? `Добавить на ${quickMealType === 'breakfast' ? 'завтрак' : quickMealType === 'lunch' ? 'обед' : quickMealType === 'dinner' ? 'ужин' : 'перекус'}`
                       : 'Добавить (обед по умолчанию)'}
                   </Button>
 
                   <Group gap="xs">
-                    <Button
-                      variant="light"
-                      color="gray"
-                      onClick={handleCancelSelection}
-                      size="sm"
-                      style={{ flex: 1 }}
-                    >
+                    <Button variant="light" color="gray" onClick={handleCancelSelection} size="sm" style={{ flex: 1 }}>
                       Очистить выбор рецепта
                     </Button>
                     <Button
@@ -3035,26 +2693,26 @@ function CalendarPage() {
         </Grid.Col>
       </Grid>
     </Stack>
-  );
+  )
 }
 
 function Recipe() {
-  const params = useParams();
-  const id: number = Number(params.id);
-  const recipes = useStore($recipes);
-  const recipe = recipes.find(r => r.id === id);
-  const [servings, setServings] = React.useState(1);
-  const [isFavorite, setIsFavorite] = React.useState(false);
+  const params = useParams()
+  const id: number = Number(params.id)
+  const recipes = useStore($recipes)
+  const recipe = recipes.find((r) => r.id === id)
+  const [servings, setServings] = React.useState(1)
+  const [isFavorite, setIsFavorite] = React.useState(false)
 
   if (!recipe) {
-    return 'Not found';
+    return 'Not found'
   }
 
   // Расчет ингредиентов с учетом количества порций
-  const scaledIngredients = recipe.ingredients.map(ingredient => ({
+  const scaledIngredients = recipe.ingredients.map((ingredient) => ({
     ...ingredient,
     scaledAmount: ingredient.amount * servings,
-  }));
+  }))
 
   // Расчет КБЖУ с учетом количества порций
   const scaledNutrition = {
@@ -3062,16 +2720,14 @@ function Recipe() {
     proteins: recipe.proteins * servings,
     fats: recipe.fats * servings,
     carbohydrates: recipe.carbohydrates * servings,
-  };
+  }
 
   // Процент готовности (наличие ингредиентов)
-  const availableIngredients = scaledIngredients.filter(ingredient => {
-    const available = getIngredientStock(ingredient.name);
-    return available >= ingredient.scaledAmount;
-  });
-  const readinessPercentage = Math.round(
-    (availableIngredients.length / scaledIngredients.length) * 100
-  );
+  const availableIngredients = scaledIngredients.filter((ingredient) => {
+    const available = getIngredientStock(ingredient.name)
+    return available >= ingredient.scaledAmount
+  })
+  const readinessPercentage = Math.round((availableIngredients.length / scaledIngredients.length) * 100)
 
   return (
     <Stack gap="lg">
@@ -3081,25 +2737,13 @@ function Recipe() {
           Назад к рецептам
         </Button>
         <Group gap="xs">
-          <ActionIcon
-            variant={isFavorite ? 'filled' : 'light'}
-            color="red"
-            onClick={() => setIsFavorite(!isFavorite)}
-          >
+          <ActionIcon variant={isFavorite ? 'filled' : 'light'} color="red" onClick={() => setIsFavorite(!isFavorite)}>
             ❤️
           </ActionIcon>
-          <ActionIcon
-            variant="subtle"
-            color="blue"
-            onClick={() => openEditRecipeModal(recipe)}
-          >
+          <ActionIcon variant="subtle" color="blue" onClick={() => openEditRecipeModal(recipe)}>
             <PencilIcon size={16} />
           </ActionIcon>
-          <ActionIcon
-            variant="subtle"
-            color="red"
-            onClick={() => handleDeleteRecipe(recipe.id)}
-          >
+          <ActionIcon variant="subtle" color="red" onClick={() => handleDeleteRecipe(recipe.id)}>
             <TrashIcon size={16} />
           </ActionIcon>
         </Group>
@@ -3140,13 +2784,7 @@ function Recipe() {
                   <Text
                     size="sm"
                     fw={700}
-                    c={
-                      readinessPercentage === 100
-                        ? 'green'
-                        : readinessPercentage > 50
-                          ? 'orange'
-                          : 'red'
-                    }
+                    c={readinessPercentage === 100 ? 'green' : readinessPercentage > 50 ? 'orange' : 'red'}
                   >
                     {readinessPercentage}%
                   </Text>
@@ -3192,9 +2830,7 @@ function Recipe() {
                 </ActionIcon>
                 <NumberInput
                   value={servings}
-                  onChange={value =>
-                    setServings(Math.max(1, Number(value) || 1))
-                  }
+                  onChange={(value) => setServings(Math.max(1, Number(value) || 1))}
                   min={1}
                   max={20}
                   w={80}
@@ -3222,20 +2858,14 @@ function Recipe() {
               Ингредиенты ({scaledIngredients.length})
             </Title>
             <Grid>
-              {scaledIngredients.map(ingredient => {
-                const available = getIngredientStock(ingredient.name);
-                const hasEnough = available >= ingredient.scaledAmount;
+              {scaledIngredients.map((ingredient) => {
+                const available = getIngredientStock(ingredient.name)
+                const hasEnough = available >= ingredient.scaledAmount
                 const icon = hasEnough ? (
-                  <CheckCircleFillIcon
-                    size={16}
-                    fill="var(--mantine-color-green-8)"
-                  />
+                  <CheckCircleFillIcon size={16} fill="var(--mantine-color-green-8)" />
                 ) : (
-                  <XCircleFillIcon
-                    size={16}
-                    fill="var(--mantine-color-red-8)"
-                  />
-                );
+                  <XCircleFillIcon size={16} fill="var(--mantine-color-red-8)" />
+                )
 
                 return (
                   <Grid.Col key={ingredient.name} span={6}>
@@ -3243,12 +2873,8 @@ function Recipe() {
                       withBorder
                       p="sm"
                       style={{
-                        backgroundColor: hasEnough
-                          ? 'var(--mantine-color-green-0)'
-                          : 'var(--mantine-color-red-0)',
-                        borderColor: hasEnough
-                          ? 'var(--mantine-color-green-3)'
-                          : 'var(--mantine-color-red-3)',
+                        backgroundColor: hasEnough ? 'var(--mantine-color-green-0)' : 'var(--mantine-color-red-0)',
+                        borderColor: hasEnough ? 'var(--mantine-color-green-3)' : 'var(--mantine-color-red-3)',
                       }}
                     >
                       <Group gap="sm">
@@ -3265,7 +2891,7 @@ function Recipe() {
                       </Group>
                     </Card>
                   </Grid.Col>
-                );
+                )
               })}
             </Grid>
           </div>
@@ -3315,14 +2941,8 @@ function Recipe() {
               <Title order={3} mb="md">
                 Инструкции приготовления
               </Title>
-              <Card
-                withBorder
-                p="md"
-                style={{ backgroundColor: 'var(--mantine-color-gray-0)' }}
-              >
-                <Text style={{ whiteSpace: 'pre-line' }}>
-                  {recipe.instructions}
-                </Text>
+              <Card withBorder p="md" style={{ backgroundColor: 'var(--mantine-color-gray-0)' }}>
+                <Text style={{ whiteSpace: 'pre-line' }}>{recipe.instructions}</Text>
               </Card>
             </div>
           )}
@@ -3351,8 +2971,8 @@ function Recipe() {
                 leftSection="📋"
                 onClick={() => {
                   // Копирование рецепта в буфер обмена
-                  const recipeText = `${recipe.name}\n\nКБЖУ: ${recipe.calories}/${recipe.proteins}/${recipe.fats}/${recipe.carbohydrates}\n\nИнгредиенты:\n${recipe.ingredients.map(i => `- ${i.name}: ${i.amount} ${i.amountType}`).join('\n')}`;
-                  navigator.clipboard.writeText(recipeText);
+                  const recipeText = `${recipe.name}\n\nКБЖУ: ${recipe.calories}/${recipe.proteins}/${recipe.fats}/${recipe.carbohydrates}\n\nИнгредиенты:\n${recipe.ingredients.map((i) => `- ${i.name}: ${i.amount} ${i.amountType}`).join('\n')}`
+                  navigator.clipboard.writeText(recipeText)
                 }}
                 size="lg"
               >
@@ -3371,17 +2991,15 @@ function Recipe() {
           </Title>
           <Grid>
             {recipes
-              .filter(r => r.id !== recipe.id)
+              .filter((r) => r.id !== recipe.id)
               .slice(0, 3)
-              .map(similarRecipe => (
+              .map((similarRecipe) => (
                 <Grid.Col key={similarRecipe.id} span={4}>
                   <Card
                     withBorder
                     p="md"
                     style={{ cursor: 'pointer' }}
-                    onClick={() =>
-                      (window.location.href = `/recipe/${similarRecipe.id}`)
-                    }
+                    onClick={() => (window.location.href = `/recipe/${similarRecipe.id}`)}
                   >
                     <Title order={4} mb="sm">
                       {similarRecipe.name}
@@ -3395,7 +3013,7 @@ function Recipe() {
                       </Badge>
                     </Group>
                     <Text size="xs" c="dimmed" lineClamp={2}>
-                      {similarRecipe.ingredients.map(i => i.name).join(', ')}
+                      {similarRecipe.ingredients.map((i) => i.name).join(', ')}
                     </Text>
                   </Card>
                 </Grid.Col>
@@ -3404,49 +3022,49 @@ function Recipe() {
         </Card>
       )}
     </Stack>
-  );
+  )
 }
 
 function App() {
-  const user = useStore($user);
-  const isAuthenticated = useStore($isAuthenticated);
-  const loading = useStore($loading);
+  const user = useStore($user)
+  const isAuthenticated = useStore($isAuthenticated)
+  const loading = useStore($loading)
   // Хуки для модального окна календаря
-  const addToCalendarModalOpened = useStore($addToCalendarModal);
-  const selectedRecipeForCalendar = useStore($selectedRecipeForCalendar);
+  const addToCalendarModalOpened = useStore($addToCalendarModal)
+  const selectedRecipeForCalendar = useStore($selectedRecipeForCalendar)
 
   // Хуки для модального окна редактирования рецепта
-  const editRecipeModalOpened = useStore($editRecipeModal);
-  const selectedRecipeForEdit = useStore($selectedRecipeForEdit);
+  const editRecipeModalOpened = useStore($editRecipeModal)
+  const selectedRecipeForEdit = useStore($selectedRecipeForEdit)
 
   // Проверяем авторизацию при монтировании компонента
   React.useEffect(() => {
-    checkAuth();
-  }, []);
+    checkAuth()
+  }, [])
 
   // Обрабатываем параметры URL после редиректа от Google
   React.useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const authStatus = urlParams.get('auth');
+    const urlParams = new URLSearchParams(window.location.search)
+    const authStatus = urlParams.get('auth')
 
     if (authStatus === 'success') {
       // Очищаем URL параметры
-      window.history.replaceState({}, document.title, window.location.pathname);
+      window.history.replaceState({}, document.title, window.location.pathname)
       // Проверяем авторизацию заново
-      checkAuth();
+      checkAuth()
     } else if (authStatus === 'error') {
       // Очищаем URL параметры
-      window.history.replaceState({}, document.title, window.location.pathname);
-      alert('Ошибка авторизации. Попробуйте еще раз.');
+      window.history.replaceState({}, document.title, window.location.pathname)
+      alert('Ошибка авторизации. Попробуйте еще раз.')
     }
-  }, []);
+  }, [])
 
   // Загружаем данные при монтировании компонента (только если авторизованы)
   React.useEffect(() => {
     if (isAuthenticated) {
-      loadData();
+      loadData()
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated])
 
   // Если проверяем авторизацию, показываем загрузку
   if (loading && !isAuthenticated) {
@@ -3461,7 +3079,7 @@ function App() {
       >
         <LoadingOverlay visible />
       </div>
-    );
+    )
   }
 
   // Если не авторизованы, показываем страницу входа
@@ -3472,7 +3090,7 @@ function App() {
           <Login onLogin={handleLogin} />
         </Providers>
       </div>
-    );
+    )
   }
 
   return (
@@ -3516,37 +3134,37 @@ function App() {
         />
       </Providers>
     </div>
-  );
+  )
 }
 
 // Экспорты для использования в других компонентах
 export {
+  $addToCalendarModal,
+  $calendarItems,
+  $createIngredientModal,
+  $createRecipeModal,
+  $favoriteRecipes,
+  $ingredients,
+  $isAuthenticated,
   $loading,
   $recipes,
-  $ingredients,
-  $stockItems,
-  $shoppingList,
-  $calendarItems,
-  $favoriteRecipes,
-  $createRecipeModal,
-  $createIngredientModal,
-  $addToCalendarModal,
   $selectedRecipeForCalendar,
+  $shoppingList,
+  $stockItems,
   $user,
-  $isAuthenticated,
-  exportShoppingListToPDF,
+  closeAddToCalendarModal,
+  closeEditRecipeModal,
   exportCalendarToPDF,
   exportFoodDiaryToPDF,
-  toggleFavoriteRecipe,
+  exportShoppingListToPDF,
+  getIngredientStock,
+  handleAddToCalendarConfirm,
+  handleDeleteRecipe,
+  handleEditRecipeSave,
   isRecipeFavorite,
   openAddToCalendarModal,
-  closeAddToCalendarModal,
-  handleAddToCalendarConfirm,
   openEditRecipeModal,
-  closeEditRecipeModal,
-  handleEditRecipeSave,
-  handleDeleteRecipe,
-  getIngredientStock,
-};
+  toggleFavoriteRecipe,
+}
 
-export default App;
+export default App

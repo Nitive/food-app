@@ -1,18 +1,17 @@
-import React from 'react';
-import { Group, Button, Tooltip } from '@mantine/core';
-import { PlusIcon, DownloadIcon, TrashIcon } from '@primer/octicons-react';
-import { useStore } from '@nanostores/react';
-import { $createRecipeModal, $createIngredientModal } from '../app.js';
+import { Button, Group, Tooltip } from '@mantine/core'
+import { useStore } from '@nanostores/react'
+import { DownloadIcon, PlusIcon, TrashIcon } from '@primer/octicons-react'
+import { $createIngredientModal, $createRecipeModal } from '../app.js'
 
 interface QuickActionsProps {
-  onExportPDF?: () => void;
-  onClearData?: () => void;
-  showCreateRecipe?: boolean;
-  showCreateIngredient?: boolean;
-  showExport?: boolean;
-  showClear?: boolean;
-  exportLabel?: string;
-  clearLabel?: string;
+  onExportPDF?: () => void
+  onClearData?: () => void
+  showCreateRecipe?: boolean
+  showCreateIngredient?: boolean
+  showExport?: boolean
+  showClear?: boolean
+  exportLabel?: string
+  clearLabel?: string
 }
 
 export function QuickActions({
@@ -25,8 +24,8 @@ export function QuickActions({
   exportLabel = 'Экспорт в PDF',
   clearLabel = 'Очистить',
 }: QuickActionsProps) {
-  const createRecipeModal = useStore($createRecipeModal);
-  const createIngredientModal = useStore($createIngredientModal);
+  const createRecipeModal = useStore($createRecipeModal)
+  const createIngredientModal = useStore($createIngredientModal)
 
   return (
     <Group gap="xs">
@@ -60,13 +59,7 @@ export function QuickActions({
 
       {showExport && onExportPDF && (
         <Tooltip label={exportLabel}>
-          <Button
-            variant="light"
-            color="teal"
-            leftSection={<DownloadIcon size={16} />}
-            onClick={onExportPDF}
-            size="sm"
-          >
+          <Button variant="light" color="teal" leftSection={<DownloadIcon size={16} />} onClick={onExportPDF} size="sm">
             {exportLabel}
           </Button>
         </Tooltip>
@@ -74,17 +67,11 @@ export function QuickActions({
 
       {showClear && onClearData && (
         <Tooltip label={clearLabel}>
-          <Button
-            variant="light"
-            color="rose"
-            leftSection={<TrashIcon size={16} />}
-            onClick={onClearData}
-            size="sm"
-          >
+          <Button variant="light" color="rose" leftSection={<TrashIcon size={16} />} onClick={onClearData} size="sm">
             {clearLabel}
           </Button>
         </Tooltip>
       )}
     </Group>
-  );
+  )
 }

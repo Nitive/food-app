@@ -100,9 +100,7 @@
         <!-- Рецепты будут добавлены через JavaScript -->
       </div>
 
-      <button class="clear-btn" onclick="clearFavorites()">
-        🗑️ Очистить все любимые рецепты
-      </button>
+      <button class="clear-btn" onclick="clearFavorites()">🗑️ Очистить все любимые рецепты</button>
 
       <div id="status"></div>
     </div>
@@ -204,16 +202,16 @@
             { name: 'Лук', amount: 85, amountType: 'гр' },
           ],
         },
-      ];
+      ]
 
       // Отображаем рецепты
       function displayRecipes() {
-        const container = document.getElementById('recipes-container');
-        container.innerHTML = '';
+        const container = document.getElementById('recipes-container')
+        container.innerHTML = ''
 
-        testRecipes.forEach(recipe => {
-          const recipeDiv = document.createElement('div');
-          recipeDiv.className = 'recipe-item';
+        testRecipes.forEach((recipe) => {
+          const recipeDiv = document.createElement('div')
+          recipeDiv.className = 'recipe-item'
 
           recipeDiv.innerHTML = `
                     <div class="recipe-info">
@@ -225,111 +223,108 @@
                     <button class="add-btn" onclick="addToFavorites(${recipe.id})">
                         ❤️ Добавить в любимые
                     </button>
-                `;
+                `
 
-          container.appendChild(recipeDiv);
-        });
+          container.appendChild(recipeDiv)
+        })
       }
 
       // Добавить рецепт в любимые
       function addToFavorites(recipeId) {
-        const recipe = testRecipes.find(r => r.id === recipeId);
+        const recipe = testRecipes.find((r) => r.id === recipeId)
         if (!recipe) {
-          showStatus('Рецепт не найден', 'error');
-          return;
+          showStatus('Рецепт не найден', 'error')
+          return
         }
 
         // Получаем текущие любимые рецепты
-        let favorites = [];
+        let favorites = []
         try {
-          const saved = localStorage.getItem('favoriteRecipes');
+          const saved = localStorage.getItem('favoriteRecipes')
           if (saved) {
-            favorites = JSON.parse(saved);
+            favorites = JSON.parse(saved)
           }
         } catch (error) {
-          console.error('Ошибка загрузки любимых рецептов:', error);
+          console.error('Ошибка загрузки любимых рецептов:', error)
         }
 
         // Проверяем, не добавлен ли уже
-        if (favorites.some(fav => fav.id === recipeId)) {
-          showStatus(`Рецепт "${recipe.name}" уже в любимых!`, 'info');
-          return;
+        if (favorites.some((fav) => fav.id === recipeId)) {
+          showStatus(`Рецепт "${recipe.name}" уже в любимых!`, 'info')
+          return
         }
 
         // Добавляем рецепт
-        favorites.push(recipe);
-        localStorage.setItem('favoriteRecipes', JSON.stringify(favorites));
+        favorites.push(recipe)
+        localStorage.setItem('favoriteRecipes', JSON.stringify(favorites))
 
-        showStatus(`✅ Рецепт "${recipe.name}" добавлен в любимые!`, 'success');
+        showStatus(`✅ Рецепт "${recipe.name}" добавлен в любимые!`, 'success')
 
         // Обновляем кнопку
-        updateButton(recipeId);
+        updateButton(recipeId)
       }
 
       // Обновить кнопку после добавления
       function updateButton(recipeId) {
-        const buttons = document.querySelectorAll('.add-btn');
-        buttons.forEach(button => {
+        const buttons = document.querySelectorAll('.add-btn')
+        buttons.forEach((button) => {
           if (button.onclick.toString().includes(recipeId)) {
-            button.textContent = '❤️ В любимых';
-            button.style.background = '#e83e8c';
-            button.disabled = true;
+            button.textContent = '❤️ В любимых'
+            button.style.background = '#e83e8c'
+            button.disabled = true
           }
-        });
+        })
       }
 
       // Очистить все любимые рецепты
       function clearFavorites() {
         if (window.confirm('Вы уверены, что хотите очистить все любимые рецепты?')) {
-          localStorage.removeItem('favoriteRecipes');
-          showStatus('🗑️ Все любимые рецепты очищены!', 'success');
+          localStorage.removeItem('favoriteRecipes')
+          showStatus('🗑️ Все любимые рецепты очищены!', 'success')
 
           // Обновляем все кнопки
-          const buttons = document.querySelectorAll('.add-btn');
-          buttons.forEach(button => {
-            button.textContent = '❤️ Добавить в любимые';
-            button.style.background = '#20c997';
-            button.disabled = false;
-          });
+          const buttons = document.querySelectorAll('.add-btn')
+          buttons.forEach((button) => {
+            button.textContent = '❤️ Добавить в любимые'
+            button.style.background = '#20c997'
+            button.disabled = false
+          })
         }
       }
 
       // Показать статус
       function showStatus(message, type) {
-        const statusDiv = document.getElementById('status');
-        statusDiv.textContent = message;
-        statusDiv.className = `status ${type}`;
+        const statusDiv = document.getElementById('status')
+        statusDiv.textContent = message
+        statusDiv.className = `status ${type}`
 
         setTimeout(() => {
-          statusDiv.textContent = '';
-          statusDiv.className = 'status';
-        }, 3000);
+          statusDiv.textContent = ''
+          statusDiv.className = 'status'
+        }, 3000)
       }
 
       // Проверить существующие любимые рецепты
       function checkExistingFavorites() {
         try {
-          const saved = localStorage.getItem('favoriteRecipes');
+          const saved = localStorage.getItem('favoriteRecipes')
           if (saved) {
-            const favorites = JSON.parse(saved);
-            favorites.forEach(fav => {
-              updateButton(fav.id);
-            });
-            showStatus(
-              `📋 Найдено ${favorites.length} любимых рецептов`,
-              'info'
-            );
+            const favorites = JSON.parse(saved)
+            favorites.forEach((fav) => {
+              updateButton(fav.id)
+            })
+            showStatus(`📋 Найдено ${favorites.length} любимых рецептов`, 'info')
           }
         } catch (error) {
-          console.error('Ошибка проверки любимых рецептов:', error);
+          console.error('Ошибка проверки любимых рецептов:', error)
         }
       }
 
       // Инициализация
       document.addEventListener('DOMContentLoaded', function () {
-        displayRecipes();
-        checkExistingFavorites();
-      });
+        displayRecipes()
+        checkExistingFavorites()
+      })
     </script>
   </body>
 </html>

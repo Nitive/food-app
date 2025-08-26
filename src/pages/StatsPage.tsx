@@ -1,39 +1,22 @@
-import React from 'react';
-import {
-  Stack,
-  Title,
-  Text,
-  Group,
-  Card,
-  Grid,
-  LoadingOverlay,
-} from '@mantine/core';
-import { useStore } from '@nanostores/react';
-import {
-  $recipes,
-  $shoppingList,
-  $calendarItems,
-  $ingredients,
-  $stockItems,
-  $loading,
-  $user,
-} from '../app.js';
-import { UserMenu } from '../components/UserMenu.js';
-import { Breadcrumbs } from '../components/Breadcrumbs.js';
-import { QuickActions } from '../components/QuickActions.js';
+import { Card, Grid, Group, LoadingOverlay, Stack, Text, Title } from '@mantine/core'
+import { useStore } from '@nanostores/react'
+import { $calendarItems, $ingredients, $loading, $recipes, $shoppingList, $stockItems, $user } from '../app.js'
+import { Breadcrumbs } from '../components/Breadcrumbs.js'
+import { QuickActions } from '../components/QuickActions.js'
+import { UserMenu } from '../components/UserMenu.js'
 
 export function StatsPage() {
-  const recipes = useStore($recipes);
-  const shoppingList = useStore($shoppingList);
-  const calendarItems = useStore($calendarItems);
-  const ingredients = useStore($ingredients);
-  const stockItems = useStore($stockItems);
-  const loading = useStore($loading);
-  const user = useStore($user);
+  const recipes = useStore($recipes)
+  const shoppingList = useStore($shoppingList)
+  const calendarItems = useStore($calendarItems)
+  const ingredients = useStore($ingredients)
+  const stockItems = useStore($stockItems)
+  const loading = useStore($loading)
+  const user = useStore($user)
 
   const handleLogout = () => {
     // Функция будет передана из основного компонента
-  };
+  }
 
   // Общая статистика
   const totalStats = {
@@ -42,47 +25,30 @@ export function StatsPage() {
     calendarItems: calendarItems.length,
     ingredients: ingredients.length,
     stockItems: stockItems.length,
-  };
+  }
 
   // Статистика калорий
   const caloriesStats = {
-    totalCalendar: calendarItems.reduce(
-      (sum: number, item: any) => sum + item.recipe.calories,
-      0
-    ),
+    totalCalendar: calendarItems.reduce((sum: number, item: any) => sum + item.recipe.calories, 0),
     avgRecipe:
-      recipes.length > 0
-        ? recipes.reduce(
-            (sum: number, recipe: any) => sum + recipe.calories,
-            0
-          ) / recipes.length
-        : 0,
-  };
+      recipes.length > 0 ? recipes.reduce((sum: number, recipe: any) => sum + recipe.calories, 0) / recipes.length : 0,
+  }
 
   // Статистика ингредиентов
   const ingredientsStats = {
-    totalUnique: new Set(
-      recipes.flatMap((recipe: any) =>
-        recipe.ingredients.map((ing: any) => ing.name)
-      )
-    ).size,
+    totalUnique: new Set(recipes.flatMap((recipe: any) => recipe.ingredients.map((ing: any) => ing.name))).size,
     lowStock: stockItems.filter((item: any) => item.amount < 10).length,
-    totalStock: stockItems.reduce(
-      (sum: number, item: any) => sum + item.amount,
-      0
-    ),
-  };
+    totalStock: stockItems.reduce((sum: number, item: any) => sum + item.amount, 0),
+  }
 
   // Популярные рецепты
   const popularRecipes = recipes
     .map((recipe: any) => ({
       ...recipe,
-      inCalendarCount: calendarItems.filter(
-        (item: any) => item.recipeId === recipe.id
-      ).length,
+      inCalendarCount: calendarItems.filter((item: any) => item.recipeId === recipe.id).length,
     }))
     .sort((a: any, b: any) => b.inCalendarCount - a.inCalendarCount)
-    .slice(0, 5);
+    .slice(0, 5)
 
   return (
     <Stack gap="lg" pos="relative">
@@ -251,11 +217,7 @@ export function StatsPage() {
       </Card>
 
       {/* Дополнительная информация */}
-      <Card
-        withBorder
-        p="md"
-        style={{ backgroundColor: 'var(--mantine-color-teal-0)' }}
-      >
+      <Card withBorder p="md" style={{ backgroundColor: 'var(--mantine-color-teal-0)' }}>
         <Group gap="md" align="flex-start">
           <div style={{ fontSize: '24px' }}>💡</div>
           <div style={{ flex: 1 }}>
@@ -265,16 +227,14 @@ export function StatsPage() {
             <Text size="sm" c="dimmed">
               • Статистика обновляется в реальном времени
               <br />
-              • Популярность рецептов рассчитывается по использованию в
-              календаре
+              • Популярность рецептов рассчитывается по использованию в календаре
               <br />
               • Ингредиенты с количеством менее 10 считаются заканчивающимися
-              <br />• Уникальные ингредиенты - это все разные ингредиенты во
-              всех рецептах
+              <br />• Уникальные ингредиенты - это все разные ингредиенты во всех рецептах
             </Text>
           </div>
         </Group>
       </Card>
     </Stack>
-  );
+  )
 }

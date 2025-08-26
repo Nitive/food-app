@@ -1,92 +1,75 @@
-import React from 'react';
 import {
-  Title,
-  Card,
-  Text,
-  Group,
-  Badge,
-  Stack,
-  Button,
   ActionIcon,
-  Box,
-  Grid,
-  Paper,
-  Divider,
-  Select,
-  TextInput,
-  Flex,
   Alert,
+  Badge,
+  Box,
+  Button,
+  Card,
+  Divider,
+  Flex,
+  Grid,
+  Group,
+  Select,
+  Stack,
+  Text,
+  TextInput,
   ThemeIcon,
-} from '@mantine/core';
-import {
-  HeartIcon,
-  HeartFillIcon,
-  PlusIcon,
-  TrashIcon,
-  CalendarIcon,
-} from '@primer/octicons-react';
-import { useStore } from '@nanostores/react';
-import {
-  $favoriteRecipes,
-  $user,
-  toggleFavoriteRecipe,
-  openAddToCalendarModal,
-  getIngredientStock,
-} from '../app.js';
-import { UserMenu } from '../components/UserMenu.js';
-import { Breadcrumbs } from '../components/Breadcrumbs.js';
-import { QuickActions } from '../components/QuickActions.js';
-import { Link } from 'react-router-dom';
-import type { Recipe } from '../api-client.js';
+  Title,
+} from '@mantine/core'
+import { useStore } from '@nanostores/react'
+import { CalendarIcon, HeartFillIcon, HeartIcon, PlusIcon } from '@primer/octicons-react'
+import React from 'react'
+import { Link } from 'react-router-dom'
+import type { Recipe } from '../api-client.js'
+import { $favoriteRecipes, $user, getIngredientStock, openAddToCalendarModal, toggleFavoriteRecipe } from '../app.js'
+import { Breadcrumbs } from '../components/Breadcrumbs.js'
+import { QuickActions } from '../components/QuickActions.js'
+import { UserMenu } from '../components/UserMenu.js'
 
 export function FavoritesPage() {
-  const favoriteRecipes = useStore($favoriteRecipes);
-  const user = useStore($user);
-  const [searchQuery, setSearchQuery] = React.useState('');
-  const [sortBy, setSortBy] = React.useState<'name' | 'calories' | 'proteins'>(
-    'name'
-  );
+  const favoriteRecipes = useStore($favoriteRecipes)
+  const user = useStore($user)
+  const [searchQuery, setSearchQuery] = React.useState('')
+  const [sortBy, setSortBy] = React.useState<'name' | 'calories' | 'proteins'>('name')
 
   // Фильтрация и сортировка любимых рецептов
   const filteredAndSortedRecipes = React.useMemo(() => {
-    const filtered = favoriteRecipes.filter(recipe =>
-      recipe.name.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    const filtered = favoriteRecipes.filter((recipe) => recipe.name.toLowerCase().includes(searchQuery.toLowerCase()))
 
     // Сортировка
     filtered.sort((a, b) => {
       switch (sortBy) {
         case 'name':
-          return a.name.localeCompare(b.name);
+          return a.name.localeCompare(b.name)
         case 'calories':
-          return a.calories - b.calories;
+          return a.calories - b.calories
         case 'proteins':
-          return b.proteins - a.proteins;
+          return b.proteins - a.proteins
         default:
-          return 0;
+          return 0
       }
-    });
+    })
 
-    return filtered;
-  }, [favoriteRecipes, searchQuery, sortBy]);
+    return filtered
+  }, [favoriteRecipes, searchQuery, sortBy])
 
   const handleToggleFavorite = (recipe: Recipe) => {
-    toggleFavoriteRecipe(recipe);
-  };
+    toggleFavoriteRecipe(recipe)
+  }
 
   const handleAddToCalendar = (recipe: Recipe) => {
-    openAddToCalendarModal(recipe);
-  };
+    openAddToCalendarModal(recipe)
+  }
 
   const handleAddAllToCalendar = () => {
-    filteredAndSortedRecipes.forEach(recipe => {
-      openAddToCalendarModal(recipe);
-    });
-  };
+    filteredAndSortedRecipes.forEach((recipe) => {
+      openAddToCalendarModal(recipe)
+    })
+  }
 
   const getIngredientStockValue = (ingredientName: string): number => {
-    return getIngredientStock(ingredientName);
-  };
+    return getIngredientStock(ingredientName)
+  }
 
   if (favoriteRecipes.length === 0) {
     return (
@@ -106,8 +89,7 @@ export function FavoritesPage() {
             У вас пока нет сохраненных рецептов
           </Text>
           <Text size="sm" c="dimmed" mb="xl" maw={400} mx="auto">
-            Отмечайте рецепты сердечком на странице рецептов, чтобы они
-            появились здесь
+            Отмечайте рецепты сердечком на странице рецептов, чтобы они появились здесь
           </Text>
           <Button
             component={Link}
@@ -121,7 +103,7 @@ export function FavoritesPage() {
           </Button>
         </Box>
       </div>
-    );
+    )
   }
 
   return (
@@ -140,14 +122,14 @@ export function FavoritesPage() {
           <TextInput
             placeholder="Поиск по названию рецепта..."
             value={searchQuery}
-            onChange={e => setSearchQuery(e.target.value)}
+            onChange={(e) => setSearchQuery(e.target.value)}
             leftSection={<span>🔍</span>}
             style={{ flex: 1, minWidth: 250 }}
           />
           <Select
             placeholder="Сортировка"
             value={sortBy}
-            onChange={value => setSortBy(value as any)}
+            onChange={(value) => setSortBy(value as any)}
             data={[
               { value: 'name', label: 'По названию' },
               { value: 'calories', label: 'По калориям' },
@@ -190,10 +172,7 @@ export function FavoritesPage() {
           <Card withBorder p="md" style={{ textAlign: 'center' }}>
             <Text size="xl" fw={700} c="teal">
               {favoriteRecipes.length > 0
-                ? Math.round(
-                    favoriteRecipes.reduce((sum, r) => sum + r.calories, 0) /
-                      favoriteRecipes.length
-                  )
+                ? Math.round(favoriteRecipes.reduce((sum, r) => sum + r.calories, 0) / favoriteRecipes.length)
                 : 0}
             </Text>
             <Text size="sm" c="dimmed">
@@ -205,10 +184,7 @@ export function FavoritesPage() {
           <Card withBorder p="md" style={{ textAlign: 'center' }}>
             <Text size="xl" fw={700} c="blue">
               {favoriteRecipes.length > 0
-                ? Math.round(
-                    favoriteRecipes.reduce((sum, r) => sum + r.proteins, 0) /
-                      favoriteRecipes.length
-                  )
+                ? Math.round(favoriteRecipes.reduce((sum, r) => sum + r.proteins, 0) / favoriteRecipes.length)
                 : 0}
             </Text>
             <Text size="sm" c="dimmed">
@@ -219,10 +195,7 @@ export function FavoritesPage() {
         <Grid.Col span={3}>
           <Card withBorder p="md" style={{ textAlign: 'center' }}>
             <Text size="xl" fw={700} c="orange">
-              {favoriteRecipes.reduce(
-                (sum, r) => sum + r.ingredients.length,
-                0
-              )}
+              {favoriteRecipes.reduce((sum, r) => sum + r.ingredients.length, 0)}
             </Text>
             <Text size="sm" c="dimmed">
               Ингредиентов
@@ -232,18 +205,13 @@ export function FavoritesPage() {
       </Grid>
 
       {filteredAndSortedRecipes.length === 0 && searchQuery ? (
-        <Alert
-          icon={<span>🔍</span>}
-          title="Рецепты не найдены"
-          color="blue"
-          mb="lg"
-        >
-          По запросу "{searchQuery}" не найдено любимых рецептов. Попробуйте
-          изменить поисковый запрос или очистить фильтр.
+        <Alert icon={<span>🔍</span>} title="Рецепты не найдены" color="blue" mb="lg">
+          По запросу "{searchQuery}" не найдено любимых рецептов. Попробуйте изменить поисковый запрос или очистить
+          фильтр.
         </Alert>
       ) : (
         <Grid>
-          {filteredAndSortedRecipes.map(recipe => (
+          {filteredAndSortedRecipes.map((recipe) => (
             <Grid.Col key={recipe.id} span={{ base: 12, sm: 6, lg: 4 }}>
               <Card shadow="sm" padding="lg" radius="md" withBorder>
                 <Card.Section>
@@ -305,8 +273,8 @@ export function FavoritesPage() {
                   </Text>
                   <Stack gap="xs">
                     {recipe.ingredients.map((ingredient, index) => {
-                      const stock = getIngredientStockValue(ingredient.name);
-                      const hasStock = stock >= ingredient.amount;
+                      const stock = getIngredientStockValue(ingredient.name)
+                      const hasStock = stock >= ingredient.amount
 
                       return (
                         <Group key={index} justify="space-between" gap="xs">
@@ -317,29 +285,19 @@ export function FavoritesPage() {
                             <Text size="sm" c="dimmed">
                               {ingredient.amount} {ingredient.amountType}
                             </Text>
-                            <Badge
-                              size="xs"
-                              color={hasStock ? 'green' : 'red'}
-                              variant="light"
-                            >
+                            <Badge size="xs" color={hasStock ? 'green' : 'red'} variant="light">
                               {hasStock ? '✓' : '✗'} {stock}
                             </Badge>
                           </Group>
                         </Group>
-                      );
+                      )
                     })}
                   </Stack>
 
                   <Divider />
 
                   <Group justify="space-between" mt="md">
-                    <Button
-                      component={Link}
-                      to={`/recipe/${recipe.id}`}
-                      variant="light"
-                      color="teal"
-                      size="sm"
-                    >
+                    <Button component={Link} to={`/recipe/${recipe.id}`} variant="light" color="teal" size="sm">
                       Подробнее
                     </Button>
                     <Button
@@ -359,5 +317,5 @@ export function FavoritesPage() {
         </Grid>
       )}
     </div>
-  );
+  )
 }

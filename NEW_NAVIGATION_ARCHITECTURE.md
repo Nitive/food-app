@@ -135,23 +135,23 @@
 
 ```typescript
 // Основные компоненты навигации
-MainNavigation; // Боковая навигация
-MobileNavigation; // Мобильная навигация
-Breadcrumbs; // Хлебные крошки
-QuickActions; // Быстрые действия
-UserMenu; // Меню пользователя (обновлено)
+MainNavigation // Боковая навигация
+MobileNavigation // Мобильная навигация
+Breadcrumbs // Хлебные крошки
+QuickActions // Быстрые действия
+UserMenu // Меню пользователя (обновлено)
 ```
 
 ### Состояние
 
 ```typescript
 // Глобальное состояние
-$recipes; // Рецепты
-$cartItems; // Корзина
-$shoppingList; // Список покупок
-$calendarItems; // Календарь
-$ingredients; // Ингредиенты
-$user; // Пользователь
+$recipes // Рецепты
+$cartItems // Корзина
+$shoppingList // Список покупок
+$calendarItems // Календарь
+$ingredients // Ингредиенты
+$user // Пользователь
 ```
 
 ### Роутинг

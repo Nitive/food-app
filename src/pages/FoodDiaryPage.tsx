@@ -1,79 +1,74 @@
-import React from 'react';
 import {
-  Stack,
-  Title,
-  Text,
-  Card,
-  Group,
-  Button,
-  Badge,
   ActionIcon,
+  Badge,
+  Button,
+  Card,
+  Grid,
+  Group,
+  LoadingOverlay,
+  Modal,
   NumberInput,
   Select,
-  Modal,
-  TextInput,
-  Grid,
-  Divider,
-  LoadingOverlay,
-} from '@mantine/core';
-import { useStore } from '@nanostores/react';
-import { DateInput } from '@mantine/dates';
-import { TrashIcon, PlusIcon } from '@primer/octicons-react';
-import { $recipes, $loading, $user, exportFoodDiaryToPDF } from '../app.js';
-import { UserMenu } from '../components/UserMenu.js';
-import { Breadcrumbs } from '../components/Breadcrumbs.js';
-import { QuickActions } from '../components/QuickActions.js';
+  Stack,
+  Text,
+  Title,
+} from '@mantine/core'
+import { DateInput } from '@mantine/dates'
+import { useStore } from '@nanostores/react'
+import { PlusIcon, TrashIcon } from '@primer/octicons-react'
+import React from 'react'
+import { $loading, $recipes, $user, exportFoodDiaryToPDF } from '../app.js'
+import { Breadcrumbs } from '../components/Breadcrumbs.js'
+import { QuickActions } from '../components/QuickActions.js'
+import { UserMenu } from '../components/UserMenu.js'
 
 interface FoodEntry {
-  id: string;
-  recipeId: number;
-  recipeName: string;
-  mealType: 'breakfast' | 'lunch' | 'dinner' | 'snack';
-  servingSize: number;
-  calories: number;
-  proteins: number;
-  fats: number;
-  carbohydrates: number;
-  timestamp: string;
-  date: string;
+  id: string
+  recipeId: number
+  recipeName: string
+  mealType: 'breakfast' | 'lunch' | 'dinner' | 'snack'
+  servingSize: number
+  calories: number
+  proteins: number
+  fats: number
+  carbohydrates: number
+  timestamp: string
+  date: string
 }
 
 export function FoodDiaryPage() {
-  const recipes = useStore($recipes);
-  const loading = useStore($loading);
-  const user = useStore($user);
+  const recipes = useStore($recipes)
+  const loading = useStore($loading)
+  const user = useStore($user)
 
-  const [selectedDate, setSelectedDate] = React.useState<Date>(new Date());
-  const [foodEntries, setFoodEntries] = React.useState<FoodEntry[]>([]);
-  const [addEntryModalOpened, setAddEntryModalOpened] = React.useState(false);
-  const [selectedRecipe, setSelectedRecipe] = React.useState<number | null>(
-    null
-  );
-  const [selectedMealType, setSelectedMealType] =
-    React.useState<string>('lunch');
-  const [servingSize, setServingSize] = React.useState<number>(1);
+  const [selectedDate, setSelectedDate] = React.useState<Date>(new Date())
+  const [foodEntries, setFoodEntries] = React.useState<FoodEntry[]>([])
+  const [addEntryModalOpened, setAddEntryModalOpened] = React.useState(false)
+  const [selectedRecipe, setSelectedRecipe] = React.useState<number | null>(null)
+  const [selectedMealType, setSelectedMealType] = React.useState<string>('lunch')
+  const [servingSize, setServingSize] = React.useState<number>(1)
 
   // Состояние для выбора периода экспорта
   const [exportStartDate, setExportStartDate] = React.useState<Date>(() => {
-    const date = new Date();
-    date.setDate(date.getDate() - 7); // По умолчанию неделя назад
-    return date;
-  });
-  const [exportEndDate, setExportEndDate] = React.useState<Date>(new Date());
-  const [exportModalOpened, setExportModalOpened] = React.useState(false);
+    const date = new Date()
+    date.setDate(date.getDate() - 7) // По умолчанию неделя назад
+    return date
+  })
+  const [exportEndDate, setExportEndDate] = React.useState<Date>(new Date())
+  const [exportModalOpened, setExportModalOpened] = React.useState(false)
 
   // Загружаем записи для выбранной даты (в реальном приложении это будет из API)
   React.useEffect(() => {
     // Здесь будет загрузка записей из API
     // Пока используем пустой массив
-    setFoodEntries([]);
-  }, [selectedDate]);
+    setFoodEntries([])
+  }, [selectedDate])
 
   const handleAddEntry = () => {
-    if (!selectedRecipe) return;
+    if (!selectedRecipe) return
 
-    const recipe = recipes.find(r => r.id === selectedRecipe);
-    if (!recipe) return;
+    const recipe = recipes.find((r) => r.id === selectedRecipe)
+    if (!recipe) return
 
     const newEntry: FoodEntry = {
       id: Date.now().toString(),
@@ -87,32 +82,23 @@ export function FoodDiaryPage() {
       carbohydrates: recipe.carbohydrates * servingSize,
       timestamp: new Date().toISOString(),
       date: selectedDate.toISOString().split('T')[0] || '',
-    };
+    }
 
-    setFoodEntries(prev => [...prev, newEntry]);
-    setAddEntryModalOpened(false);
-    setSelectedRecipe(null);
-    setServingSize(1);
-  };
+    setFoodEntries((prev) => [...prev, newEntry])
+    setAddEntryModalOpened(false)
+    setSelectedRecipe(null)
+    setServingSize(1)
+  }
 
   const handleDeleteEntry = (entryId: string) => {
-    setFoodEntries(prev => prev.filter(entry => entry.id !== entryId));
-  };
+    setFoodEntries((prev) => prev.filter((entry) => entry.id !== entryId))
+  }
 
   const getDailyStats = () => {
-    const totalCalories = foodEntries.reduce(
-      (sum, entry) => sum + entry.calories,
-      0
-    );
-    const totalProteins = foodEntries.reduce(
-      (sum, entry) => sum + entry.proteins,
-      0
-    );
-    const totalFats = foodEntries.reduce((sum, entry) => sum + entry.fats, 0);
-    const totalCarbohydrates = foodEntries.reduce(
-      (sum, entry) => sum + entry.carbohydrates,
-      0
-    );
+    const totalCalories = foodEntries.reduce((sum, entry) => sum + entry.calories, 0)
+    const totalProteins = foodEntries.reduce((sum, entry) => sum + entry.proteins, 0)
+    const totalFats = foodEntries.reduce((sum, entry) => sum + entry.fats, 0)
+    const totalCarbohydrates = foodEntries.reduce((sum, entry) => sum + entry.carbohydrates, 0)
 
     return {
       totalCalories,
@@ -120,55 +106,55 @@ export function FoodDiaryPage() {
       totalFats,
       totalCarbohydrates,
       totalEntries: foodEntries.length,
-    };
-  };
+    }
+  }
 
   const getMealTypeEmoji = (mealType: string) => {
     switch (mealType) {
       case 'breakfast':
-        return '🌅';
+        return '🌅'
       case 'lunch':
-        return '🍽️';
+        return '🍽️'
       case 'dinner':
-        return '🌙';
+        return '🌙'
       case 'snack':
-        return '🍎';
+        return '🍎'
       default:
-        return '🍽️';
+        return '🍽️'
     }
-  };
+  }
 
   const getMealTypeLabel = (mealType: string) => {
     switch (mealType) {
       case 'breakfast':
-        return 'Завтрак';
+        return 'Завтрак'
       case 'lunch':
-        return 'Обед';
+        return 'Обед'
       case 'dinner':
-        return 'Ужин';
+        return 'Ужин'
       case 'snack':
-        return 'Перекус';
+        return 'Перекус'
       default:
-        return 'Прием пищи';
+        return 'Прием пищи'
     }
-  };
+  }
 
   const getMealTypeColor = (mealType: string) => {
     switch (mealType) {
       case 'breakfast':
-        return 'orange';
+        return 'orange'
       case 'lunch':
-        return 'green';
+        return 'green'
       case 'dinner':
-        return 'blue';
+        return 'blue'
       case 'snack':
-        return 'purple';
+        return 'purple'
       default:
-        return 'gray';
+        return 'gray'
     }
-  };
+  }
 
-  const stats = getDailyStats();
+  const stats = getDailyStats()
 
   return (
     <Stack gap="lg" pos="relative">
@@ -193,7 +179,7 @@ export function FoodDiaryPage() {
               user={user}
               onLogout={() => {
                 // TODO: Реализовать logout
-                alert('Logout в разработке');
+                alert('Logout в разработке')
               }}
             />
           )}
@@ -203,8 +189,8 @@ export function FoodDiaryPage() {
       <Breadcrumbs />
 
       <Text c="dimmed">
-        Записывайте все приемы пищи с указанием размера порции. КБЖУ
-        рассчитывается автоматически на основе выбранных рецептов.
+        Записывайте все приемы пищи с указанием размера порции. КБЖУ рассчитывается автоматически на основе выбранных
+        рецептов.
       </Text>
 
       <Grid>
@@ -218,20 +204,16 @@ export function FoodDiaryPage() {
                 </Text>
                 <DateInput
                   value={selectedDate}
-                  onChange={date => {
+                  onChange={(date) => {
                     if (date && typeof date === 'object') {
-                      setSelectedDate(date);
+                      setSelectedDate(date)
                     }
                   }}
                   placeholder="Выберите дату"
                   clearable={false}
                 />
               </div>
-              <Button
-                leftSection={<PlusIcon size={16} />}
-                onClick={() => setAddEntryModalOpened(true)}
-                color="teal"
-              >
+              <Button leftSection={<PlusIcon size={16} />} onClick={() => setAddEntryModalOpened(true)} color="teal">
                 Добавить прием пищи
               </Button>
             </Group>
@@ -294,23 +276,17 @@ export function FoodDiaryPage() {
 
             {foodEntries.length === 0 ? (
               <Text c="dimmed" ta="center" py="xl">
-                Нет записей о питании на выбранную дату. Добавьте первый прием
-                пищи!
+                Нет записей о питании на выбранную дату. Добавьте первый прием пищи!
               </Text>
             ) : (
               <Stack gap="md">
-                {foodEntries.map(entry => (
+                {foodEntries.map((entry) => (
                   <Card key={entry.id} withBorder p="md">
                     <Group justify="space-between" align="flex-start">
                       <div style={{ flex: 1 }}>
                         <Group gap="xs" mb="xs">
-                          <Badge
-                            color={getMealTypeColor(entry.mealType)}
-                            variant="light"
-                            size="sm"
-                          >
-                            {getMealTypeEmoji(entry.mealType)}{' '}
-                            {getMealTypeLabel(entry.mealType)}
+                          <Badge color={getMealTypeColor(entry.mealType)} variant="light" size="sm">
+                            {getMealTypeEmoji(entry.mealType)} {getMealTypeLabel(entry.mealType)}
                           </Badge>
                           <Badge size="sm" color="gray" variant="light">
                             {entry.servingSize} порция
@@ -338,11 +314,7 @@ export function FoodDiaryPage() {
                         </Group>
                       </div>
 
-                      <ActionIcon
-                        variant="light"
-                        color="red"
-                        onClick={() => handleDeleteEntry(entry.id)}
-                      >
+                      <ActionIcon variant="light" color="red" onClick={() => handleDeleteEntry(entry.id)}>
                         <TrashIcon size={16} />
                       </ActionIcon>
                     </Group>
@@ -386,8 +358,8 @@ export function FoodDiaryPage() {
                   variant="light"
                   size="sm"
                   onClick={() => {
-                    setSelectedMealType('breakfast');
-                    setAddEntryModalOpened(true);
+                    setSelectedMealType('breakfast')
+                    setAddEntryModalOpened(true)
                   }}
                   color="orange"
                 >
@@ -397,8 +369,8 @@ export function FoodDiaryPage() {
                   variant="light"
                   size="sm"
                   onClick={() => {
-                    setSelectedMealType('lunch');
-                    setAddEntryModalOpened(true);
+                    setSelectedMealType('lunch')
+                    setAddEntryModalOpened(true)
                   }}
                   color="green"
                 >
@@ -408,8 +380,8 @@ export function FoodDiaryPage() {
                   variant="light"
                   size="sm"
                   onClick={() => {
-                    setSelectedMealType('dinner');
-                    setAddEntryModalOpened(true);
+                    setSelectedMealType('dinner')
+                    setAddEntryModalOpened(true)
                   }}
                   color="blue"
                 >
@@ -419,8 +391,8 @@ export function FoodDiaryPage() {
                   variant="light"
                   size="sm"
                   onClick={() => {
-                    setSelectedMealType('snack');
-                    setAddEntryModalOpened(true);
+                    setSelectedMealType('snack')
+                    setAddEntryModalOpened(true)
                   }}
                   color="purple"
                 >
@@ -444,7 +416,7 @@ export function FoodDiaryPage() {
             label="Тип приема пищи"
             placeholder="Выберите тип приема пищи"
             value={selectedMealType}
-            onChange={value => value && setSelectedMealType(value)}
+            onChange={(value) => value && setSelectedMealType(value)}
             data={[
               { value: 'breakfast', label: '🌅 Завтрак' },
               { value: 'lunch', label: '🍽️ Обед' },
@@ -457,8 +429,8 @@ export function FoodDiaryPage() {
             label="Рецепт"
             placeholder="Выберите рецепт"
             value={selectedRecipe?.toString() || ''}
-            onChange={value => value && setSelectedRecipe(Number(value))}
-            data={recipes.map(recipe => ({
+            onChange={(value) => value && setSelectedRecipe(Number(value))}
+            data={recipes.map((recipe) => ({
               value: recipe.id.toString(),
               label: `${recipe.name} (${recipe.calories} ккал)`,
             }))}
@@ -469,9 +441,7 @@ export function FoodDiaryPage() {
             label="Размер порции"
             placeholder="Введите размер порции"
             value={servingSize}
-            onChange={value =>
-              setServingSize(typeof value === 'number' ? value : 1)
-            }
+            onChange={(value) => setServingSize(typeof value === 'number' ? value : 1)}
             min={0.1}
             max={10}
             step={0.1}
@@ -484,14 +454,13 @@ export function FoodDiaryPage() {
                 Расчет КБЖУ:
               </Text>
               {(() => {
-                const recipe = recipes.find(r => r.id === selectedRecipe);
-                if (!recipe) return null;
+                const recipe = recipes.find((r) => r.id === selectedRecipe)
+                if (!recipe) return null
 
                 return (
                   <Group gap="md">
                     <Text size="xs" c="dimmed">
-                      Калории: <strong>{recipe.calories * servingSize}</strong>{' '}
-                      ккал
+                      Калории: <strong>{recipe.calories * servingSize}</strong> ккал
                     </Text>
                     <Text size="xs" c="dimmed">
                       Белки: <strong>{recipe.proteins * servingSize}</strong>г
@@ -500,27 +469,19 @@ export function FoodDiaryPage() {
                       Жиры: <strong>{recipe.fats * servingSize}</strong>г
                     </Text>
                     <Text size="xs" c="dimmed">
-                      Углеводы:{' '}
-                      <strong>{recipe.carbohydrates * servingSize}</strong>г
+                      Углеводы: <strong>{recipe.carbohydrates * servingSize}</strong>г
                     </Text>
                   </Group>
-                );
+                )
               })()}
             </Card>
           )}
 
           <Group justify="flex-end" gap="xs">
-            <Button
-              variant="light"
-              onClick={() => setAddEntryModalOpened(false)}
-            >
+            <Button variant="light" onClick={() => setAddEntryModalOpened(false)}>
               Отмена
             </Button>
-            <Button
-              onClick={handleAddEntry}
-              disabled={!selectedRecipe}
-              color="teal"
-            >
+            <Button onClick={handleAddEntry} disabled={!selectedRecipe} color="teal">
               Добавить
             </Button>
           </Group>
@@ -543,9 +504,9 @@ export function FoodDiaryPage() {
             label="Начальная дата"
             placeholder="Выберите начальную дату"
             value={exportStartDate}
-            onChange={date => {
+            onChange={(date) => {
               if (date && typeof date === 'object') {
-                setExportStartDate(date);
+                setExportStartDate(date)
               }
             }}
             clearable={false}
@@ -555,9 +516,9 @@ export function FoodDiaryPage() {
             label="Конечная дата"
             placeholder="Выберите конечную дату"
             value={exportEndDate}
-            onChange={date => {
+            onChange={(date) => {
               if (date && typeof date === 'object') {
-                setExportEndDate(date);
+                setExportEndDate(date)
               }
             }}
             clearable={false}
@@ -565,10 +526,10 @@ export function FoodDiaryPage() {
 
           {(() => {
             // Фильтруем записи по выбранному периоду
-            const filteredEntries = foodEntries.filter(entry => {
-              const entryDate = new Date(entry.date);
-              return entryDate >= exportStartDate && entryDate <= exportEndDate;
-            });
+            const filteredEntries = foodEntries.filter((entry) => {
+              const entryDate = new Date(entry.date)
+              return entryDate >= exportStartDate && entryDate <= exportEndDate
+            })
 
             const periodStats = filteredEntries.reduce(
               (stats, entry) => ({
@@ -579,7 +540,7 @@ export function FoodDiaryPage() {
                 count: stats.count + 1,
               }),
               { calories: 0, proteins: 0, fats: 0, carbohydrates: 0, count: 0 }
-            );
+            )
 
             return (
               <Card withBorder p="md">
@@ -591,8 +552,7 @@ export function FoodDiaryPage() {
                     Записей: <strong>{periodStats.count}</strong>
                   </Text>
                   <Text size="xs" c="dimmed">
-                    Калории: <strong>{periodStats.calories.toFixed(1)}</strong>{' '}
-                    ккал
+                    Калории: <strong>{periodStats.calories.toFixed(1)}</strong> ккал
                   </Text>
                   <Text size="xs" c="dimmed">
                     Белки: <strong>{periodStats.proteins.toFixed(1)}</strong>г
@@ -601,12 +561,11 @@ export function FoodDiaryPage() {
                     Жиры: <strong>{periodStats.fats.toFixed(1)}</strong>г
                   </Text>
                   <Text size="xs" c="dimmed">
-                    Углеводы:{' '}
-                    <strong>{periodStats.carbohydrates.toFixed(1)}</strong>г
+                    Углеводы: <strong>{periodStats.carbohydrates.toFixed(1)}</strong>г
                   </Text>
                 </Group>
               </Card>
-            );
+            )
           })()}
 
           <Group justify="flex-end" gap="xs">
@@ -616,26 +575,19 @@ export function FoodDiaryPage() {
             <Button
               onClick={() => {
                 // Фильтруем записи по выбранному периоду
-                const filteredEntries = foodEntries.filter(entry => {
-                  const entryDate = new Date(entry.date);
-                  return (
-                    entryDate >= exportStartDate && entryDate <= exportEndDate
-                  );
-                });
+                const filteredEntries = foodEntries.filter((entry) => {
+                  const entryDate = new Date(entry.date)
+                  return entryDate >= exportStartDate && entryDate <= exportEndDate
+                })
 
                 // Добавляем поле date к записям для экспорта
-                const entriesWithDate = filteredEntries.map(entry => ({
+                const entriesWithDate = filteredEntries.map((entry) => ({
                   ...entry,
-                  date:
-                    new Date(entry.timestamp).toISOString().split('T')[0] || '',
-                }));
+                  date: new Date(entry.timestamp).toISOString().split('T')[0] || '',
+                }))
 
-                exportFoodDiaryToPDF(
-                  entriesWithDate,
-                  exportStartDate,
-                  exportEndDate
-                );
-                setExportModalOpened(false);
+                exportFoodDiaryToPDF(entriesWithDate, exportStartDate, exportEndDate)
+                setExportModalOpened(false)
               }}
               color="teal"
             >
@@ -645,5 +597,5 @@ export function FoodDiaryPage() {
         </Stack>
       </Modal>
     </Stack>
-  );
+  )
 }

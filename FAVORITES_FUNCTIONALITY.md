@@ -34,42 +34,40 @@
 
 ```typescript
 // Состояние любимых рецептов
-const $favoriteRecipes = atom<Recipe[]>([]);
+const $favoriteRecipes = atom<Recipe[]>([])
 
 // Функции для работы с любимыми рецептами
 function toggleFavoriteRecipe(recipe: Recipe) {
-  const currentFavorites = $favoriteRecipes.get();
-  const isFavorite = currentFavorites.some(fav => fav.id === recipe.id);
+  const currentFavorites = $favoriteRecipes.get()
+  const isFavorite = currentFavorites.some((fav) => fav.id === recipe.id)
 
   if (isFavorite) {
     // Удаляем из любимых
-    const updatedFavorites = currentFavorites.filter(
-      fav => fav.id !== recipe.id
-    );
-    $favoriteRecipes.set(updatedFavorites);
-    localStorage.setItem('favoriteRecipes', JSON.stringify(updatedFavorites));
+    const updatedFavorites = currentFavorites.filter((fav) => fav.id !== recipe.id)
+    $favoriteRecipes.set(updatedFavorites)
+    localStorage.setItem('favoriteRecipes', JSON.stringify(updatedFavorites))
   } else {
     // Добавляем в любимые
-    const updatedFavorites = [...currentFavorites, recipe];
-    $favoriteRecipes.set(updatedFavorites);
-    localStorage.setItem('favoriteRecipes', JSON.stringify(updatedFavorites));
+    const updatedFavorites = [...currentFavorites, recipe]
+    $favoriteRecipes.set(updatedFavorites)
+    localStorage.setItem('favoriteRecipes', JSON.stringify(updatedFavorites))
   }
 }
 
 function isRecipeFavorite(recipeId: number): boolean {
-  const favorites = $favoriteRecipes.get();
-  return favorites.some(fav => fav.id === recipeId);
+  const favorites = $favoriteRecipes.get()
+  return favorites.some((fav) => fav.id === recipeId)
 }
 
 function loadFavoriteRecipes() {
   try {
-    const savedFavorites = localStorage.getItem('favoriteRecipes');
+    const savedFavorites = localStorage.getItem('favoriteRecipes')
     if (savedFavorites) {
-      const favorites = JSON.parse(savedFavorites);
-      $favoriteRecipes.set(favorites);
+      const favorites = JSON.parse(savedFavorites)
+      $favoriteRecipes.set(favorites)
     }
   } catch (error) {
-    console.error('Ошибка загрузки любимых рецептов:', error);
+    console.error('Ошибка загрузки любимых рецептов:', error)
   }
 }
 ```
@@ -93,7 +91,7 @@ const navigationItems: NavigationItem[] = [
     color: 'pink',
   },
   // ... остальные пункты
-];
+]
 ```
 
 ### Компонент карточки рецепта
@@ -196,17 +194,17 @@ export function FavoritesPage() {
 
 ```javascript
 // Сохранение
-localStorage.setItem('favoriteRecipes', JSON.stringify(favorites));
+localStorage.setItem('favoriteRecipes', JSON.stringify(favorites))
 
 // Загрузка
-const savedFavorites = localStorage.getItem('favoriteRecipes');
+const savedFavorites = localStorage.getItem('favoriteRecipes')
 if (savedFavorites) {
-  const favorites = JSON.parse(savedFavorites);
-  $favoriteRecipes.set(favorites);
+  const favorites = JSON.parse(savedFavorites)
+  $favoriteRecipes.set(favorites)
 }
 
 // Очистка при выходе
-localStorage.removeItem('favoriteRecipes');
+localStorage.removeItem('favoriteRecipes')
 ```
 
 ### Преимущества localStorage
@@ -287,14 +285,14 @@ localStorage.removeItem('favoriteRecipes');
 
 ```javascript
 // Проверка состояния любимых рецептов
-console.log('Любимые рецепты:', $favoriteRecipes.get());
+console.log('Любимые рецепты:', $favoriteRecipes.get())
 
 // Проверка localStorage
-console.log('localStorage:', localStorage.getItem('favoriteRecipes'));
+console.log('localStorage:', localStorage.getItem('favoriteRecipes'))
 
 // Очистка данных
-localStorage.removeItem('favoriteRecipes');
-$favoriteRecipes.set([]);
+localStorage.removeItem('favoriteRecipes')
+$favoriteRecipes.set([])
 ```
 
 ### Обработка ошибок

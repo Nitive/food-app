@@ -29,10 +29,10 @@
 
 ```typescript
 interface UserMenuProps {
-  user: User;
-  cartItems: CartItem[];
-  onLogout: () => void;
-  onCartClick: () => void;
+  user: User
+  cartItems: CartItem[]
+  onLogout: () => void
+  onCartClick: () => void
 }
 ```
 
@@ -46,11 +46,8 @@ interface UserMenuProps {
 ```typescript
 const cartStats = {
   totalItems: cartItems.length,
-  totalCalories: cartItems.reduce(
-    (sum, item) => sum + item.recipe.calories * item.quantity,
-    0
-  ),
-};
+  totalCalories: cartItems.reduce((sum, item) => sum + item.recipe.calories * item.quantity, 0),
+}
 ```
 
 ## Визуальные элементы

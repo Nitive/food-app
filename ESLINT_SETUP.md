@@ -30,13 +30,13 @@ pnpm add -D eslint @typescript-eslint/parser @typescript-eslint/eslint-plugin es
 ### ESLint (eslint.config.js)
 
 ```javascript
-import js from '@eslint/js';
-import typescript from '@typescript-eslint/eslint-plugin';
-import typescriptParser from '@typescript-eslint/parser';
-import react from 'eslint-plugin-react';
-import reactHooks from 'eslint-plugin-react-hooks';
-import jsxA11y from 'eslint-plugin-jsx-a11y';
-import prettier from 'eslint-plugin-prettier';
+import js from '@eslint/js'
+import typescript from '@typescript-eslint/eslint-plugin'
+import typescriptParser from '@typescript-eslint/parser'
+import react from 'eslint-plugin-react'
+import reactHooks from 'eslint-plugin-react-hooks'
+import jsxA11y from 'eslint-plugin-jsx-a11y'
+import prettier from 'eslint-plugin-prettier'
 
 export default [
   js.configs.recommended,
@@ -79,10 +79,7 @@ export default [
       'react/react-in-jsx-scope': 'off',
       'react/prop-types': 'off',
       'react/no-unescaped-entities': 'off',
-      '@typescript-eslint/no-unused-vars': [
-        'warn',
-        { argsIgnorePattern: '^_' },
-      ],
+      '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
       '@typescript-eslint/no-explicit-any': 'warn',
       '@typescript-eslint/explicit-function-return-type': 'off',
       '@typescript-eslint/explicit-module-boundary-types': 'off',
@@ -100,7 +97,7 @@ export default [
   {
     ignores: ['dist/', 'node_modules/', '*.config.js', '*.config.ts'],
   },
-];
+]
 ```
 
 ### Prettier (.prettierrc)
