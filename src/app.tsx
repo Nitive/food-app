@@ -3190,23 +3190,6 @@ function App() {
     checkAuth()
   }, [])
 
-  // Обрабатываем параметры URL после редиректа от Google
-  React.useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search)
-    const authStatus = urlParams.get('auth')
-
-    if (authStatus === 'success') {
-      // Очищаем URL параметры
-      window.history.replaceState({}, document.title, window.location.pathname)
-      // Проверяем авторизацию заново
-      checkAuth()
-    } else if (authStatus === 'error') {
-      // Очищаем URL параметры
-      window.history.replaceState({}, document.title, window.location.pathname)
-      alert('Ошибка авторизации. Попробуйте еще раз.')
-    }
-  }, [])
-
   // Загружаем данные при монтировании компонента (только если авторизованы)
   React.useEffect(() => {
     if (isAuthenticated) {
