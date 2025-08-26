@@ -1020,6 +1020,13 @@ function RecipesPage() {
                     </Group>
                   </Group>
 
+                  {/* Автор рецепта */}
+                  {recipe.author && (
+                    <Text size="xs" c="dimmed">
+                      👨‍🍳 Автор: {recipe.author.name || recipe.author.email}
+                    </Text>
+                  )}
+
                   {/* КБЖУ */}
                   <Group gap="xs">
                     <Badge size="sm" color="teal" variant="light">

@@ -17,6 +17,12 @@ export interface Recipe {
   instructions?: string | null
   cookingTime?: number | null
   difficulty?: string | null
+  authorId?: number | null
+  author?: {
+    id: number
+    name?: string | null
+    email: string
+  } | null
   ingredients: {
     name: string
     amount: number
@@ -65,6 +71,7 @@ export interface CalendarItem {
   date: Date
   mealType: string // breakfast, lunch, dinner, snack
   recipeId: number
+  userId: number
   recipe: {
     id: number
     name: string
@@ -92,6 +99,27 @@ export interface AuthResponse {
 export interface AuthMeResponse {
   authenticated: boolean
   user?: User
+}
+
+export interface FoodDiaryEntry {
+  id: number
+  date: Date
+  mealType: string // breakfast, lunch, dinner, snack
+  recipeId: number
+  userId: number
+  servingSize: number
+  calories: number
+  proteins: number
+  fats: number
+  carbohydrates: number
+  recipe: {
+    id: number
+    name: string
+    calories: number
+    proteins: number
+    fats: number
+    carbohydrates: number
+  }
 }
 
 export const apiClient = {
@@ -253,5 +281,29 @@ export const apiClient = {
   async logout(): Promise<{ success: boolean }> {
     const { data } = await client.api.auth.logout.post()
     return (data as unknown as { success: boolean }) || { success: true }
+  },
+
+  // Food Diary functions
+  async getFoodDiary(date?: string): Promise<FoodDiaryEntry[]> {
+    const params = date ? { query: { date } } : {}
+    const { data } = await client.api['food-diary'].get(params)
+    return data || []
+  },
+
+  async addFoodDiaryEntry(date: string, recipeId: number, mealType: string, servingSize: number): Promise<FoodDiaryEntry> {
+    const { data } = await client.api['food-diary'].post({
+      date,
+      recipeId,
+      mealType,
+      servingSize,
+    })
+    if (!data) throw new Error('Failed to add food diary entry')
+    return data as unknown as FoodDiaryEntry
+  },
+
+  async removeFoodDiaryEntry(id: number): Promise<{ deleted: boolean }> {
+    const { data } = await client.api['food-diary']({ id }).delete()
+    if (!data) throw new Error('Failed to remove food diary entry')
+    return data as unknown as { deleted: boolean }
   },
 }

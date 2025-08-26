@@ -23,9 +23,12 @@ model Recipe {
   instructions  String?       // Описание приготовления
   cookingTime   Int?          // Время приготовления в минутах
   difficulty    String?       // Сложность: easy, medium, hard
+  authorId      Int?          // ID автора рецепта
+  author        User?         @relation(fields: [authorId], references: [id])
   ingredients   RecipeIngredient[]
   cartItems     CartItem[]
   calendarItems CalendarItem[]
+  foodDiaryEntries FoodDiaryEntry[]
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
 
@@ -87,6 +90,9 @@ model User {
   name          String?
   picture       String?
   googleId      String    @unique
+  recipes       Recipe[]  // Рецепты, созданные пользователем
+  calendarItems CalendarItem[]
+  foodDiaryEntries FoodDiaryEntry[]
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
@@ -98,10 +104,31 @@ model CalendarItem {
   date          DateTime
   mealType      String    // breakfast, lunch, dinner, snack
   recipeId      Int
+  userId        Int       // ID пользователя
   recipe        Recipe    @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
-  @@unique([date, recipeId, mealType])
+  @@unique([date, recipeId, mealType, userId])
   @@map("calendar_items")
+}
+
+model FoodDiaryEntry {
+  id            Int       @id @default(autoincrement())
+  date          DateTime
+  mealType      String    // breakfast, lunch, dinner, snack
+  recipeId      Int
+  userId        Int       // ID пользователя
+  servingSize   Float     // Размер порции
+  calories      Float     // Рассчитанные калории
+  proteins      Float     // Рассчитанные белки
+  fats          Float     // Рассчитанные жиры
+  carbohydrates Float     // Рассчитанные углеводы
+  recipe        Recipe    @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@map("food_diary_entries")
 }

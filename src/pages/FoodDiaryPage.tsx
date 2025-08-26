@@ -18,6 +18,7 @@ import { useStore } from '@nanostores/react'
 import { PlusIcon, TrashIcon } from '@primer/octicons-react'
 import React from 'react'
 import { $loading, $recipes, $user, exportFoodDiaryToPDF } from '../app.js'
+import { apiClient } from '../api-client.js'
 import { Breadcrumbs } from '../components/Breadcrumbs.js'
 import { QuickActions } from '../components/QuickActions.js'
 import { UserMenu } from '../components/UserMenu.js'
@@ -57,41 +58,83 @@ export function FoodDiaryPage() {
   const [exportEndDate, setExportEndDate] = React.useState<Date>(new Date())
   const [exportModalOpened, setExportModalOpened] = React.useState(false)
 
-  // Загружаем записи для выбранной даты (в реальном приложении это будет из API)
+  // Загружаем записи для выбранной даты
   React.useEffect(() => {
-    // Здесь будет загрузка записей из API
-    // Пока используем пустой массив
-    setFoodEntries([])
-  }, [selectedDate])
-
-  const handleAddEntry = () => {
-    if (!selectedRecipe) return
-
-    const recipe = recipes.find((r) => r.id === selectedRecipe)
-    if (!recipe) return
-
-    const newEntry: FoodEntry = {
-      id: Date.now().toString(),
-      recipeId: recipe.id,
-      recipeName: recipe.name,
-      mealType: selectedMealType as 'breakfast' | 'lunch' | 'dinner' | 'snack',
-      servingSize,
-      calories: recipe.calories * servingSize,
-      proteins: recipe.proteins * servingSize,
-      fats: recipe.fats * servingSize,
-      carbohydrates: recipe.carbohydrates * servingSize,
-      timestamp: new Date().toISOString(),
-      date: selectedDate.toISOString().split('T')[0] || '',
+    const loadFoodDiary = async () => {
+      try {
+        const dateString = selectedDate.toISOString().split('T')[0]
+        const entries = await apiClient.getFoodDiary(dateString)
+        
+        // Преобразуем в локальный формат
+        const localEntries: FoodEntry[] = entries.map(entry => ({
+          id: entry.id.toString(),
+          recipeId: entry.recipeId,
+          recipeName: entry.recipe.name,
+          mealType: entry.mealType as 'breakfast' | 'lunch' | 'dinner' | 'snack',
+          servingSize: entry.servingSize,
+          calories: entry.calories,
+          proteins: entry.proteins,
+          fats: entry.fats,
+          carbohydrates: entry.carbohydrates,
+          timestamp: entry.date.toISOString(),
+          date: entry.date.toISOString().split('T')[0] || '',
+        }))
+        
+        setFoodEntries(localEntries)
+      } catch (error) {
+        console.error('Ошибка загрузки дневника питания:', error)
+        setFoodEntries([])
+      }
     }
 
-    setFoodEntries((prev) => [...prev, newEntry])
-    setAddEntryModalOpened(false)
-    setSelectedRecipe(null)
-    setServingSize(1)
+    loadFoodDiary()
+  }, [selectedDate])
+
+  const handleAddEntry = async () => {
+    if (!selectedRecipe || !selectedMealType) return
+
+    try {
+      const dateString = selectedDate.toISOString().split('T')[0] || ''
+      const newEntry = await apiClient.addFoodDiaryEntry(
+        dateString,
+        selectedRecipe,
+        selectedMealType || 'lunch',
+        servingSize
+      )
+
+      // Преобразуем в локальный формат
+      const localEntry: FoodEntry = {
+        id: newEntry.id.toString(),
+        recipeId: newEntry.recipeId,
+        recipeName: newEntry.recipe.name,
+        mealType: newEntry.mealType as 'breakfast' | 'lunch' | 'dinner' | 'snack',
+        servingSize: newEntry.servingSize,
+        calories: newEntry.calories,
+        proteins: newEntry.proteins,
+        fats: newEntry.fats,
+        carbohydrates: newEntry.carbohydrates,
+        timestamp: newEntry.date.toISOString(),
+        date: newEntry.date.toISOString().split('T')[0] || '',
+      }
+
+      setFoodEntries((prev) => [...prev, localEntry])
+      setAddEntryModalOpened(false)
+      setSelectedRecipe(null)
+      setServingSize(1)
+    } catch (error) {
+      console.error('Ошибка добавления записи:', error)
+      alert('Ошибка при добавлении записи')
+    }
   }
 
-  const handleDeleteEntry = (entryId: string) => {
-    setFoodEntries((prev) => prev.filter((entry) => entry.id !== entryId))
+  const handleDeleteEntry = async (entryId: string) => {
+    try {
+      await apiClient.removeFoodDiaryEntry(parseInt(entryId))
+      setFoodEntries((prev) => prev.filter((entry) => entry.id !== entryId))
+    } catch (error) {
+      console.error('Ошибка удаления записи:', error)
+      alert('Ошибка при удалении записи')
+    }
   }
 
   const getDailyStats = () => {

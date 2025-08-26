@@ -49,6 +49,13 @@ const app = new Elysia({ adapter: node() as any })
             ingredient: true,
           },
         },
+        author: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
       },
     })
 
@@ -62,6 +69,8 @@ const app = new Elysia({ adapter: node() as any })
       instructions: recipe.instructions,
       cookingTime: recipe.cookingTime,
       difficulty: recipe.difficulty,
+      authorId: recipe.authorId,
+      author: recipe.author,
       ingredients: recipe.ingredients.map((ri) => ({
         name: ri.ingredient.name,
         amount: ri.amount,
@@ -110,10 +119,10 @@ const app = new Elysia({ adapter: node() as any })
   .post(
     '/api/recipes',
     async ({ body, cookie }) => {
-      await requireAuth({ cookie })
+      const user = await requireAuth({ cookie })
       const { name, calories, proteins, fats, carbohydrates, instructions, cookingTime, difficulty, ingredients } = body
 
-      // Создаем рецепт
+      // Создаем рецепт с автором
       const recipe = await prisma.recipe.create({
         data: {
           name,
@@ -124,6 +133,7 @@ const app = new Elysia({ adapter: node() as any })
           instructions: instructions || null,
           cookingTime: cookingTime || null,
           difficulty: difficulty || null,
+          authorId: user.user.id,
         },
       })
 
@@ -702,8 +712,11 @@ const app = new Elysia({ adapter: node() as any })
 
   // Получить календарь планирования
   .get('/api/calendar', async ({ cookie }) => {
-    await requireAuth({ cookie })
+    const user = await requireAuth({ cookie })
     const calendarItems = await prisma.calendarItem.findMany({
+      where: {
+        userId: user.user.id,
+      },
       include: {
         recipe: true,
       },
@@ -732,7 +745,7 @@ const app = new Elysia({ adapter: node() as any })
   .post(
     '/api/calendar',
     async ({ body, cookie }) => {
-      await requireAuth({ cookie })
+      const user = await requireAuth({ cookie })
       const { date, recipeId, mealType } = body
 
       // Проверяем, есть ли уже рецепт на эту дату для этого приема пищи
@@ -741,6 +754,7 @@ const app = new Elysia({ adapter: node() as any })
           date: new Date(date),
           recipeId,
           mealType,
+          userId: user.user.id,
         },
       })
 
@@ -753,6 +767,7 @@ const app = new Elysia({ adapter: node() as any })
           date: new Date(date),
           recipeId,
           mealType,
+          userId: user.user.id,
         },
         include: {
           recipe: true,
@@ -785,17 +800,23 @@ const app = new Elysia({ adapter: node() as any })
 
   // Удалить рецепт из календаря
   .delete('/api/calendar/:id', async ({ params, cookie }) => {
-    await requireAuth({ cookie })
+    const user = await requireAuth({ cookie })
     await prisma.calendarItem.delete({
-      where: { id: parseInt(params.id) },
+      where: { 
+        id: parseInt(params.id),
+        userId: user.user.id,
+      },
     })
     return { deleted: true }
   })
 
   // Добавить все рецепты из календаря в корзину
   .post('/api/calendar/add-to-cart', async ({ cookie }) => {
-    await requireAuth({ cookie })
+    const user = await requireAuth({ cookie })
     const calendarItems = await prisma.calendarItem.findMany({
+      where: {
+        userId: user.user.id,
+      },
       include: {
         recipe: true,
       },
@@ -848,6 +869,132 @@ const app = new Elysia({ adapter: node() as any })
     }
 
     return results
+  })
+
+  // Food Diary endpoints
+  .get('/api/food-diary', async ({ cookie, query }) => {
+    const user = await requireAuth({ cookie })
+    const date = query.date
+
+    const where: any = {
+      userId: user.user.id,
+    }
+
+    if (date) {
+      const startDate = new Date(date as string)
+      const endDate = new Date(startDate)
+      endDate.setDate(endDate.getDate() + 1)
+      
+      where.date = {
+        gte: startDate,
+        lt: endDate,
+      }
+    }
+
+    const foodDiaryEntries = await prisma.foodDiaryEntry.findMany({
+      where,
+      include: {
+        recipe: true,
+      },
+      orderBy: {
+        date: 'asc',
+      },
+    })
+
+    return foodDiaryEntries.map((entry) => ({
+      id: entry.id,
+      date: entry.date,
+      mealType: entry.mealType,
+      recipeId: entry.recipeId,
+      userId: entry.userId,
+      servingSize: entry.servingSize,
+      calories: entry.calories,
+      proteins: entry.proteins,
+      fats: entry.fats,
+      carbohydrates: entry.carbohydrates,
+      recipe: {
+        id: entry.recipe.id,
+        name: entry.recipe.name,
+        calories: entry.recipe.calories,
+        proteins: entry.recipe.proteins,
+        fats: entry.recipe.fats,
+        carbohydrates: entry.recipe.carbohydrates,
+      },
+    }))
+  })
+
+  .post(
+    '/api/food-diary',
+    async ({ body, cookie }) => {
+      const user = await requireAuth({ cookie })
+      const { date, recipeId, mealType, servingSize } = body
+
+      // Получаем рецепт для расчета КБЖУ
+      const recipe = await prisma.recipe.findUnique({
+        where: { id: recipeId },
+      })
+
+      if (!recipe) {
+        throw new Error('Recipe not found')
+      }
+
+      const foodDiaryEntry = await prisma.foodDiaryEntry.create({
+        data: {
+          date: new Date(date),
+          recipeId,
+          mealType,
+          servingSize,
+          userId: user.user.id,
+          calories: recipe.calories * servingSize,
+          proteins: recipe.proteins * servingSize,
+          fats: recipe.fats * servingSize,
+          carbohydrates: recipe.carbohydrates * servingSize,
+        },
+        include: {
+          recipe: true,
+        },
+      })
+
+      return {
+        id: foodDiaryEntry.id,
+        date: foodDiaryEntry.date,
+        mealType: foodDiaryEntry.mealType,
+        recipeId: foodDiaryEntry.recipeId,
+        userId: foodDiaryEntry.userId,
+        servingSize: foodDiaryEntry.servingSize,
+        calories: foodDiaryEntry.calories,
+        proteins: foodDiaryEntry.proteins,
+        fats: foodDiaryEntry.fats,
+        carbohydrates: foodDiaryEntry.carbohydrates,
+        recipe: {
+          id: foodDiaryEntry.recipe.id,
+          name: foodDiaryEntry.recipe.name,
+          calories: foodDiaryEntry.recipe.calories,
+          proteins: foodDiaryEntry.recipe.proteins,
+          fats: foodDiaryEntry.recipe.fats,
+          carbohydrates: foodDiaryEntry.recipe.carbohydrates,
+        },
+      }
+    },
+    {
+      body: t.Object({
+        date: t.String(),
+        recipeId: t.Number(),
+        mealType: t.String(),
+        servingSize: t.Number(),
+      }),
+    }
+  )
+
+  .delete('/api/food-diary/:id', async ({ params, cookie }) => {
+    const user = await requireAuth({ cookie })
+    await prisma.foodDiaryEntry.delete({
+      where: { 
+        id: parseInt(params.id),
+        userId: user.user.id,
+      },
+    })
+    return { deleted: true }
   })
 
   // Google OAuth endpoints
