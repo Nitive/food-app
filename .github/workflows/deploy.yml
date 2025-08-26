@@ -125,7 +125,7 @@ jobs:
             EOF
 
             echo "🗄️ Running database migrations..."
-            docker run -it --env-file .env --network=food-app_default --entrypoint=/nodejs/bin/node "$FOOD_APP_IMAGE" /app/node_modules/prisma/build/index.js migrate deploy
+            docker run -i --env-file .env --network=food-app_default --entrypoint=/nodejs/bin/node "$FOOD_APP_IMAGE" /app/node_modules/prisma/build/index.js migrate deploy
 
             echo "🔨 Starting containers..."
             docker compose up -d
