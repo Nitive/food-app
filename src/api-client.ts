@@ -1,7 +1,11 @@
 import { treaty } from '@elysiajs/eden'
 import type { App } from './api.js'
 
-const client = treaty<App>('http://localhost:3000', {
+const backendUrl = ['localhost', '127.0.0.1'].includes(window.location.host)
+  ? 'http://localhost:3000'
+  : window.location.origin
+
+const client = treaty<App>(backendUrl, {
   fetch: {
     credentials: 'include',
   },
