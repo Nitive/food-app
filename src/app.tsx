@@ -92,7 +92,7 @@ function Providers(props: { children: React.ReactNode }) {
         },
       }}
     >
-      <BrowserRouter>{props.children}</BrowserRouter>
+      <BrowserRouter basename="/">{props.children}</BrowserRouter>
     </MantineProvider>
   )
 }
