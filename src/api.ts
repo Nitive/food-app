@@ -1010,13 +1010,16 @@ const app = new Elysia({ adapter: node() as any })
   // Google OAuth endpoints
   .get('/api/auth/google/url', ({ request }) => {
     const clientId = process.env.GOOGLE_CLIENT_ID
-    const redirectUri = new URL('/api/auth/google/callback', request.url).toString()
+    const redirectUri = new URL('/api/auth/google/callback', request.url)
+    if (request.headers.get('x-forwarded-proto') === 'https') {
+      redirectUri.protocol = 'https:'
+    }
     const scope = 'email profile'
 
     const authUrl =
       `https://accounts.google.com/o/oauth2/v2/auth?` +
       `client_id=${clientId}&` +
-      `redirect_uri=${encodeURIComponent(redirectUri)}&` +
+      `redirect_uri=${encodeURIComponent(redirectUri.toString())}&` +
       `response_type=code&` +
       `scope=${encodeURIComponent(scope)}&` +
       `access_type=offline`
