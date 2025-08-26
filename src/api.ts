@@ -11,6 +11,14 @@ import { requireAuth } from './middleware.js'
 
 const prisma = new PrismaClient()
 
+function getRedirectUri(request: Request) {
+  const redirectUri = new URL('/api/auth/google/callback', request.url)
+  if (request.headers.get('x-forwarded-proto') === 'https') {
+    redirectUri.protocol = 'https:'
+  }
+  return redirectUri.toString()
+}
+
 const app = new Elysia({ adapter: node() as any })
   .get('/*', async () => {
     const indexFile = await fsp.readFile('./dist/client/index.html', 'utf-8')
@@ -1010,29 +1018,26 @@ const app = new Elysia({ adapter: node() as any })
   // Google OAuth endpoints
   .get('/api/auth/google/url', ({ request }) => {
     const clientId = process.env.GOOGLE_CLIENT_ID
-    const redirectUri = new URL('/api/auth/google/callback', request.url)
-    if (request.headers.get('x-forwarded-proto') === 'https') {
-      redirectUri.protocol = 'https:'
-    }
+    const redirectUri = getRedirectUri(request)
     const scope = 'email profile'
 
-    const authUrl =
-      `https://accounts.google.com/o/oauth2/v2/auth?` +
-      `client_id=${clientId}&` +
-      `redirect_uri=${encodeURIComponent(redirectUri.toString())}&` +
-      `response_type=code&` +
-      `scope=${encodeURIComponent(scope)}&` +
-      `access_type=offline`
+    const authUrl = new URL('https://accounts.google.com/o/oauth2/v2/auth')
+    authUrl.searchParams.set('client_id', clientId!)
+    authUrl.searchParams.set('redirect_uri', redirectUri)
+    authUrl.searchParams.set('response_type', 'code')
+    authUrl.searchParams.set('scope', scope)
+    authUrl.searchParams.set('access_type', 'offline')
 
-    return { authUrl }
+    return { authUrl: authUrl.toString() }
   })
 
-  .get('/api/auth/google/callback', async ({ query }) => {
+  .get('/api/auth/google/callback', async ({ query, request }) => {
     const { code } = query
 
     if (!code || typeof code !== 'string') {
       return new Response('Authorization code is required', { status: 400 })
     }
+    const redirectUri = getRedirectUri(request)
 
     try {
       // Обмениваем код на access token
@@ -1046,7 +1051,7 @@ const app = new Elysia({ adapter: node() as any })
           client_secret: process.env.GOOGLE_CLIENT_SECRET!,
           code,
           grant_type: 'authorization_code',
-          redirect_uri: 'http://localhost:3000/api/auth/google/callback',
+          redirect_uri: redirectUri,
         }),
       })
 
