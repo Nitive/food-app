@@ -3252,16 +3252,16 @@ function App() {
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
             <div className="main-content" style={{ flex: 1, padding: '20px' }}>
               <Routes>
-                <Route index element={<CalendarPage />} />
-                <Route path="recipes" element={<RecipesPage />} />
-                <Route path="favorites" element={<FavoritesPage />} />
+                <Route path="/" element={<CalendarPage />} />
+                <Route path="/recipes" element={<RecipesPage />} />
+                <Route path="/favorites" element={<FavoritesPage />} />
 
-                <Route path="shopping-list" element={<ShoppingListPage />} />
-                <Route path="ingredients" element={<IngredientsPage />} />
-                <Route path="calendar" element={<CalendarPage />} />
-                <Route path="food-diary" element={<FoodDiaryPage />} />
-                <Route path="stats" element={<StatsPage />} />
-                <Route path="recipe/:id" element={<Recipe />} />
+                <Route path="/shopping-list" element={<ShoppingListPage />} />
+                <Route path="/ingredients" element={<IngredientsPage />} />
+                <Route path="/calendar" element={<CalendarPage />} />
+                <Route path="/food-diary" element={<FoodDiaryPage />} />
+                <Route path="/stats" element={<StatsPage />} />
+                <Route path="/recipe/:id" element={<Recipe />} />
               </Routes>
             </div>
           </div>
