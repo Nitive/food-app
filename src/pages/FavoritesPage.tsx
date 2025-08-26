@@ -21,7 +21,14 @@ import { CalendarIcon, HeartFillIcon, HeartIcon, PlusIcon } from '@primer/octico
 import React from 'react'
 import { Link } from 'react-router-dom'
 import type { Recipe } from '../api-client.js'
-import { $favoriteRecipes, $user, getIngredientStock, openAddToCalendarModal, toggleFavoriteRecipe } from '../app.js'
+import {
+  $favoriteRecipes,
+  $user,
+  getIngredientStock,
+  openAddToCalendarModal,
+  openProfileModal,
+  toggleFavoriteRecipe,
+} from '../app.js'
 import { Breadcrumbs } from '../components/Breadcrumbs.js'
 import { QuickActions } from '../components/QuickActions.js'
 import { UserMenu } from '../components/UserMenu.js'
@@ -74,7 +81,7 @@ export function FavoritesPage() {
   if (favoriteRecipes.length === 0) {
     return (
       <div>
-        {user && <UserMenu user={user} onLogout={() => {}} onOpenProfile={() => alert('Профиль пользователя')} />}
+        {user && <UserMenu user={user} onLogout={() => {}} onOpenProfile={openProfileModal} />}
         <Breadcrumbs />
         <QuickActions />
 
@@ -108,7 +115,7 @@ export function FavoritesPage() {
 
   return (
     <div>
-      {user && <UserMenu user={user} onLogout={() => {}} onOpenProfile={() => alert('Профиль пользователя')} />}
+      {user && <UserMenu user={user} onLogout={() => {}} onOpenProfile={openProfileModal} />}
       <Breadcrumbs />
       <QuickActions />
 

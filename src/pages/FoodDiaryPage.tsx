@@ -18,7 +18,7 @@ import { useStore } from '@nanostores/react'
 import { PlusIcon, TrashIcon } from '@primer/octicons-react'
 import React from 'react'
 import { apiClient } from '../api-client.js'
-import { $loading, $recipes, $user, exportFoodDiaryToPDF } from '../app.js'
+import { $loading, $recipes, $user, exportFoodDiaryToPDF, openProfileModal } from '../app.js'
 import { Breadcrumbs } from '../components/Breadcrumbs.js'
 import { QuickActions } from '../components/QuickActions.js'
 import { UserMenu } from '../components/UserMenu.js'
@@ -260,9 +260,7 @@ export function FoodDiaryPage() {
                 // TODO: Реализовать logout
                 alert('Logout в разработке')
               }}
-              onOpenProfile={() => {
-                alert('Профиль пользователя')
-              }}
+              onOpenProfile={openProfileModal}
             />
           )}
         </Group>

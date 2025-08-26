@@ -5,7 +5,7 @@ import { CheckCircleFillIcon } from '@primer/octicons-react'
 import React from 'react'
 import { Link } from 'react-router-dom'
 import { apiClient } from '../api-client.js'
-import { $loading, $shoppingList, $user, exportShoppingListToPDF } from '../app.js'
+import { $loading, $shoppingList, $user, exportShoppingListToPDF, openProfileModal } from '../app.js'
 import { Breadcrumbs } from '../components/Breadcrumbs.js'
 import { QuickActions } from '../components/QuickActions.js'
 import { UserMenu } from '../components/UserMenu.js'
@@ -76,7 +76,7 @@ export function ShoppingListPage() {
             onExportPDF={() => exportShoppingListToPDF(shoppingList.items)}
             exportLabel="Экспорт списка"
           />
-          {user && <UserMenu user={user} onLogout={handleLogout} onOpenProfile={() => alert('Профиль пользователя')} />}
+          {user && <UserMenu user={user} onLogout={handleLogout} onOpenProfile={openProfileModal} />}
         </Group>
       </Group>
 

@@ -1,6 +1,15 @@
 import { Card, Grid, Group, LoadingOverlay, Stack, Text, Title } from '@mantine/core'
 import { useStore } from '@nanostores/react'
-import { $calendarItems, $ingredients, $loading, $recipes, $shoppingList, $stockItems, $user } from '../app.js'
+import {
+  $calendarItems,
+  $ingredients,
+  $loading,
+  $recipes,
+  $shoppingList,
+  $stockItems,
+  $user,
+  openProfileModal,
+} from '../app.js'
 import { Breadcrumbs } from '../components/Breadcrumbs.js'
 import { QuickActions } from '../components/QuickActions.js'
 import { UserMenu } from '../components/UserMenu.js'
@@ -64,7 +73,7 @@ export function StatsPage() {
         </div>
         <Group gap="xs">
           <QuickActions />
-          {user && <UserMenu user={user} onLogout={handleLogout} onOpenProfile={() => alert('Профиль пользователя')} />}
+          {user && <UserMenu user={user} onLogout={handleLogout} onOpenProfile={openProfileModal} />}
         </Group>
       </Group>
 
