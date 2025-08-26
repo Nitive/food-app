@@ -33,7 +33,9 @@ const app = new Elysia({ adapter: node() as any })
 
     return new Response(assetFile, {
       status: 200,
-      headers: { 'Content-Type': mime.lookup(path) },
+      headers: {
+        'Content-Type': mime.lookup(path) || 'application/octet-stream',
+      },
     });
   })
   .use(cookie())
