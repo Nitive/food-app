@@ -62,6 +62,7 @@ import { QuickActions } from './components/QuickActions.js';
 import { ShoppingListPage } from './pages/ShoppingListPage.js';
 import { StatsPage } from './pages/StatsPage.js';
 import { FavoritesPage } from './pages/FavoritesPage.js';
+import { FoodDiaryPage } from './pages/FoodDiaryPage.js';
 import { AddToCalendarModal } from './components/AddToCalendarModal.js';
 import { EditRecipeForm } from './components/EditRecipeForm.js';
 
@@ -3222,6 +3223,7 @@ function App() {
                 <Route path="shopping-list" element={<ShoppingListPage />} />
                 <Route path="ingredients" element={<IngredientsPage />} />
                 <Route path="calendar" element={<CalendarPage />} />
+                <Route path="food-diary" element={<FoodDiaryPage />} />
                 <Route path="stats" element={<StatsPage />} />
                 <Route path="recipe/:id" element={<Recipe />} />
               </Routes>

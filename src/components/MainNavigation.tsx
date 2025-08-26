@@ -66,6 +66,12 @@ export function MainNavigation() {
       color: 'amber',
     },
     {
+      path: '/food-diary',
+      icon: '📝',
+      label: 'Дневник питания',
+      color: 'lime',
+    },
+    {
       path: '/ingredients',
       icon: '📦',
       label: 'Ингредиенты',

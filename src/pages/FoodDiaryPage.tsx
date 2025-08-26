@@ -1,0 +1,475 @@
+import React from 'react';
+import {
+  Stack,
+  Title,
+  Text,
+  Card,
+  Group,
+  Button,
+  Badge,
+  ActionIcon,
+  NumberInput,
+  Select,
+  Modal,
+  TextInput,
+  Grid,
+  Divider,
+  LoadingOverlay,
+} from '@mantine/core';
+import { useStore } from '@nanostores/react';
+import { DateInput } from '@mantine/dates';
+import { TrashIcon, PlusIcon } from '@primer/octicons-react';
+import {
+  $recipes,
+  $loading,
+  $user,
+} from '../app.js';
+import { UserMenu } from '../components/UserMenu.js';
+import { Breadcrumbs } from '../components/Breadcrumbs.js';
+import { QuickActions } from '../components/QuickActions.js';
+
+interface FoodEntry {
+  id: string;
+  recipeId: number;
+  recipeName: string;
+  mealType: 'breakfast' | 'lunch' | 'dinner' | 'snack';
+  servingSize: number;
+  calories: number;
+  proteins: number;
+  fats: number;
+  carbohydrates: number;
+  timestamp: string;
+}
+
+export function FoodDiaryPage() {
+  const recipes = useStore($recipes);
+  const loading = useStore($loading);
+  const user = useStore($user);
+  
+  const [selectedDate, setSelectedDate] = React.useState<Date>(new Date());
+  const [foodEntries, setFoodEntries] = React.useState<FoodEntry[]>([]);
+  const [addEntryModalOpened, setAddEntryModalOpened] = React.useState(false);
+  const [selectedRecipe, setSelectedRecipe] = React.useState<number | null>(null);
+  const [selectedMealType, setSelectedMealType] = React.useState<string>('lunch');
+  const [servingSize, setServingSize] = React.useState<number>(1);
+
+  // Загружаем записи для выбранной даты (в реальном приложении это будет из API)
+  React.useEffect(() => {
+    // Здесь будет загрузка записей из API
+    // Пока используем пустой массив
+    setFoodEntries([]);
+  }, [selectedDate]);
+
+  const handleAddEntry = () => {
+    if (!selectedRecipe) return;
+
+    const recipe = recipes.find(r => r.id === selectedRecipe);
+    if (!recipe) return;
+
+    const newEntry: FoodEntry = {
+      id: Date.now().toString(),
+      recipeId: recipe.id,
+      recipeName: recipe.name,
+      mealType: selectedMealType as 'breakfast' | 'lunch' | 'dinner' | 'snack',
+      servingSize,
+      calories: recipe.calories * servingSize,
+      proteins: recipe.proteins * servingSize,
+      fats: recipe.fats * servingSize,
+      carbohydrates: recipe.carbohydrates * servingSize,
+      timestamp: new Date().toISOString(),
+    };
+
+    setFoodEntries(prev => [...prev, newEntry]);
+    setAddEntryModalOpened(false);
+    setSelectedRecipe(null);
+    setServingSize(1);
+  };
+
+  const handleDeleteEntry = (entryId: string) => {
+    setFoodEntries(prev => prev.filter(entry => entry.id !== entryId));
+  };
+
+  const getDailyStats = () => {
+    const totalCalories = foodEntries.reduce((sum, entry) => sum + entry.calories, 0);
+    const totalProteins = foodEntries.reduce((sum, entry) => sum + entry.proteins, 0);
+    const totalFats = foodEntries.reduce((sum, entry) => sum + entry.fats, 0);
+    const totalCarbohydrates = foodEntries.reduce((sum, entry) => sum + entry.carbohydrates, 0);
+
+    return {
+      totalCalories,
+      totalProteins,
+      totalFats,
+      totalCarbohydrates,
+      totalEntries: foodEntries.length,
+    };
+  };
+
+  const getMealTypeEmoji = (mealType: string) => {
+    switch (mealType) {
+      case 'breakfast': return '🌅';
+      case 'lunch': return '🍽️';
+      case 'dinner': return '🌙';
+      case 'snack': return '🍎';
+      default: return '🍽️';
+    }
+  };
+
+  const getMealTypeLabel = (mealType: string) => {
+    switch (mealType) {
+      case 'breakfast': return 'Завтрак';
+      case 'lunch': return 'Обед';
+      case 'dinner': return 'Ужин';
+      case 'snack': return 'Перекус';
+      default: return 'Прием пищи';
+    }
+  };
+
+  const getMealTypeColor = (mealType: string) => {
+    switch (mealType) {
+      case 'breakfast': return 'orange';
+      case 'lunch': return 'green';
+      case 'dinner': return 'blue';
+      case 'snack': return 'purple';
+      default: return 'gray';
+    }
+  };
+
+  const stats = getDailyStats();
+
+  return (
+    <Stack gap="lg" pos="relative">
+      <LoadingOverlay visible={loading} />
+
+      <Group justify="space-between" align="center">
+        <div>
+          <Title>Дневник питания</Title>
+          <Text size="sm" c="dimmed" mt={4}>
+            Отслеживайте все, что вы съели за день
+          </Text>
+        </div>
+        <Group gap="xs">
+          <QuickActions
+            showExport={foodEntries.length > 0}
+            onExportPDF={() => {
+              // TODO: Реализовать экспорт дневника в PDF
+              alert('Экспорт дневника в разработке');
+            }}
+            exportLabel="Экспорт дневника"
+          />
+
+          {user && (
+            <UserMenu
+              user={user}
+              onLogout={() => {
+                // TODO: Реализовать logout
+                alert('Logout в разработке');
+              }}
+            />
+          )}
+        </Group>
+      </Group>
+
+      <Breadcrumbs />
+
+      <Text c="dimmed">
+        Записывайте все приемы пищи с указанием размера порции. 
+        КБЖУ рассчитывается автоматически на основе выбранных рецептов.
+      </Text>
+
+      <Grid>
+        <Grid.Col span={9}>
+          {/* Выбор даты */}
+          <Card withBorder p="md" mb="md">
+            <Group justify="space-between" align="center">
+              <div>
+                <Text fw={500} mb={4}>Выбранная дата:</Text>
+                <DateInput
+                  value={selectedDate}
+                  onChange={(date) => {
+                    if (date && typeof date === 'object') {
+                      setSelectedDate(date);
+                    }
+                  }}
+                  placeholder="Выберите дату"
+                  clearable={false}
+                />
+              </div>
+              <Button
+                leftSection={<PlusIcon size={16} />}
+                onClick={() => setAddEntryModalOpened(true)}
+                color="teal"
+              >
+                Добавить прием пищи
+              </Button>
+            </Group>
+          </Card>
+
+          {/* Статистика дня */}
+          <Card withBorder p="md" mb="md">
+            <Title order={4} mb="md">📊 Статистика за день</Title>
+            <Grid>
+              <Grid.Col span={3}>
+                <Group justify="space-between">
+                  <Text size="sm" fw={500}>Калории:</Text>
+                  <Badge size="lg" color="teal" variant="light">
+                    {stats.totalCalories} ккал
+                  </Badge>
+                </Group>
+              </Grid.Col>
+              <Grid.Col span={3}>
+                <Group justify="space-between">
+                  <Text size="sm" fw={500}>Белки:</Text>
+                  <Badge size="lg" color="green" variant="light">
+                    {stats.totalProteins}г
+                  </Badge>
+                </Group>
+              </Grid.Col>
+              <Grid.Col span={3}>
+                <Group justify="space-between">
+                  <Text size="sm" fw={500}>Жиры:</Text>
+                  <Badge size="lg" color="yellow" variant="light">
+                    {stats.totalFats}г
+                  </Badge>
+                </Group>
+              </Grid.Col>
+              <Grid.Col span={3}>
+                <Group justify="space-between">
+                  <Text size="sm" fw={500}>Углеводы:</Text>
+                  <Badge size="lg" color="blue" variant="light">
+                    {stats.totalCarbohydrates}г
+                  </Badge>
+                </Group>
+              </Grid.Col>
+            </Grid>
+          </Card>
+
+          {/* Список записей */}
+          <Card withBorder p="md">
+            <Title order={4} mb="md">🍽️ Записи о питании</Title>
+            
+            {foodEntries.length === 0 ? (
+              <Text c="dimmed" ta="center" py="xl">
+                Нет записей о питании на выбранную дату. 
+                Добавьте первый прием пищи!
+              </Text>
+            ) : (
+              <Stack gap="md">
+                {foodEntries.map(entry => (
+                  <Card key={entry.id} withBorder p="md">
+                    <Group justify="space-between" align="flex-start">
+                      <div style={{ flex: 1 }}>
+                        <Group gap="xs" mb="xs">
+                          <Badge 
+                            color={getMealTypeColor(entry.mealType)} 
+                            variant="light"
+                            size="sm"
+                          >
+                            {getMealTypeEmoji(entry.mealType)} {getMealTypeLabel(entry.mealType)}
+                          </Badge>
+                          <Badge size="sm" color="gray" variant="light">
+                            {entry.servingSize} порция{entry.servingSize > 1 ? 'и' : ''}
+                          </Badge>
+                        </Group>
+                        
+                        <Text fw={500} size="lg" mb="xs">
+                          {entry.recipeName}
+                        </Text>
+                        
+                        <Group gap="md">
+                          <Text size="sm" c="dimmed">
+                            Калории: <strong>{entry.calories}</strong> ккал
+                          </Text>
+                          <Text size="sm" c="dimmed">
+                            Белки: <strong>{entry.proteins}</strong>г
+                          </Text>
+                          <Text size="sm" c="dimmed">
+                            Жиры: <strong>{entry.fats}</strong>г
+                          </Text>
+                          <Text size="sm" c="dimmed">
+                            Углеводы: <strong>{entry.carbohydrates}</strong>г
+                          </Text>
+                        </Group>
+                      </div>
+                      
+                      <ActionIcon
+                        variant="light"
+                        color="red"
+                        onClick={() => handleDeleteEntry(entry.id)}
+                      >
+                        <TrashIcon size={16} />
+                      </ActionIcon>
+                    </Group>
+                  </Card>
+                ))}
+              </Stack>
+            )}
+          </Card>
+        </Grid.Col>
+
+        <Grid.Col span={3}>
+          <Stack gap="md">
+            {/* Рекомендации */}
+            <Card withBorder p="md">
+              <Title order={5} mb="sm" c="teal">
+                💡 Рекомендации
+              </Title>
+              <Stack gap="xs">
+                <Text size="xs" c="dimmed">
+                  • Записывайте все приемы пищи сразу после еды
+                </Text>
+                <Text size="xs" c="dimmed">
+                  • Указывайте точный размер порции
+                </Text>
+                <Text size="xs" c="dimmed">
+                  • Старайтесь не пропускать записи
+                </Text>
+                <Text size="xs" c="dimmed">
+                  • Анализируйте статистику регулярно
+                </Text>
+              </Stack>
+            </Card>
+
+            {/* Быстрые действия */}
+            <Card withBorder p="md">
+              <Title order={5} mb="sm" c="blue">
+                ⚡ Быстрые действия
+              </Title>
+              <Stack gap="xs">
+                <Button
+                  variant="light"
+                  size="sm"
+                  onClick={() => {
+                    setSelectedMealType('breakfast');
+                    setAddEntryModalOpened(true);
+                  }}
+                  color="orange"
+                >
+                  🌅 Добавить завтрак
+                </Button>
+                <Button
+                  variant="light"
+                  size="sm"
+                  onClick={() => {
+                    setSelectedMealType('lunch');
+                    setAddEntryModalOpened(true);
+                  }}
+                  color="green"
+                >
+                  🍽️ Добавить обед
+                </Button>
+                <Button
+                  variant="light"
+                  size="sm"
+                  onClick={() => {
+                    setSelectedMealType('dinner');
+                    setAddEntryModalOpened(true);
+                  }}
+                  color="blue"
+                >
+                  🌙 Добавить ужин
+                </Button>
+                <Button
+                  variant="light"
+                  size="sm"
+                  onClick={() => {
+                    setSelectedMealType('snack');
+                    setAddEntryModalOpened(true);
+                  }}
+                  color="purple"
+                >
+                  🍎 Добавить перекус
+                </Button>
+              </Stack>
+            </Card>
+          </Stack>
+        </Grid.Col>
+      </Grid>
+
+      {/* Модальное окно добавления записи */}
+      <Modal
+        opened={addEntryModalOpened}
+        onClose={() => setAddEntryModalOpened(false)}
+        title="Добавить прием пищи"
+        size="md"
+      >
+        <Stack gap="md">
+          <Select
+            label="Тип приема пищи"
+            placeholder="Выберите тип приема пищи"
+            value={selectedMealType}
+            onChange={(value) => value && setSelectedMealType(value)}
+            data={[
+              { value: 'breakfast', label: '🌅 Завтрак' },
+              { value: 'lunch', label: '🍽️ Обед' },
+              { value: 'dinner', label: '🌙 Ужин' },
+              { value: 'snack', label: '🍎 Перекус' },
+            ]}
+          />
+
+          <Select
+            label="Рецепт"
+            placeholder="Выберите рецепт"
+            value={selectedRecipe?.toString() || ''}
+            onChange={(value) => value && setSelectedRecipe(Number(value))}
+            data={recipes.map(recipe => ({
+              value: recipe.id.toString(),
+              label: `${recipe.name} (${recipe.calories} ккал)`,
+            }))}
+            searchable
+          />
+
+          <NumberInput
+            label="Размер порции"
+            placeholder="Введите размер порции"
+            value={servingSize}
+            onChange={(value) => setServingSize(typeof value === 'number' ? value : 1)}
+            min={0.1}
+            max={10}
+            step={0.1}
+            decimalScale={1}
+          />
+
+          {selectedRecipe && (
+            <Card withBorder p="md">
+              <Text size="sm" fw={500} mb="xs">Расчет КБЖУ:</Text>
+              {(() => {
+                const recipe = recipes.find(r => r.id === selectedRecipe);
+                if (!recipe) return null;
+                
+                return (
+                  <Group gap="md">
+                    <Text size="xs" c="dimmed">
+                      Калории: <strong>{recipe.calories * servingSize}</strong> ккал
+                    </Text>
+                    <Text size="xs" c="dimmed">
+                      Белки: <strong>{recipe.proteins * servingSize}</strong>г
+                    </Text>
+                    <Text size="xs" c="dimmed">
+                      Жиры: <strong>{recipe.fats * servingSize}</strong>г
+                    </Text>
+                    <Text size="xs" c="dimmed">
+                      Углеводы: <strong>{recipe.carbohydrates * servingSize}</strong>г
+                    </Text>
+                  </Group>
+                );
+              })()}
+            </Card>
+          )}
+
+          <Group justify="flex-end" gap="xs">
+            <Button variant="light" onClick={() => setAddEntryModalOpened(false)}>
+              Отмена
+            </Button>
+            <Button 
+              onClick={handleAddEntry}
+              disabled={!selectedRecipe}
+              color="teal"
+            >
+              Добавить
+            </Button>
+          </Group>
+        </Stack>
+      </Modal>
+    </Stack>
+  );
+}

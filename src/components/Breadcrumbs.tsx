@@ -41,6 +41,10 @@ export function Breadcrumbs() {
           label = 'Список покупок';
           icon = '📋';
           break;
+        case 'food-diary':
+          label = 'Дневник питания';
+          icon = '📝';
+          break;
         case 'calendar':
           label = 'Календарь';
           icon = '📅';
