@@ -2110,6 +2110,21 @@ function CalendarPage() {
     return { totalCalories, totalRecipes };
   };
 
+  const getSelectedDayStats = () => {
+    if (!selectedDate) {
+      return { totalCalories: 0, totalRecipes: 0 };
+    }
+    
+    const events = getEventsForDate(selectedDate);
+    const totalCalories = events.reduce(
+      (sum, event) => sum + event.recipe.calories,
+      0
+    );
+    const totalRecipes = events.length;
+
+    return { totalCalories, totalRecipes };
+  };
+
   const getWeekStart = (date: Date) => {
     const weekStart = new Date(date);
     const dayOfWeek = date.getDay();
@@ -2331,13 +2346,22 @@ function CalendarPage() {
         <div>
           <Title>Календарь планирования питания</Title>
           {(() => {
-            const stats = getWeekStats();
-            return (
-              <Text size="sm" c="dimmed" mt={4}>
-                На этой неделе: {stats.totalRecipes} рецептов,{' '}
-                {stats.totalCalories} ккал
-              </Text>
-            );
+            const selectedStats = getSelectedDayStats();
+            const weekStats = getWeekStats();
+            
+            if (selectedDate) {
+              return (
+                <Text size="sm" c="dimmed" mt={4}>
+                  Выбранный день ({selectedDate.toLocaleDateString('ru-RU')}): {selectedStats.totalRecipes} рецептов, {selectedStats.totalCalories} ккал
+                </Text>
+              );
+            } else {
+              return (
+                <Text size="sm" c="dimmed" mt={4}>
+                  На этой неделе: {weekStats.totalRecipes} рецептов, {weekStats.totalCalories} ккал
+                </Text>
+              );
+            }
           })()}
         </div>
         <Group gap="xs">
@@ -2447,15 +2471,49 @@ function CalendarPage() {
         <Grid.Col span={3}>
           <Stack gap="md">
             {selectedDate && (
-              <Card withBorder p="md">
-                <Title order={4} mb="md">
-                  {selectedDate.toLocaleDateString('ru-RU', {
-                    weekday: 'long',
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric',
-                  })}
-                </Title>
+              <>
+                {/* Статистика калорий для выбранного дня */}
+                <Card withBorder p="md">
+                  <Title order={5} mb="sm" c="teal">
+                    📊 Статистика дня
+                  </Title>
+                  {(() => {
+                    const stats = getSelectedDayStats();
+                    return (
+                      <Stack gap="xs">
+                        <Group justify="space-between">
+                          <Text size="sm" fw={500}>Ожидаемые калории:</Text>
+                          <Badge size="lg" color="teal" variant="light">
+                            {stats.totalCalories} ккал
+                          </Badge>
+                        </Group>
+                        <Group justify="space-between">
+                          <Text size="sm" fw={500}>Количество рецептов:</Text>
+                          <Badge size="sm" color="blue" variant="light">
+                            {stats.totalRecipes}
+                          </Badge>
+                        </Group>
+                        {stats.totalCalories > 0 && (
+                          <Text size="xs" c="dimmed" mt="xs">
+                            {stats.totalCalories < 1200 ? '⚠️ Малокалорийный день' : 
+                             stats.totalCalories > 2500 ? '⚠️ Высококалорийный день' : 
+                             '✅ Сбалансированное питание'}
+                          </Text>
+                        )}
+                      </Stack>
+                    );
+                  })()}
+                </Card>
+
+                <Card withBorder p="md">
+                  <Title order={4} mb="md">
+                    {selectedDate.toLocaleDateString('ru-RU', {
+                      weekday: 'long',
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric',
+                    })}
+                  </Title>
                 {quickMealType && (
                   <Badge
                     color={
@@ -2674,6 +2732,7 @@ function CalendarPage() {
                   </Button>
                 </Group>
               </Card>
+            </>
             )}
 
             {!selectedDate && (
