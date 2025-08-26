@@ -22,3 +22,5 @@ build
 .cache
 .parcel-cache
 .github
+Dockerfile
+.dockerignore

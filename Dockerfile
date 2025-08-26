@@ -1,57 +1,22 @@
-# Используем Node.js 22 Alpine для меньшего размера образа
-FROM node:22-alpine AS base
-
-# Устанавливаем pnpm
-RUN npm install -g pnpm
-
-# Рабочая директория
+FROM node:22-bookworm-slim AS base
 WORKDIR /app
-
-# Копируем файлы зависимостей
 COPY package.json pnpm-lock.yaml ./
+RUN corepack enable
 
-# Устанавливаем зависимости
+FROM base AS build
 RUN pnpm install --frozen-lockfile
-
-# Копируем исходный код
 COPY . .
-
-# Генерируем Prisma клиент
-RUN npx prisma generate
-
-# Собираем фронтенд и бэкенд
+RUN pnpm prisma generate
 RUN pnpm run build
 
-# Продакшн образ
-FROM node:22-alpine AS production
-
-# Устанавливаем pnpm
-RUN npm install -g pnpm
-
-# Рабочая директория
-WORKDIR /app
-
-# Копируем package.json и pnpm-lock.yaml
-COPY package.json pnpm-lock.yaml ./
-
-# Устанавливаем только продакшн зависимости
+FROM base AS prod_deps
 RUN pnpm install --frozen-lockfile --prod
+COPY . .
+RUN pnpm prisma generate
 
-# Копируем собранное приложение
-COPY --from=base /app/dist ./dist
-COPY --from=base /app/prisma ./prisma
-COPY --from=base /app/node_modules/.prisma ./node_modules/.prisma
-
-# Создаем пользователя для безопасности
-RUN addgroup -g 1001 -S nodejs
-RUN adduser -S nextjs -u 1001
-
-# Меняем владельца файлов
-RUN chown -R nextjs:nodejs /app
-USER nextjs
-
-# Открываем порт
-EXPOSE 3000
-
-# Команда запуска
-CMD ["node", "dist/api.js"]
+FROM gcr.io/distroless/nodejs22-debian12
+WORKDIR /app
+COPY package.json pnpm-lock.yaml ./
+COPY --from=build /app/dist ./dist
+COPY --from=prod_deps /app/node_modules ./node_modules
+CMD ["/app/dist/src/api.js"]
