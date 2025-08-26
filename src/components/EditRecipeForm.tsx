@@ -100,10 +100,7 @@ export function EditRecipeForm({
   };
 
   const addIngredient = () => {
-    setIngredients([
-      ...ingredients,
-      { name: '', amount: 0, amountType: 'г' },
-    ]);
+    setIngredients([...ingredients, { name: '', amount: 0, amountType: 'г' }]);
   };
 
   const removeIngredient = (index: number) => {
@@ -163,7 +160,9 @@ export function EditRecipeForm({
             label="Калории"
             placeholder="0"
             value={calories}
-            onChange={value => setCalories(typeof value === 'number' ? value : 0)}
+            onChange={value =>
+              setCalories(typeof value === 'number' ? value : 0)
+            }
             min={0}
             required
           />
@@ -171,7 +170,9 @@ export function EditRecipeForm({
             label="Белки (г)"
             placeholder="0"
             value={proteins}
-            onChange={value => setProteins(typeof value === 'number' ? value : 0)}
+            onChange={value =>
+              setProteins(typeof value === 'number' ? value : 0)
+            }
             min={0}
             required
           />
@@ -190,7 +191,9 @@ export function EditRecipeForm({
             label="Углеводы (г)"
             placeholder="0"
             value={carbohydrates}
-            onChange={value => setCarbohydrates(typeof value === 'number' ? value : 0)}
+            onChange={value =>
+              setCarbohydrates(typeof value === 'number' ? value : 0)
+            }
             min={0}
             required
           />
@@ -201,7 +204,9 @@ export function EditRecipeForm({
             label="Время приготовления (мин)"
             placeholder="0"
             value={cookingTime}
-            onChange={value => setCookingTime(typeof value === 'number' ? value : '')}
+            onChange={value =>
+              setCookingTime(typeof value === 'number' ? value : '')
+            }
             min={0}
           />
           <Select

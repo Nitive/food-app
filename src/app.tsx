@@ -105,8 +105,6 @@ const $loading = atom(false);
 // Состояние рецептов
 const $recipes = atom<Recipe[]>([]);
 
-
-
 // Состояние ингредиентов
 const $ingredients = atom<Ingredient[]>([]);
 
@@ -114,7 +112,11 @@ const $ingredients = atom<Ingredient[]>([]);
 const $stockItems = atom<StockItem[]>([]);
 
 // Состояние списка покупок
-const $shoppingList = atom<ShoppingListResponse>({ items: [], date: '', recipes: [] });
+const $shoppingList = atom<ShoppingListResponse>({
+  items: [],
+  date: '',
+  recipes: [],
+});
 
 // Состояние календаря
 const $calendarItems = atom<CalendarItem[]>([]);
@@ -144,19 +146,14 @@ const $isAuthenticated = atom(false);
 async function loadData() {
   $loading.set(true);
   try {
-    const [
-      recipes,
-      ingredients,
-      stockItems,
-      shoppingList,
-      calendarItems,
-    ] = await Promise.all([
-      apiClient.getRecipes(),
-      apiClient.getIngredients(),
-      apiClient.getStock(),
-      apiClient.getShoppingList(), // По умолчанию для сегодняшней даты
-      apiClient.getCalendar(),
-    ]);
+    const [recipes, ingredients, stockItems, shoppingList, calendarItems] =
+      await Promise.all([
+        apiClient.getRecipes(),
+        apiClient.getIngredients(),
+        apiClient.getStock(),
+        apiClient.getShoppingList(), // По умолчанию для сегодняшней даты
+        apiClient.getCalendar(),
+      ]);
 
     $recipes.set(recipes);
     $ingredients.set(ingredients);
@@ -204,10 +201,10 @@ function handleLogout() {
   $user.set(null);
   $isAuthenticated.set(false);
   // Очищаем все данные
-      $recipes.set([]);
-    $ingredients.set([]);
+  $recipes.set([]);
+  $ingredients.set([]);
   $stockItems.set([]);
-      $shoppingList.set({ items: [], date: '', recipes: [] });
+  $shoppingList.set({ items: [], date: '', recipes: [] });
   $calendarItems.set([]);
   $favoriteRecipes.set([]);
   // Очищаем localStorage
@@ -227,7 +224,6 @@ async function updateIngredientStock(ingredientId: number, amount: number) {
 
 async function clearAllData() {
   try {
-
     await loadData(); // Перезагружаем данные
   } catch (error) {
     console.error('Ошибка очистки данных:', error);
@@ -294,8 +290,6 @@ async function removeFromCalendar(id: number) {
   }
 }
 
-
-
 // Функции для работы с модальным окном календаря
 function openAddToCalendarModal(recipe: Recipe) {
   $selectedRecipeForCalendar.set(recipe);
@@ -339,7 +333,10 @@ async function handleEditRecipeSave(recipeData: {
 }) {
   try {
     if ($selectedRecipeForEdit.get()) {
-      await apiClient.updateRecipe($selectedRecipeForEdit.get()!.id, recipeData);
+      await apiClient.updateRecipe(
+        $selectedRecipeForEdit.get()!.id,
+        recipeData
+      );
       await loadData(); // Перезагружаем данные
       closeEditRecipeModal();
     }
@@ -468,8 +465,6 @@ function exportShoppingListToPDF(shoppingList: ShoppingListItem[]) {
   }
 }
 
-
-
 // Функция экспорта календаря в PDF
 function exportCalendarToPDF(calendarItems: CalendarItem[]) {
   try {
@@ -580,7 +575,11 @@ function exportCalendarToPDF(calendarItems: CalendarItem[]) {
 }
 
 // Функция экспорта дневника питания в PDF
-function exportFoodDiaryToPDF(foodEntries: FoodDiaryEntry[], startDate: Date, endDate: Date) {
+function exportFoodDiaryToPDF(
+  foodEntries: FoodDiaryEntry[],
+  startDate: Date,
+  endDate: Date
+) {
   try {
     const doc = new jsPDF();
 
@@ -615,9 +614,10 @@ function exportFoodDiaryToPDF(foodEntries: FoodDiaryEntry[], startDate: Date, en
     });
 
     // Сортируем даты
-    const sortedDates = Object.keys(groupedByDate).sort((a, b) => 
-      new Date(a.split('.').reverse().join('-')).getTime() - 
-      new Date(b.split('.').reverse().join('-')).getTime()
+    const sortedDates = Object.keys(groupedByDate).sort(
+      (a, b) =>
+        new Date(a.split('.').reverse().join('-')).getTime() -
+        new Date(b.split('.').reverse().join('-')).getTime()
     );
 
     let yPosition = 80;
@@ -625,7 +625,7 @@ function exportFoodDiaryToPDF(foodEntries: FoodDiaryEntry[], startDate: Date, en
 
     sortedDates.forEach((date, dateIndex) => {
       const entries = groupedByDate[date] || [];
-      
+
       // Проверяем, нужно ли добавить новую страницу
       if (yPosition > 250) {
         doc.addPage();
@@ -640,13 +640,16 @@ function exportFoodDiaryToPDF(foodEntries: FoodDiaryEntry[], startDate: Date, en
       yPosition += 15;
 
       // Статистика дня
-      const dayStats = entries.reduce((stats, entry) => ({
-        calories: stats.calories + entry.calories,
-        proteins: stats.proteins + entry.proteins,
-        fats: stats.fats + entry.fats,
-        carbohydrates: stats.carbohydrates + entry.carbohydrates,
-        count: stats.count + 1,
-      }), { calories: 0, proteins: 0, fats: 0, carbohydrates: 0, count: 0 });
+      const dayStats = entries.reduce(
+        (stats, entry) => ({
+          calories: stats.calories + entry.calories,
+          proteins: stats.proteins + entry.proteins,
+          fats: stats.fats + entry.fats,
+          carbohydrates: stats.carbohydrates + entry.carbohydrates,
+          count: stats.count + 1,
+        }),
+        { calories: 0, proteins: 0, fats: 0, carbohydrates: 0, count: 0 }
+      );
 
       doc.setFontSize(12);
       doc.setFont('helvetica', 'bold');
@@ -661,7 +664,11 @@ function exportFoodDiaryToPDF(foodEntries: FoodDiaryEntry[], startDate: Date, en
       yPosition += 8;
       doc.text(`Жиры: ${dayStats.fats.toFixed(1)}г`, 30, yPosition);
       yPosition += 8;
-      doc.text(`Углеводы: ${dayStats.carbohydrates.toFixed(1)}г`, 30, yPosition);
+      doc.text(
+        `Углеводы: ${dayStats.carbohydrates.toFixed(1)}г`,
+        30,
+        yPosition
+      );
       yPosition += 8;
       doc.text(`Приемов пищи: ${dayStats.count}`, 30, yPosition);
       yPosition += 15;
@@ -680,19 +687,21 @@ function exportFoodDiaryToPDF(foodEntries: FoodDiaryEntry[], startDate: Date, en
           pageNumber++;
         }
 
-        const mealTypeEmoji = {
-          breakfast: '🌅',
-          lunch: '🍽️',
-          dinner: '🌙',
-          snack: '🍎',
-        }[entry.mealType] || '🍽️';
+        const mealTypeEmoji =
+          {
+            breakfast: '🌅',
+            lunch: '🍽️',
+            dinner: '🌙',
+            snack: '🍎',
+          }[entry.mealType] || '🍽️';
 
-        const mealTypeLabel = {
-          breakfast: 'Завтрак',
-          lunch: 'Обед',
-          dinner: 'Ужин',
-          snack: 'Перекус',
-        }[entry.mealType] || 'Прием пищи';
+        const mealTypeLabel =
+          {
+            breakfast: 'Завтрак',
+            lunch: 'Обед',
+            dinner: 'Ужин',
+            snack: 'Перекус',
+          }[entry.mealType] || 'Прием пищи';
 
         doc.setFontSize(11);
         doc.setFont('helvetica', 'bold');
@@ -701,9 +710,17 @@ function exportFoodDiaryToPDF(foodEntries: FoodDiaryEntry[], startDate: Date, en
 
         doc.setFontSize(10);
         doc.setFont('helvetica', 'normal');
-        doc.text(`• ${entry.recipeName} (${entry.servingSize} порция)`, 35, yPosition);
+        doc.text(
+          `• ${entry.recipeName} (${entry.servingSize} порция)`,
+          35,
+          yPosition
+        );
         yPosition += 8;
-        doc.text(`  Калории: ${entry.calories.toFixed(1)} ккал, Белки: ${entry.proteins.toFixed(1)}г, Жиры: ${entry.fats.toFixed(1)}г, Углеводы: ${entry.carbohydrates.toFixed(1)}г`, 35, yPosition);
+        doc.text(
+          `  Калории: ${entry.calories.toFixed(1)} ккал, Белки: ${entry.proteins.toFixed(1)}г, Жиры: ${entry.fats.toFixed(1)}г, Углеводы: ${entry.carbohydrates.toFixed(1)}г`,
+          35,
+          yPosition
+        );
         yPosition += 12;
       });
 
@@ -724,13 +741,16 @@ function exportFoodDiaryToPDF(foodEntries: FoodDiaryEntry[], startDate: Date, en
         yPosition = 30;
       }
 
-      const totalStats = foodEntries.reduce((stats, entry) => ({
-        calories: stats.calories + entry.calories,
-        proteins: stats.proteins + entry.proteins,
-        fats: stats.fats + entry.fats,
-        carbohydrates: stats.carbohydrates + entry.carbohydrates,
-        count: stats.count + 1,
-      }), { calories: 0, proteins: 0, fats: 0, carbohydrates: 0, count: 0 });
+      const totalStats = foodEntries.reduce(
+        (stats, entry) => ({
+          calories: stats.calories + entry.calories,
+          proteins: stats.proteins + entry.proteins,
+          fats: stats.fats + entry.fats,
+          carbohydrates: stats.carbohydrates + entry.carbohydrates,
+          count: stats.count + 1,
+        }),
+        { calories: 0, proteins: 0, fats: 0, carbohydrates: 0, count: 0 }
+      );
 
       const avgStats = {
         calories: totalStats.calories / sortedDates.length,
@@ -755,13 +775,25 @@ function exportFoodDiaryToPDF(foodEntries: FoodDiaryEntry[], startDate: Date, en
       yPosition += 8;
       doc.text(`Записей: ${totalStats.count}`, 30, yPosition);
       yPosition += 8;
-      doc.text(`Общие калории: ${totalStats.calories.toFixed(1)} ккал`, 30, yPosition);
+      doc.text(
+        `Общие калории: ${totalStats.calories.toFixed(1)} ккал`,
+        30,
+        yPosition
+      );
       yPosition += 8;
-      doc.text(`Общие белки: ${totalStats.proteins.toFixed(1)}г`, 30, yPosition);
+      doc.text(
+        `Общие белки: ${totalStats.proteins.toFixed(1)}г`,
+        30,
+        yPosition
+      );
       yPosition += 8;
       doc.text(`Общие жиры: ${totalStats.fats.toFixed(1)}г`, 30, yPosition);
       yPosition += 8;
-      doc.text(`Общие углеводы: ${totalStats.carbohydrates.toFixed(1)}г`, 30, yPosition);
+      doc.text(
+        `Общие углеводы: ${totalStats.carbohydrates.toFixed(1)}г`,
+        30,
+        yPosition
+      );
       yPosition += 15;
 
       doc.setFontSize(12);
@@ -777,7 +809,11 @@ function exportFoodDiaryToPDF(foodEntries: FoodDiaryEntry[], startDate: Date, en
       yPosition += 8;
       doc.text(`Жиры: ${avgStats.fats.toFixed(1)}г`, 30, yPosition);
       yPosition += 8;
-      doc.text(`Углеводы: ${avgStats.carbohydrates.toFixed(1)}г`, 30, yPosition);
+      doc.text(
+        `Углеводы: ${avgStats.carbohydrates.toFixed(1)}г`,
+        30,
+        yPosition
+      );
     }
 
     // Сохраняем файл
@@ -803,8 +839,6 @@ function RecipesPage() {
     null
   );
   const [viewMode, setViewMode] = React.useState<'cards' | 'table'>('cards');
-
-
 
   // Фильтрация и сортировка рецептов
   const filteredAndSortedRecipes = React.useMemo(() => {
@@ -891,12 +925,7 @@ function RecipesPage() {
         </div>
         <Group gap="xs">
           <QuickActions showCreateRecipe={true} />
-          {user && (
-            <UserMenu
-              user={user}
-              onLogout={handleLogout}
-            />
-          )}
+          {user && <UserMenu user={user} onLogout={handleLogout} />}
         </Group>
       </Group>
 
@@ -996,7 +1025,6 @@ function RecipesPage() {
             </Text>
           </Card>
         </Grid.Col>
-
       </Grid>
 
       {/* Отображение рецептов */}
@@ -1373,15 +1401,9 @@ function IngredientsPage() {
           <QuickActions
             showCreateIngredient={true}
             showClear={true}
-
             clearLabel="Очистить все данные"
           />
-          {user && (
-            <UserMenu
-              user={user}
-              onLogout={handleLogout}
-            />
-          )}
+          {user && <UserMenu user={user} onLogout={handleLogout} />}
         </Group>
       </Group>
 
@@ -2257,9 +2279,11 @@ function CalendarPage() {
   const [currentWeek, setCurrentWeek] = React.useState(new Date());
   const [searchQuery, setSearchQuery] = React.useState('');
   const [quickMealType, setQuickMealType] = React.useState<string | null>(null);
-  
+
   // Состояние для drag & drop
-  const [draggedItem, setDraggedItem] = React.useState<CalendarItem | null>(null);
+  const [draggedItem, setDraggedItem] = React.useState<CalendarItem | null>(
+    null
+  );
   const [dragOverDate, setDragOverDate] = React.useState<Date | null>(null);
 
   const handleAddToCalendar = () => {
@@ -2340,7 +2364,7 @@ function CalendarPage() {
     if (!selectedDate) {
       return { totalCalories: 0, totalRecipes: 0, totalProteins: 0 };
     }
-    
+
     const events = getEventsForDate(selectedDate);
     const totalCalories = events.reduce(
       (sum, event) => sum + event.recipe.calories,
@@ -2397,7 +2421,8 @@ function CalendarPage() {
 
     if (draggedItem) {
       const targetDateString = targetDate.toISOString().split('T')[0] || '';
-      const originalDateString = new Date(draggedItem.date).toISOString().split('T')[0] || '';
+      const originalDateString =
+        new Date(draggedItem.date).toISOString().split('T')[0] || '';
 
       // Если дата не изменилась, ничего не делаем
       if (targetDateString === originalDateString) {
@@ -2408,10 +2433,14 @@ function CalendarPage() {
       try {
         // Удаляем рецепт с исходной даты
         await removeFromCalendar(draggedItem.id);
-        
+
         // Добавляем рецепт на новую дату
-        await addToCalendar(targetDateString, draggedItem.recipeId, draggedItem.mealType);
-        
+        await addToCalendar(
+          targetDateString,
+          draggedItem.recipeId,
+          draggedItem.mealType
+        );
+
         setDraggedItem(null);
       } catch (error) {
         console.error('Ошибка при перемещении рецепта:', error);
@@ -2451,8 +2480,9 @@ function CalendarPage() {
     weekEnd.setDate(weekStart.getDate() + 6);
     const isCurrentWeek = date >= weekStart && date <= weekEnd;
 
-    const isDragOver = dragOverDate && dragOverDate.toDateString() === date.toDateString();
-    
+    const isDragOver =
+      dragOverDate && dragOverDate.toDateString() === date.toDateString();
+
     return (
       <Box
         style={{
@@ -2526,13 +2556,13 @@ function CalendarPage() {
                 }[event.mealType] || '🍽️';
 
               const isDragging = draggedItem && draggedItem.id === event.id;
-              
+
               return (
                 <Badge
                   key={event.id}
                   size="xs"
                   variant="filled"
-                  color={isDragging ? "gray" : "teal"}
+                  color={isDragging ? 'gray' : 'teal'}
                   style={{
                     fontSize: '10px',
                     padding: '2px 4px',
@@ -2578,17 +2608,20 @@ function CalendarPage() {
           {(() => {
             const selectedStats = getSelectedDayStats();
             const weekStats = getWeekStats();
-            
+
             if (selectedDate) {
               return (
                 <Text size="sm" c="dimmed" mt={4}>
-                  Выбранный день ({selectedDate.toLocaleDateString('ru-RU')}): {selectedStats.totalRecipes} рецептов, {selectedStats.totalCalories} ккал
+                  Выбранный день ({selectedDate.toLocaleDateString('ru-RU')}):{' '}
+                  {selectedStats.totalRecipes} рецептов,{' '}
+                  {selectedStats.totalCalories} ккал
                 </Text>
               );
             } else {
               return (
                 <Text size="sm" c="dimmed" mt={4}>
-                  На этой неделе: {weekStats.totalRecipes} рецептов, {weekStats.totalCalories} ккал
+                  На этой неделе: {weekStats.totalRecipes} рецептов,{' '}
+                  {weekStats.totalCalories} ккал
                 </Text>
               );
             }
@@ -2601,12 +2634,7 @@ function CalendarPage() {
             exportLabel="Экспорт календаря"
           />
 
-          {user && (
-            <UserMenu
-              user={user}
-              onLogout={handleLogout}
-            />
-          )}
+          {user && <UserMenu user={user} onLogout={handleLogout} />}
         </Group>
       </Group>
 
@@ -2615,8 +2643,8 @@ function CalendarPage() {
       <Text c="dimmed">
         Планируйте свое питание на неделю. Кликните на день, чтобы добавить
         рецепт. Перетаскивайте рецепты между днями для быстрого планирования.
-        Все рецепты из календаря можно добавить в корзину одним кликом.
-        Выходные дни выделены серым цветом, а суббота и воскресенье - розовым.
+        Все рецепты из календаря можно добавить в корзину одним кликом. Выходные
+        дни выделены серым цветом, а суббота и воскресенье - розовым.
       </Text>
 
       <Grid>
@@ -2627,7 +2655,11 @@ function CalendarPage() {
               {getWeekStart(currentWeek).toLocaleDateString('ru-RU', {
                 day: 'numeric',
                 month: 'long',
-              })} - {new Date(getWeekStart(currentWeek).getTime() + 6 * 24 * 60 * 60 * 1000).toLocaleDateString('ru-RU', {
+              })}{' '}
+              -{' '}
+              {new Date(
+                getWeekStart(currentWeek).getTime() + 6 * 24 * 60 * 60 * 1000
+              ).toLocaleDateString('ru-RU', {
                 day: 'numeric',
                 month: 'long',
                 year: 'numeric',
@@ -2712,19 +2744,25 @@ function CalendarPage() {
                     return (
                       <Stack gap="xs">
                         <Group justify="space-between">
-                          <Text size="sm" fw={500}>Ожидаемые калории:</Text>
+                          <Text size="sm" fw={500}>
+                            Ожидаемые калории:
+                          </Text>
                           <Badge size="lg" color="teal" variant="light">
                             {stats.totalCalories} ккал
                           </Badge>
                         </Group>
                         <Group justify="space-between">
-                          <Text size="sm" fw={500}>Белки:</Text>
+                          <Text size="sm" fw={500}>
+                            Белки:
+                          </Text>
                           <Badge size="sm" color="green" variant="light">
                             {stats.totalProteins}г
                           </Badge>
                         </Group>
                         <Group justify="space-between">
-                          <Text size="sm" fw={500}>Количество рецептов:</Text>
+                          <Text size="sm" fw={500}>
+                            Количество рецептов:
+                          </Text>
                           <Badge size="sm" color="blue" variant="light">
                             {stats.totalRecipes}
                           </Badge>
@@ -2732,9 +2770,11 @@ function CalendarPage() {
                         {stats.totalCalories > 0 && (
                           <Stack gap="xs" mt="xs">
                             <Text size="xs" c="dimmed">
-                              {stats.totalCalories < 1200 ? '⚠️ Малокалорийный день' : 
-                               stats.totalCalories > 2500 ? '⚠️ Высококалорийный день' : 
-                               '✅ Сбалансированное питание'}
+                              {stats.totalCalories < 1200
+                                ? '⚠️ Малокалорийный день'
+                                : stats.totalCalories > 2500
+                                  ? '⚠️ Высококалорийный день'
+                                  : '✅ Сбалансированное питание'}
                             </Text>
                             {stats.totalProteins < 80 && (
                               <Text size="xs" c="orange" fw={500}>
@@ -2757,225 +2797,231 @@ function CalendarPage() {
                       day: 'numeric',
                     })}
                   </Title>
-                {quickMealType && (
-                  <Badge
-                    color={
-                      quickMealType === 'breakfast'
-                        ? 'orange'
+                  {quickMealType && (
+                    <Badge
+                      color={
+                        quickMealType === 'breakfast'
+                          ? 'orange'
+                          : quickMealType === 'lunch'
+                            ? 'green'
+                            : quickMealType === 'dinner'
+                              ? 'blue'
+                              : 'purple'
+                      }
+                      variant="light"
+                      mb="md"
+                    >
+                      {quickMealType === 'breakfast'
+                        ? '🍳 Завтрак'
                         : quickMealType === 'lunch'
-                          ? 'green'
+                          ? '🍽️ Обед'
                           : quickMealType === 'dinner'
-                            ? 'blue'
-                            : 'purple'
-                    }
-                    variant="light"
-                    mb="md"
-                  >
-                    {quickMealType === 'breakfast'
-                      ? '🍳 Завтрак'
-                      : quickMealType === 'lunch'
-                        ? '🍽️ Обед'
-                        : quickMealType === 'dinner'
-                          ? '🌙 Ужин'
-                          : '🍎 Перекус'}
-                  </Badge>
-                )}
+                            ? '🌙 Ужин'
+                            : '🍎 Перекус'}
+                    </Badge>
+                  )}
 
-                <Stack gap="xs" mb="md">
-                  {getEventsForDate(selectedDate).map(item => {
-                    const mealTypeEmoji =
-                      {
-                        breakfast: '🌅',
-                        lunch: '🍽️',
-                        dinner: '🌙',
-                        snack: '🍎',
-                      }[item.mealType] || '🍽️';
+                  <Stack gap="xs" mb="md">
+                    {getEventsForDate(selectedDate).map(item => {
+                      const mealTypeEmoji =
+                        {
+                          breakfast: '🌅',
+                          lunch: '🍽️',
+                          dinner: '🌙',
+                          snack: '🍎',
+                        }[item.mealType] || '🍽️';
 
-                    const mealTypeLabel =
-                      {
-                        breakfast: 'Завтрак',
-                        lunch: 'Обед',
-                        dinner: 'Ужин',
-                        snack: 'Перекус',
-                      }[item.mealType] || 'Прием пищи';
+                      const mealTypeLabel =
+                        {
+                          breakfast: 'Завтрак',
+                          lunch: 'Обед',
+                          dinner: 'Ужин',
+                          snack: 'Перекус',
+                        }[item.mealType] || 'Прием пищи';
 
-                    const isDragging = draggedItem && draggedItem.id === item.id;
-                    
-                    return (
-                      <Group
-                        key={item.id}
-                        justify="space-between"
-                        align="center"
-                        style={{
-                          padding: '8px',
-                          borderRadius: '4px',
-                          backgroundColor: isDragging ? 'var(--mantine-color-gray-1)' : 'transparent',
-                          cursor: 'grab',
-                          opacity: isDragging ? 0.5 : 1,
-                          transform: isDragging ? 'rotate(2deg)' : 'none',
-                        }}
-                        draggable
-                        onDragStart={e => handleDragStart(e, item)}
-                        onDragEnd={handleDragEnd}
-                      >
-                        <div>
-                          <Group gap="xs" align="center">
-                            <Text size="xs" c="dimmed">
-                              {mealTypeEmoji} {mealTypeLabel}
-                            </Text>
-                          </Group>
-                          <Text fw={500} size="sm">
-                            {item.recipe.name}
-                          </Text>
-                          <Text size="xs" c="dimmed">
-                            КБЖУ: {item.recipe.calories}/{item.recipe.proteins}/
-                            {item.recipe.fats}/{item.recipe.carbohydrates}
-                          </Text>
-                        </div>
-                        <ActionIcon
-                          variant="light"
-                          color="red"
-                          size="sm"
-                          onClick={() => removeFromCalendar(item.id)}
+                      const isDragging =
+                        draggedItem && draggedItem.id === item.id;
+
+                      return (
+                        <Group
+                          key={item.id}
+                          justify="space-between"
+                          align="center"
+                          style={{
+                            padding: '8px',
+                            borderRadius: '4px',
+                            backgroundColor: isDragging
+                              ? 'var(--mantine-color-gray-1)'
+                              : 'transparent',
+                            cursor: 'grab',
+                            opacity: isDragging ? 0.5 : 1,
+                            transform: isDragging ? 'rotate(2deg)' : 'none',
+                          }}
+                          draggable
+                          onDragStart={e => handleDragStart(e, item)}
+                          onDragEnd={handleDragEnd}
                         >
-                          <TrashIcon size={12} />
-                        </ActionIcon>
-                      </Group>
-                    );
-                  })}
-                </Stack>
-
-                <Divider mb="md" />
-
-                <Title order={5} mb="sm">
-                  Добавить рецепт
-                </Title>
-
-                {/* Быстрые действия */}
-                <Group gap="xs" mb="sm">
-                  <Button
-                    variant={quickMealType === 'breakfast' ? 'filled' : 'light'}
-                    size="xs"
-                    onClick={() => handleQuickMeal('breakfast')}
-                    color="orange"
-                  >
-                    🍳 Завтрак
-                  </Button>
-                  <Button
-                    variant={quickMealType === 'lunch' ? 'filled' : 'light'}
-                    size="xs"
-                    onClick={() => handleQuickMeal('lunch')}
-                    color="green"
-                  >
-                    🍽️ Обед
-                  </Button>
-                  <Button
-                    variant={quickMealType === 'dinner' ? 'filled' : 'light'}
-                    size="xs"
-                    onClick={() => handleQuickMeal('dinner')}
-                    color="blue"
-                  >
-                    🌙 Ужин
-                  </Button>
-                  <Button
-                    variant={quickMealType === 'snack' ? 'filled' : 'light'}
-                    size="xs"
-                    onClick={() => handleQuickMeal('snack')}
-                    color="purple"
-                  >
-                    🍎 Перекус
-                  </Button>
-                </Group>
-
-                {/* Поиск рецептов */}
-                <TextInput
-                  placeholder="Поиск рецептов..."
-                  value={searchQuery}
-                  onChange={e => setSearchQuery(e.target.value)}
-                  mb="sm"
-                  leftSection={<span style={{ fontSize: '12px' }}>🔍</span>}
-                />
-
-                <Select
-                  placeholder="Выберите рецепт"
-                  value={selectedRecipe?.toString() || ''}
-                  onChange={value =>
-                    setSelectedRecipe(value ? Number(value) : null)
-                  }
-                  data={filteredRecipes.map(recipe => ({
-                    value: recipe.id.toString(),
-                    label: `${recipe.name} (${recipe.calories} ккал)`,
-                  }))}
-                  mb="sm"
-                  searchable
-                />
-                {selectedRecipe &&
-                  (() => {
-                    const recipe = recipes.find(r => r.id === selectedRecipe);
-                    return recipe ? (
-                      <Card
-                        withBorder
-                        p="xs"
-                        mb="sm"
-                        style={{
-                          backgroundColor: 'var(--mantine-color-blue-0)',
-                        }}
-                      >
-                        <Text size="sm" fw={500} mb={4}>
-                          {recipe.name}
-                        </Text>
-                        <Group gap="xs">
-                          <Badge size="xs" color="blue">
-                            {recipe.calories} ккал
-                          </Badge>
-                          <Badge size="xs" color="green">
-                            {recipe.proteins}г белка
-                          </Badge>
-                          <Badge size="xs" color="orange">
-                            {recipe.fats}г жиров
-                          </Badge>
-                          <Badge size="xs" color="purple">
-                            {recipe.carbohydrates}г углеводов
-                          </Badge>
+                          <div>
+                            <Group gap="xs" align="center">
+                              <Text size="xs" c="dimmed">
+                                {mealTypeEmoji} {mealTypeLabel}
+                              </Text>
+                            </Group>
+                            <Text fw={500} size="sm">
+                              {item.recipe.name}
+                            </Text>
+                            <Text size="xs" c="dimmed">
+                              КБЖУ: {item.recipe.calories}/
+                              {item.recipe.proteins}/{item.recipe.fats}/
+                              {item.recipe.carbohydrates}
+                            </Text>
+                          </div>
+                          <ActionIcon
+                            variant="light"
+                            color="red"
+                            size="sm"
+                            onClick={() => removeFromCalendar(item.id)}
+                          >
+                            <TrashIcon size={12} />
+                          </ActionIcon>
                         </Group>
-                      </Card>
-                    ) : null;
-                  })()}
+                      );
+                    })}
+                  </Stack>
 
-                <Button
-                  onClick={handleAddToCalendar}
-                  disabled={!selectedRecipe}
-                  size="sm"
-                  fullWidth
-                  mb="sm"
-                >
-                  {quickMealType
-                    ? `Добавить на ${quickMealType === 'breakfast' ? 'завтрак' : quickMealType === 'lunch' ? 'обед' : quickMealType === 'dinner' ? 'ужин' : 'перекус'}`
-                    : 'Добавить (обед по умолчанию)'}
-                </Button>
+                  <Divider mb="md" />
 
-                <Group gap="xs">
+                  <Title order={5} mb="sm">
+                    Добавить рецепт
+                  </Title>
+
+                  {/* Быстрые действия */}
+                  <Group gap="xs" mb="sm">
+                    <Button
+                      variant={
+                        quickMealType === 'breakfast' ? 'filled' : 'light'
+                      }
+                      size="xs"
+                      onClick={() => handleQuickMeal('breakfast')}
+                      color="orange"
+                    >
+                      🍳 Завтрак
+                    </Button>
+                    <Button
+                      variant={quickMealType === 'lunch' ? 'filled' : 'light'}
+                      size="xs"
+                      onClick={() => handleQuickMeal('lunch')}
+                      color="green"
+                    >
+                      🍽️ Обед
+                    </Button>
+                    <Button
+                      variant={quickMealType === 'dinner' ? 'filled' : 'light'}
+                      size="xs"
+                      onClick={() => handleQuickMeal('dinner')}
+                      color="blue"
+                    >
+                      🌙 Ужин
+                    </Button>
+                    <Button
+                      variant={quickMealType === 'snack' ? 'filled' : 'light'}
+                      size="xs"
+                      onClick={() => handleQuickMeal('snack')}
+                      color="purple"
+                    >
+                      🍎 Перекус
+                    </Button>
+                  </Group>
+
+                  {/* Поиск рецептов */}
+                  <TextInput
+                    placeholder="Поиск рецептов..."
+                    value={searchQuery}
+                    onChange={e => setSearchQuery(e.target.value)}
+                    mb="sm"
+                    leftSection={<span style={{ fontSize: '12px' }}>🔍</span>}
+                  />
+
+                  <Select
+                    placeholder="Выберите рецепт"
+                    value={selectedRecipe?.toString() || ''}
+                    onChange={value =>
+                      setSelectedRecipe(value ? Number(value) : null)
+                    }
+                    data={filteredRecipes.map(recipe => ({
+                      value: recipe.id.toString(),
+                      label: `${recipe.name} (${recipe.calories} ккал)`,
+                    }))}
+                    mb="sm"
+                    searchable
+                  />
+                  {selectedRecipe &&
+                    (() => {
+                      const recipe = recipes.find(r => r.id === selectedRecipe);
+                      return recipe ? (
+                        <Card
+                          withBorder
+                          p="xs"
+                          mb="sm"
+                          style={{
+                            backgroundColor: 'var(--mantine-color-blue-0)',
+                          }}
+                        >
+                          <Text size="sm" fw={500} mb={4}>
+                            {recipe.name}
+                          </Text>
+                          <Group gap="xs">
+                            <Badge size="xs" color="blue">
+                              {recipe.calories} ккал
+                            </Badge>
+                            <Badge size="xs" color="green">
+                              {recipe.proteins}г белка
+                            </Badge>
+                            <Badge size="xs" color="orange">
+                              {recipe.fats}г жиров
+                            </Badge>
+                            <Badge size="xs" color="purple">
+                              {recipe.carbohydrates}г углеводов
+                            </Badge>
+                          </Group>
+                        </Card>
+                      ) : null;
+                    })()}
+
                   <Button
-                    variant="light"
-                    color="gray"
-                    onClick={handleCancelSelection}
+                    onClick={handleAddToCalendar}
+                    disabled={!selectedRecipe}
                     size="sm"
-                    style={{ flex: 1 }}
+                    fullWidth
+                    mb="sm"
                   >
-                    Очистить выбор рецепта
+                    {quickMealType
+                      ? `Добавить на ${quickMealType === 'breakfast' ? 'завтрак' : quickMealType === 'lunch' ? 'обед' : quickMealType === 'dinner' ? 'ужин' : 'перекус'}`
+                      : 'Добавить (обед по умолчанию)'}
                   </Button>
-                  <Button
-                    variant="light"
-                    color="red"
-                    onClick={handleCancelDateSelection}
-                    size="sm"
-                    style={{ flex: 1 }}
-                  >
-                    Отменить день
-                  </Button>
-                </Group>
-              </Card>
-            </>
+
+                  <Group gap="xs">
+                    <Button
+                      variant="light"
+                      color="gray"
+                      onClick={handleCancelSelection}
+                      size="sm"
+                      style={{ flex: 1 }}
+                    >
+                      Очистить выбор рецепта
+                    </Button>
+                    <Button
+                      variant="light"
+                      color="red"
+                      onClick={handleCancelDateSelection}
+                      size="sm"
+                      style={{ flex: 1 }}
+                    >
+                      Отменить день
+                    </Button>
+                  </Group>
+                </Card>
+              </>
             )}
 
             {!selectedDate && (
@@ -3289,7 +3335,6 @@ function Recipe() {
               Действия
             </Title>
             <Group gap="md">
-
               <Button
                 variant="light"
                 color="green"

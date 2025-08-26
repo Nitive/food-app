@@ -8,10 +8,7 @@ interface UserMenuProps {
   onLogout: () => void;
 }
 
-export function UserMenu({
-  user,
-  onLogout,
-}: UserMenuProps) {
+export function UserMenu({ user, onLogout }: UserMenuProps) {
   const handleLogout = async () => {
     try {
       await apiClient.logout();
@@ -55,8 +52,6 @@ export function UserMenu({
             </div>
           </Group>
         </Menu.Item>
-
-
 
         <Menu.Item
           color="rose"

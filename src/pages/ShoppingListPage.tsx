@@ -26,7 +26,9 @@ export function ShoppingListPage() {
   const shoppingList = useStore($shoppingList);
   const loading = useStore($loading);
   const user = useStore($user);
-  const [selectedDate, setSelectedDate] = React.useState<Date | null>(new Date());
+  const [selectedDate, setSelectedDate] = React.useState<Date | null>(
+    new Date()
+  );
 
   const handleLogout = () => {
     // Функция будет передана из основного компонента
@@ -57,11 +59,16 @@ export function ShoppingListPage() {
 
   const getMealTypeEmoji = (mealType: string) => {
     switch (mealType) {
-      case 'breakfast': return '🌅';
-      case 'lunch': return '🍽️';
-      case 'dinner': return '🌙';
-      case 'snack': return '🍎';
-      default: return '🍽️';
+      case 'breakfast':
+        return '🌅';
+      case 'lunch':
+        return '🍽️';
+      case 'dinner':
+        return '🌙';
+      case 'snack':
+        return '🍎';
+      default:
+        return '🍽️';
     }
   };
 
@@ -83,12 +90,7 @@ export function ShoppingListPage() {
             onExportPDF={() => exportShoppingListToPDF(shoppingList.items)}
             exportLabel="Экспорт списка"
           />
-          {user && (
-            <UserMenu
-              user={user}
-              onLogout={handleLogout}
-            />
-          )}
+          {user && <UserMenu user={user} onLogout={handleLogout} />}
         </Group>
       </Group>
 
@@ -123,10 +125,9 @@ export function ShoppingListPage() {
             📋 Список покупок пуст
           </Text>
           <Text c="dimmed" mb="lg">
-            {selectedDate 
+            {selectedDate
               ? `На ${formatDate(selectedDate.toISOString().split('T')[0] || '')} нет запланированных рецептов`
-              : 'Выберите дату для просмотра списка покупок'
-            }
+              : 'Выберите дату для просмотра списка покупок'}
           </Text>
           <Button component={Link} to="/calendar" color="teal">
             Перейти к календарю
@@ -136,9 +137,14 @@ export function ShoppingListPage() {
         <>
           {/* Информация о рецептах */}
           {shoppingList.recipes.length > 0 && (
-            <Card withBorder p="md" style={{ backgroundColor: 'var(--mantine-color-teal-0)' }}>
+            <Card
+              withBorder
+              p="md"
+              style={{ backgroundColor: 'var(--mantine-color-teal-0)' }}
+            >
               <Text fw={500} mb="sm">
-                📅 Запланированные рецепты на {formatDate(shoppingList.date || '')}:
+                📅 Запланированные рецепты на{' '}
+                {formatDate(shoppingList.date || '')}:
               </Text>
               <Group gap="xs">
                 {shoppingList.recipes.map((recipe, index) => (
@@ -163,13 +169,13 @@ export function ShoppingListPage() {
                   Как использовать список покупок:
                 </Text>
                 <Text size="sm" c="dimmed">
-                  • Этот список автоматически генерируется на основе рецептов в календаре
+                  • Этот список автоматически генерируется на основе рецептов в
+                  календаре
                   <br />
                   • Учитываются имеющиеся ингредиенты на складе
                   <br />
                   • Отметьте купленные товары, кликнув на них
-                  <br />
-                  • Экспортируйте список в PDF для удобства
+                  <br />• Экспортируйте список в PDF для удобства
                 </Text>
               </div>
             </Group>

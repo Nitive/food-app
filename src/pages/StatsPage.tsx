@@ -81,10 +81,7 @@ export function StatsPage() {
         (item: any) => item.recipeId === recipe.id
       ).length,
     }))
-    .sort(
-      (a: any, b: any) =>
-        b.inCalendarCount - a.inCalendarCount
-    )
+    .sort((a: any, b: any) => b.inCalendarCount - a.inCalendarCount)
     .slice(0, 5);
 
   return (
@@ -101,12 +98,7 @@ export function StatsPage() {
         </div>
         <Group gap="xs">
           <QuickActions />
-          {user && (
-            <UserMenu
-              user={user}
-              onLogout={handleLogout}
-            />
-          )}
+          {user && <UserMenu user={user} onLogout={handleLogout} />}
         </Group>
       </Group>
 
@@ -125,9 +117,7 @@ export function StatsPage() {
           </Card>
         </Grid.Col>
         <Grid.Col span={3}>
-          <Card withBorder p="md" style={{ textAlign: 'center' }}>
-
-          </Card>
+          <Card withBorder p="md" style={{ textAlign: 'center' }}></Card>
         </Grid.Col>
         <Grid.Col span={3}>
           <Card withBorder p="md" style={{ textAlign: 'center' }}>
@@ -157,7 +147,6 @@ export function StatsPage() {
           📊 Статистика калорий
         </Title>
         <Grid>
-
           <Grid.Col span={4}>
             <Card withBorder p="sm" style={{ textAlign: 'center' }}>
               <Text size="lg" fw={600} c="indigo">
@@ -276,7 +265,8 @@ export function StatsPage() {
             <Text size="sm" c="dimmed">
               • Статистика обновляется в реальном времени
               <br />
-              • Популярность рецептов рассчитывается по использованию в календаре
+              • Популярность рецептов рассчитывается по использованию в
+              календаре
               <br />
               • Ингредиенты с количеством менее 10 считаются заканчивающимися
               <br />• Уникальные ингредиенты - это все разные ингредиенты во

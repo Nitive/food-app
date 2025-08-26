@@ -657,7 +657,7 @@ const app = new Elysia({ adapter: node() as any })
   // Получить список покупок для конкретной даты
   .get('/api/shopping-list', async ({ query, cookie }) => {
     await requireAuth({ cookie });
-    
+
     // Получаем дату из query параметров, по умолчанию сегодня
     const dateParam = query.date;
     const targetDate = dateParam ? new Date(dateParam) : new Date();

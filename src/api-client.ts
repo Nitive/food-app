@@ -211,7 +211,13 @@ export const apiClient = {
     const params = date ? { query: { date } } : {};
     const { data } = await client.api['shopping-list'].get(params);
     const defaultDate = date || new Date().toISOString().split('T')[0];
-    return (data as ShoppingListResponse) || { items: [], date: defaultDate, recipes: [] };
+    return (
+      (data as ShoppingListResponse) || {
+        items: [],
+        date: defaultDate,
+        recipes: [],
+      }
+    );
   },
 
   async getCalendar(): Promise<CalendarItem[]> {

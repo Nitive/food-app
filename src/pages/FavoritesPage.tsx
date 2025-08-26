@@ -47,8 +47,6 @@ export function FavoritesPage() {
     'name'
   );
 
-
-
   // Фильтрация и сортировка любимых рецептов
   const filteredAndSortedRecipes = React.useMemo(() => {
     const filtered = favoriteRecipes.filter(recipe =>
@@ -93,12 +91,7 @@ export function FavoritesPage() {
   if (favoriteRecipes.length === 0) {
     return (
       <div>
-        {user && (
-          <UserMenu
-            user={user}
-            onLogout={() => {}}
-          />
-        )}
+        {user && <UserMenu user={user} onLogout={() => {}} />}
         <Breadcrumbs />
         <QuickActions />
 
@@ -133,12 +126,7 @@ export function FavoritesPage() {
 
   return (
     <div>
-      {user && (
-        <UserMenu
-          user={user}
-          onLogout={() => {}}
-        />
-      )}
+      {user && <UserMenu user={user} onLogout={() => {}} />}
       <Breadcrumbs />
       <QuickActions />
 
