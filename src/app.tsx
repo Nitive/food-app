@@ -50,6 +50,7 @@ import {
 import { Breadcrumbs } from './components/Breadcrumbs.js'
 import { Login } from './components/Login.js'
 import { MainNavigation } from './components/MainNavigation.js'
+import { ProfileReminderModal } from './components/ProfileReminderModal.js'
 import { QuickActions } from './components/QuickActions.js'
 import { UserMenu } from './components/UserMenu.js'
 import { UserProfileModal } from './components/UserProfileModal.js'
@@ -128,6 +129,7 @@ const $createIngredientModal = atom(false)
 // Состояние модального окна добавления в календарь
 const $addToCalendarModal = atom(false)
 const $profileModal = atom(false)
+const $profileReminderModal = atom(false)
 const $selectedRecipeForCalendar = atom<Recipe | null>(null)
 
 // Состояние модального окна редактирования рецепта
@@ -186,10 +188,36 @@ async function checkAuth() {
   }
 }
 
+// Функция для проверки полноты профиля пользователя
+const isProfileComplete = (user: any) => {
+  if (!user) return false
+
+  const requiredFields = [
+    user.name,
+    user.age,
+    user.weight,
+    user.height,
+    user.gender,
+    user.activityLevel,
+    user.goal,
+    user.dailyCalories,
+  ]
+
+  // Проверяем, что все обязательные поля заполнены
+  return requiredFields.every((field) => field !== null && field !== undefined && field !== '')
+}
+
 function handleLogin(user: User) {
   $user.set(user)
   $isAuthenticated.set(true)
   loadData() // Загружаем данные после входа
+
+  // Проверяем полноту профиля и показываем напоминание если нужно
+  window.setTimeout(() => {
+    if (!isProfileComplete(user)) {
+      openProfileReminderModal()
+    }
+  }, 1000) // Небольшая задержка, чтобы пользователь успел увидеть загрузку
 }
 
 function handleLogout() {
@@ -305,6 +333,14 @@ function openProfileModal() {
 
 function closeProfileModal() {
   $profileModal.set(false)
+}
+
+function openProfileReminderModal() {
+  $profileReminderModal.set(true)
+}
+
+function closeProfileReminderModal() {
+  $profileReminderModal.set(false)
 }
 
 async function handleAddToCalendarConfirm(date: string, mealType: string) {
@@ -3194,6 +3230,7 @@ function App() {
   // Хуки для модального окна календаря
   const addToCalendarModalOpened = useStore($addToCalendarModal)
   const profileModalOpened = useStore($profileModal)
+  const profileReminderModalOpened = useStore($profileReminderModal)
   const selectedRecipeForCalendar = useStore($selectedRecipeForCalendar)
 
   // Хуки для модального окна редактирования рецепта
@@ -3296,6 +3333,11 @@ function App() {
           onSave={handleEditRecipeSave}
         />
         <UserProfileModal opened={profileModalOpened} onClose={closeProfileModal} />
+        <ProfileReminderModal
+          opened={profileReminderModalOpened}
+          onClose={closeProfileReminderModal}
+          onOpenProfile={openProfileModal}
+        />
       </Providers>
     </div>
   )
@@ -3319,6 +3361,7 @@ export {
   closeAddToCalendarModal,
   closeEditRecipeModal,
   closeProfileModal,
+  closeProfileReminderModal,
   exportCalendarToPDF,
   exportFoodDiaryToPDF,
   exportShoppingListToPDF,
@@ -3330,6 +3373,7 @@ export {
   openAddToCalendarModal,
   openEditRecipeModal,
   openProfileModal,
+  openProfileReminderModal,
   toggleFavoriteRecipe,
 }
 

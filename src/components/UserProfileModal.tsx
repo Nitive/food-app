@@ -19,6 +19,25 @@ import React from 'react'
 import { apiClient } from '../api-client.js'
 import { $user } from '../app.js'
 
+// Функция для проверки полноты профиля пользователя
+const isProfileComplete = (user: any) => {
+  if (!user) return false
+
+  const requiredFields = [
+    user.name,
+    user.age,
+    user.weight,
+    user.height,
+    user.gender,
+    user.activityLevel,
+    user.goal,
+    user.dailyCalories,
+  ]
+
+  // Проверяем, что все обязательные поля заполнены
+  return requiredFields.every((field) => field !== null && field !== undefined && field !== '')
+}
+
 interface UserProfileModalProps {
   opened: boolean
   onClose: () => void
@@ -107,6 +126,15 @@ export function UserProfileModal({ opened, onClose }: UserProfileModalProps) {
 
       // Обновляем глобальное состояние пользователя
       $user.set(updatedUser)
+
+      // Проверяем, стал ли профиль полным
+      if (isProfileComplete(updatedUser)) {
+        // Показываем уведомление о завершении профиля
+        alert(
+          '🎉 Отлично! Ваш профиль заполнен. Теперь вы будете получать персонализированные рекомендации по питанию!'
+        )
+      }
+
       onClose()
     } catch (error) {
       console.error('Ошибка обновления профиля:', error)
