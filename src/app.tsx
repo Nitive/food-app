@@ -264,8 +264,15 @@ async function deleteIngredient(id: number) {
 // Функции для работы с календарем
 async function addToCalendar(date: string, recipeId: number, mealType: string) {
   try {
-    await apiClient.addToCalendar(date, recipeId, mealType)
-    await loadData() // Перезагружаем данные
+    console.log('Добавление в календарь:', { date, recipeId, mealType })
+    const newCalendarItem = await apiClient.addToCalendar(date, recipeId, mealType)
+    console.log('Получен новый элемент календаря:', newCalendarItem)
+    
+    // Добавляем новый элемент в локальное состояние
+    const currentCalendarItems = $calendarItems.get()
+    console.log('Текущие элементы календаря:', currentCalendarItems)
+    $calendarItems.set([...currentCalendarItems, newCalendarItem])
+    console.log('Обновленные элементы календаря:', $calendarItems.get())
   } catch (error) {
     console.error('Ошибка добавления в календарь:', error)
   }
@@ -274,7 +281,10 @@ async function addToCalendar(date: string, recipeId: number, mealType: string) {
 async function removeFromCalendar(id: number) {
   try {
     await apiClient.removeFromCalendar(id)
-    await loadData() // Перезагружаем данные
+    
+    // Удаляем элемент из локального состояния
+    const currentCalendarItems = $calendarItems.get()
+    $calendarItems.set(currentCalendarItems.filter(item => item.id !== id))
   } catch (error) {
     console.error('Ошибка удаления из календаря:', error)
   }
@@ -293,6 +303,7 @@ function closeAddToCalendarModal() {
 
 async function handleAddToCalendarConfirm(date: string, mealType: string) {
   const recipe = $selectedRecipeForCalendar.get()
+  console.log('Подтверждение добавления в календарь:', { recipe, date, mealType })
   if (recipe) {
     await addToCalendar(date, recipe.id, mealType)
     closeAddToCalendarModal()
@@ -2014,6 +2025,11 @@ function CalendarPage() {
   const calendarItems = useStore($calendarItems)
   const loading = useStore($loading)
   const user = useStore($user)
+  
+  // Отладочное логирование
+  React.useEffect(() => {
+    console.log('CalendarPage: calendarItems обновились:', calendarItems)
+  }, [calendarItems])
   const [selectedDate, setSelectedDate] = React.useState<Date | null>(null)
   const [selectedRecipe, setSelectedRecipe] = React.useState<number | null>(null)
   const [currentWeek, setCurrentWeek] = React.useState(new Date())
