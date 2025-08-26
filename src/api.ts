@@ -25,6 +25,7 @@ const app = new Elysia({ adapter: node() as any })
       status: 200,
       headers: {
         'Content-Type': mime.lookup(path) || 'application/octet-stream',
+        'Cache-Control': 'public, max-age=31536000, immutable',
       },
     })
   })

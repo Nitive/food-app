@@ -64,7 +64,7 @@ services:
         2a06:98c0::/29
         2c0f:f248::/32
     ports:
-      # - '80:8080'
+      - '80:8080'
       - '443:8443'
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile
