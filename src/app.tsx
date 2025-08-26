@@ -2137,9 +2137,12 @@ function CalendarPage() {
     if (selectedDate && selectedRecipe) {
       const dateString = selectedDate.toISOString().split('T')[0];
       if (dateString) {
-        addToCalendar(dateString, selectedRecipe, 'lunch'); // По умолчанию обед
-        setSelectedDate(null);
+        // Используем выбранный тип приема пищи или 'lunch' по умолчанию
+        const mealType = quickMealType || 'lunch';
+        addToCalendar(dateString, selectedRecipe, mealType);
         setSelectedRecipe(null);
+        setQuickMealType(null);
+        // НЕ сбрасываем selectedDate, чтобы можно было добавлять еще рецепты на тот же день
       }
     }
   };
@@ -2155,6 +2158,12 @@ function CalendarPage() {
   };
 
   const handleCancelSelection = () => {
+    setSelectedRecipe(null);
+    setQuickMealType(null);
+    // НЕ сбрасываем selectedDate, чтобы можно было добавлять еще рецепты на тот же день
+  };
+
+  const handleCancelDateSelection = () => {
     setSelectedDate(null);
     setSelectedRecipe(null);
     setQuickMealType(null);
@@ -2162,6 +2171,10 @@ function CalendarPage() {
 
   const handleQuickMeal = (mealType: string) => {
     setQuickMealType(mealType);
+    // Если выбранная дата не установлена, используем сегодняшний день
+    if (!selectedDate) {
+      setSelectedDate(new Date());
+    }
     // Автоматически выбираем первый подходящий рецепт
     const filteredRecipes = recipes.filter(recipe =>
       recipe.name.toLowerCase().includes(searchQuery.toLowerCase())
@@ -2501,6 +2514,29 @@ function CalendarPage() {
                     day: 'numeric',
                   })}
                 </Title>
+                {quickMealType && (
+                  <Badge
+                    color={
+                      quickMealType === 'breakfast'
+                        ? 'orange'
+                        : quickMealType === 'lunch'
+                          ? 'green'
+                          : quickMealType === 'dinner'
+                            ? 'blue'
+                            : 'purple'
+                    }
+                    variant="light"
+                    mb="md"
+                  >
+                    {quickMealType === 'breakfast'
+                      ? '🍳 Завтрак'
+                      : quickMealType === 'lunch'
+                        ? '🍽️ Обед'
+                        : quickMealType === 'dinner'
+                          ? '🌙 Ужин'
+                          : '🍎 Перекус'}
+                  </Badge>
+                )}
 
                 <Stack gap="xs" mb="md">
                   {getEventsForDate(selectedDate).map(item => {
@@ -2585,6 +2621,14 @@ function CalendarPage() {
                   >
                     🌙 Ужин
                   </Button>
+                  <Button
+                    variant={quickMealType === 'snack' ? 'filled' : 'light'}
+                    size="xs"
+                    onClick={() => handleQuickMeal('snack')}
+                    color="purple"
+                  >
+                    🍎 Перекус
+                  </Button>
                 </Group>
 
                 {/* Поиск рецептов */}
@@ -2650,19 +2694,30 @@ function CalendarPage() {
                   mb="sm"
                 >
                   {quickMealType
-                    ? `Добавить на ${quickMealType === 'breakfast' ? 'завтрак' : quickMealType === 'lunch' ? 'обед' : 'ужин'}`
-                    : 'Добавить'}
+                    ? `Добавить на ${quickMealType === 'breakfast' ? 'завтрак' : quickMealType === 'lunch' ? 'обед' : quickMealType === 'dinner' ? 'ужин' : 'перекус'}`
+                    : 'Добавить (обед по умолчанию)'}
                 </Button>
 
-                <Button
-                  variant="light"
-                  color="gray"
-                  onClick={handleCancelSelection}
-                  size="sm"
-                  fullWidth
-                >
-                  Отменить выбор
-                </Button>
+                <Group gap="xs">
+                  <Button
+                    variant="light"
+                    color="gray"
+                    onClick={handleCancelSelection}
+                    size="sm"
+                    style={{ flex: 1 }}
+                  >
+                    Очистить выбор рецепта
+                  </Button>
+                  <Button
+                    variant="light"
+                    color="red"
+                    onClick={handleCancelDateSelection}
+                    size="sm"
+                    style={{ flex: 1 }}
+                  >
+                    Отменить день
+                  </Button>
+                </Group>
               </Card>
             )}
 
