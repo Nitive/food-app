@@ -17,8 +17,8 @@ import { DateInput } from '@mantine/dates'
 import { useStore } from '@nanostores/react'
 import { PlusIcon, TrashIcon } from '@primer/octicons-react'
 import React from 'react'
-import { $loading, $recipes, $user, exportFoodDiaryToPDF } from '../app.js'
 import { apiClient } from '../api-client.js'
+import { $loading, $recipes, $user, exportFoodDiaryToPDF } from '../app.js'
 import { Breadcrumbs } from '../components/Breadcrumbs.js'
 import { QuickActions } from '../components/QuickActions.js'
 import { UserMenu } from '../components/UserMenu.js'
@@ -64,9 +64,9 @@ export function FoodDiaryPage() {
       try {
         const dateString = selectedDate.toISOString().split('T')[0]
         const entries = await apiClient.getFoodDiary(dateString)
-        
+
         // Преобразуем в локальный формат
-        const localEntries: FoodEntry[] = entries.map(entry => ({
+        const localEntries: FoodEntry[] = entries.map((entry) => ({
           id: entry.id.toString(),
           recipeId: entry.recipeId,
           recipeName: entry.recipe.name,
@@ -79,7 +79,7 @@ export function FoodDiaryPage() {
           timestamp: entry.date.toISOString(),
           date: entry.date.toISOString().split('T')[0] || '',
         }))
-        
+
         setFoodEntries(localEntries)
       } catch (error) {
         console.error('Ошибка загрузки дневника питания:', error)

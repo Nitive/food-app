@@ -227,7 +227,7 @@ const app = new Elysia({ adapter: node() as any })
       }
 
       // Обновляем рецепт
-      const recipe = await prisma.recipe.update({
+      await prisma.recipe.update({
         where: { id },
         data: {
           name,
@@ -804,7 +804,7 @@ const app = new Elysia({ adapter: node() as any })
   .delete('/api/calendar/:id', async ({ params, cookie }) => {
     const user = await requireAuth({ cookie })
     await prisma.calendarItem.delete({
-      where: { 
+      where: {
         id: parseInt(params.id),
         userId: user.user.id,
       },
@@ -878,7 +878,13 @@ const app = new Elysia({ adapter: node() as any })
     const user = await requireAuth({ cookie })
     const date = query.date
 
-    const where: any = {
+    const where: {
+      userId: number
+      date?: {
+        gte: Date
+        lt: Date
+      }
+    } = {
       userId: user.user.id,
     }
 
@@ -886,7 +892,7 @@ const app = new Elysia({ adapter: node() as any })
       const startDate = new Date(date as string)
       const endDate = new Date(startDate)
       endDate.setDate(endDate.getDate() + 1)
-      
+
       where.date = {
         gte: startDate,
         lt: endDate,
@@ -991,7 +997,7 @@ const app = new Elysia({ adapter: node() as any })
   .delete('/api/food-diary/:id', async ({ params, cookie }) => {
     const user = await requireAuth({ cookie })
     await prisma.foodDiaryEntry.delete({
-      where: { 
+      where: {
         id: parseInt(params.id),
         userId: user.user.id,
       },
@@ -1078,7 +1084,7 @@ const app = new Elysia({ adapter: node() as any })
     }
   })
 
-  .get('/api/auth/me', async ({ headers, cookie }) => {
+  .get('/api/auth/me', async ({ cookie }) => {
     const token = cookie.authToken?.value
 
     if (!token || typeof token !== 'string') {

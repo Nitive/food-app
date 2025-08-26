@@ -290,7 +290,12 @@ export const apiClient = {
     return data || []
   },
 
-  async addFoodDiaryEntry(date: string, recipeId: number, mealType: string, servingSize: number): Promise<FoodDiaryEntry> {
+  async addFoodDiaryEntry(
+    date: string,
+    recipeId: number,
+    mealType: string,
+    servingSize: number
+  ): Promise<FoodDiaryEntry> {
     const { data } = await client.api['food-diary'].post({
       date,
       recipeId,
