@@ -25,7 +25,7 @@ import {
 } from '@mantine/core'
 import { Calendar } from '@mantine/dates'
 import { useStore } from '@nanostores/react'
-import { CheckCircleFillIcon, DashIcon, PlusIcon, TrashIcon, XCircleFillIcon, DownloadIcon } from '@primer/octicons-react'
+import { CheckCircleFillIcon, DashIcon, PlusIcon, TrashIcon, XCircleFillIcon, DownloadIcon, HeartIcon, HeartFillIcon } from '@primer/octicons-react'
 import { atom } from 'nanostores'
 import React from 'react'
 import jsPDF from 'jspdf'
@@ -50,6 +50,7 @@ import { QuickActions } from './components/QuickActions.js'
 import { CartPage } from './pages/CartPage.js'
 import { ShoppingListPage } from './pages/ShoppingListPage.js'
 import { StatsPage } from './pages/StatsPage.js'
+import { FavoritesPage } from './pages/FavoritesPage.js'
 
 function Providers(props: { children: React.ReactNode }) {
   return (
@@ -88,6 +89,9 @@ const $shoppingList = atom<ShoppingListItem[]>([])
 // Состояние календаря
 const $calendarItems = atom<CalendarItem[]>([])
 
+// Состояние любимых рецептов
+const $favoriteRecipes = atom<Recipe[]>([])
+
 // Состояние модального окна создания рецепта
 const $createRecipeModal = atom(false)
 
@@ -117,6 +121,9 @@ async function loadData() {
     $stockItems.set(stockItems)
     $shoppingList.set(shoppingList)
     $calendarItems.set(calendarItems)
+    
+    // Загружаем любимые рецепты из localStorage
+    loadFavoriteRecipes()
   } catch (error) {
     console.error('Ошибка загрузки данных:', error)
   } finally {
@@ -198,8 +205,10 @@ function handleLogout() {
   $stockItems.set([])
   $shoppingList.set([])
   $calendarItems.set([])
+  $favoriteRecipes.set([])
   // Очищаем localStorage
   localStorage.removeItem('user')
+  localStorage.removeItem('favoriteRecipes')
 }
 
 // Функции для работы с наличием ингредиентов
@@ -284,6 +293,43 @@ async function addCalendarToCart() {
     await loadData() // Перезагружаем данные
   } catch (error) {
     console.error('Ошибка добавления календаря в корзину:', error)
+  }
+}
+
+// Функции для работы с любимыми рецептами
+function toggleFavoriteRecipe(recipe: Recipe) {
+  const currentFavorites = $favoriteRecipes.get()
+  const isFavorite = currentFavorites.some(fav => fav.id === recipe.id)
+  
+  if (isFavorite) {
+    // Удаляем из любимых
+    const updatedFavorites = currentFavorites.filter(fav => fav.id !== recipe.id)
+    $favoriteRecipes.set(updatedFavorites)
+    // Сохраняем в localStorage
+    localStorage.setItem('favoriteRecipes', JSON.stringify(updatedFavorites))
+  } else {
+    // Добавляем в любимые
+    const updatedFavorites = [...currentFavorites, recipe]
+    $favoriteRecipes.set(updatedFavorites)
+    // Сохраняем в localStorage
+    localStorage.setItem('favoriteRecipes', JSON.stringify(updatedFavorites))
+  }
+}
+
+function isRecipeFavorite(recipeId: number): boolean {
+  const favorites = $favoriteRecipes.get()
+  return favorites.some(fav => fav.id === recipeId)
+}
+
+function loadFavoriteRecipes() {
+  try {
+    const savedFavorites = localStorage.getItem('favoriteRecipes')
+    if (savedFavorites) {
+      const favorites = JSON.parse(savedFavorites)
+      $favoriteRecipes.set(favorites)
+    }
+  } catch (error) {
+    console.error('Ошибка загрузки любимых рецептов:', error)
   }
 }
 
@@ -529,6 +575,7 @@ function RecipesPage() {
   const recipes = useStore($recipes)
   const cartItems = useStore($cartItems)
   const shoppingList = useStore($shoppingList)
+  const favoriteRecipes = useStore($favoriteRecipes)
   const loading = useStore($loading)
   const user = useStore($user)
   const [searchQuery, setSearchQuery] = React.useState('')
@@ -751,17 +798,34 @@ function RecipesPage() {
                     >
                       <Title order={4} lineClamp={2}>{recipe.name}</Title>
                     </Link>
-                    <ActionIcon 
-                      variant="light" 
-                      color="teal" 
-                      onClick={(e) => {
-                        e.preventDefault()
-                        e.stopPropagation()
-                        addToCart(recipe.id)
-                      }}
-                    >
-                      <PlusIcon size={16} />
-                    </ActionIcon>
+                    <Group gap="xs">
+                      <ActionIcon 
+                        variant="subtle" 
+                        color="pink" 
+                        onClick={(e) => {
+                          e.preventDefault()
+                          e.stopPropagation()
+                          toggleFavoriteRecipe(recipe)
+                        }}
+                      >
+                        {favoriteRecipes.some(fav => fav.id === recipe.id) ? (
+                          <HeartFillIcon size={16} />
+                        ) : (
+                          <HeartIcon size={16} />
+                        )}
+                      </ActionIcon>
+                      <ActionIcon 
+                        variant="light" 
+                        color="teal" 
+                        onClick={(e) => {
+                          e.preventDefault()
+                          e.stopPropagation()
+                          addToCart(recipe.id)
+                        }}
+                      >
+                        <PlusIcon size={16} />
+                      </ActionIcon>
+                    </Group>
                   </Group>
 
                   {/* КБЖУ */}
@@ -829,9 +893,20 @@ function RecipesPage() {
                 </Table.Td>
                 <Table.Td>
                   <Group gap="xs">
-                                  <ActionIcon variant="light" color="teal" onClick={() => addToCart(recipe.id)}>
-                <PlusIcon size={16} />
-              </ActionIcon>
+                    <ActionIcon 
+                      variant="subtle" 
+                      color="pink" 
+                      onClick={() => toggleFavoriteRecipe(recipe)}
+                    >
+                      {favoriteRecipes.some(fav => fav.id === recipe.id) ? (
+                        <HeartFillIcon size={16} />
+                      ) : (
+                        <HeartIcon size={16} />
+                      )}
+                    </ActionIcon>
+                    <ActionIcon variant="light" color="teal" onClick={() => addToCart(recipe.id)}>
+                      <PlusIcon size={16} />
+                    </ActionIcon>
                   </Group>
                 </Table.Td>
               </Table.Tr>
@@ -2518,6 +2593,7 @@ function App() {
               <Routes>
                 <Route index element={<RecipesPage />} />
                 <Route path="recipes" element={<RecipesPage />} />
+                <Route path="favorites" element={<FavoritesPage />} />
                 <Route path="cart" element={<CartPage />} />
                 <Route path="shopping-list" element={<ShoppingListPage />} />
                 <Route path="ingredients" element={<IngredientsPage />} />
@@ -2546,13 +2622,18 @@ export {
   $stockItems,
   $shoppingList,
   $calendarItems,
+  $favoriteRecipes,
   $createRecipeModal,
   $createIngredientModal,
   $user,
   $isAuthenticated,
   exportShoppingListToPDF,
   exportCartToPDF,
-  exportCalendarToPDF
+  exportCalendarToPDF,
+  toggleFavoriteRecipe,
+  isRecipeFavorite,
+  addToCart,
+  getIngredientStock
 }
 
 export default App

@@ -2,7 +2,7 @@ import React from 'react'
 import { Box, NavLink, Text, Group, Badge, ActionIcon, Drawer } from '@mantine/core'
 import { Link, useLocation } from 'react-router-dom'
 import { useStore } from '@nanostores/react'
-import { $recipes, $cartItems, $shoppingList, $calendarItems, $ingredients } from '../app.js'
+import { $recipes, $cartItems, $shoppingList, $calendarItems, $ingredients, $favoriteRecipes } from '../app.js'
 import { ThreeBarsIcon } from '@primer/octicons-react'
 
 interface NavigationItem {
@@ -20,6 +20,7 @@ export function MainNavigation() {
   const shoppingList = useStore($shoppingList)
   const calendarItems = useStore($calendarItems)
   const ingredients = useStore($ingredients)
+  const favoriteRecipes = useStore($favoriteRecipes)
   const [mobileOpened, setMobileOpened] = React.useState(false)
 
   const navigationItems: NavigationItem[] = [
@@ -29,6 +30,13 @@ export function MainNavigation() {
       label: 'Рецепты', 
       badge: recipes.length,
       color: 'teal'
+    },
+    { 
+      path: '/favorites', 
+      icon: '❤️', 
+      label: 'Сохраненные рецепты', 
+      badge: favoriteRecipes.length,
+      color: 'pink'
     },
     { 
       path: '/cart', 

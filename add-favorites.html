@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Добавить любимые рецепты</title>
+    <style>
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f8f9fa;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #20c997;
+            margin-bottom: 20px;
+        }
+        .recipe-item {
+            display: flex;
+            align-items: center;
+            padding: 15px;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            background: #f8f9fa;
+        }
+        .recipe-info {
+            flex: 1;
+        }
+        .recipe-name {
+            font-weight: 600;
+            color: #495057;
+            margin-bottom: 5px;
+        }
+        .recipe-details {
+            font-size: 14px;
+            color: #6c757d;
+        }
+        .add-btn {
+            background: #20c997;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .add-btn:hover {
+            background: #1ba37e;
+        }
+        .status {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 8px;
+            font-weight: 500;
+        }
+        .success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        .clear-btn {
+            background: #dc3545;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-top: 20px;
+        }
+        .clear-btn:hover {
+            background: #c82333;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🍽️ Добавить тестовые любимые рецепты</h1>
+        
+        <div id="recipes-container">
+            <!-- Рецепты будут добавлены через JavaScript -->
+        </div>
+        
+        <button class="clear-btn" onclick="clearFavorites()">
+            🗑️ Очистить все любимые рецепты
+        </button>
+        
+        <div id="status"></div>
+    </div>
+
+    <script>
+        // Тестовые рецепты
+        const testRecipes = [
+            {
+                id: 1,
+                name: 'Сырники',
+                calories: 164,
+                proteins: 14,
+                fats: 4.6,
+                carbohydrates: 16.9,
+                ingredients: [
+                    { name: 'Творог 5%', amount: 720, amountType: 'гр' },
+                    { name: 'Яйцо', amount: 120, amountType: 'гр' },
+                    { name: 'Сахар', amount: 80, amountType: 'гр' },
+                    { name: 'Ванилин', amount: 1, amountType: 'гр' },
+                    { name: 'Манная крупа', amount: 65, amountType: 'гр' }
+                ]
+            },
+            {
+                id: 2,
+                name: 'Блины',
+                calories: 147,
+                proteins: 5.5,
+                fats: 3.8,
+                carbohydrates: 22,
+                ingredients: [
+                    { name: 'Молоко 3,2%', amount: 1000, amountType: 'мл' },
+                    { name: 'Яйцо', amount: 120, amountType: 'гр' },
+                    { name: 'Мука', amount: 380, amountType: 'гр' },
+                    { name: 'Соль', amount: 0, amountType: 'по вкусу' },
+                    { name: 'Растительное масло', amount: 10, amountType: 'гр' }
+                ]
+            },
+            {
+                id: 3,
+                name: 'Омлет',
+                calories: 180,
+                proteins: 12,
+                fats: 15,
+                carbohydrates: 2,
+                ingredients: [
+                    { name: 'Яйцо', amount: 120, amountType: 'гр' },
+                    { name: 'Сливки 18%', amount: 150, amountType: 'мл' },
+                    { name: 'Соль', amount: 0, amountType: 'по вкусу' }
+                ]
+            },
+            {
+                id: 6,
+                name: 'Борщ',
+                calories: 85,
+                proteins: 4,
+                fats: 3,
+                carbohydrates: 12,
+                ingredients: [
+                    { name: 'Свёкла', amount: 0, amountType: 'по вкусу' },
+                    { name: 'Лук', amount: 0, amountType: 'по вкусу' },
+                    { name: 'Чеснок', amount: 0, amountType: 'по вкусу' },
+                    { name: 'Болгарский перец', amount: 0, amountType: 'по вкусу' },
+                    { name: 'Морковь', amount: 0, amountType: 'по вкусу' },
+                    { name: 'Капуста', amount: 0, amountType: 'по вкусу' },
+                    { name: 'Картофель', amount: 0, amountType: 'по вкусу' }
+                ]
+            },
+            {
+                id: 9,
+                name: 'Удон',
+                calories: 320,
+                proteins: 25,
+                fats: 8,
+                carbohydrates: 45,
+                ingredients: [
+                    { name: 'Удон лапша', amount: 0, amountType: 'по вкусу' },
+                    { name: 'Морковь', amount: 0, amountType: 'по вкусу' },
+                    { name: 'Болгарский перец', amount: 0, amountType: 'по вкусу' },
+                    { name: 'Пекинская капуста', amount: 0, amountType: 'по вкусу' },
+                    { name: 'Соевый соус', amount: 0, amountType: 'по вкусу' },
+                    { name: 'Куриная грудка', amount: 500, amountType: 'гр' }
+                ]
+            },
+            {
+                id: 11,
+                name: 'Тефтели в сметанном соусе',
+                calories: 320,
+                proteins: 22,
+                fats: 18,
+                carbohydrates: 15,
+                ingredients: [
+                    { name: 'Куриная грудка', amount: 500, amountType: 'гр' },
+                    { name: 'Яйцо', amount: 60, amountType: 'гр' },
+                    { name: 'Чеснок', amount: 10, amountType: 'гр' },
+                    { name: 'Панировочные сухари', amount: 13, amountType: 'гр' },
+                    { name: 'Растительное масло', amount: 20, amountType: 'гр' },
+                    { name: 'Морковь', amount: 150, amountType: 'гр' },
+                    { name: 'Болгарский перец', amount: 90, amountType: 'гр' },
+                    { name: 'Лук', amount: 85, amountType: 'гр' }
+                ]
+            }
+        ];
+
+        // Отображаем рецепты
+        function displayRecipes() {
+            const container = document.getElementById('recipes-container');
+            container.innerHTML = '';
+            
+            testRecipes.forEach(recipe => {
+                const recipeDiv = document.createElement('div');
+                recipeDiv.className = 'recipe-item';
+                
+                recipeDiv.innerHTML = `
+                    <div class="recipe-info">
+                        <div class="recipe-name">${recipe.name}</div>
+                        <div class="recipe-details">
+                            ${recipe.calories} ккал | Б: ${recipe.proteins}г | Ж: ${recipe.fats}г | У: ${recipe.carbohydrates}г
+                        </div>
+                    </div>
+                    <button class="add-btn" onclick="addToFavorites(${recipe.id})">
+                        ❤️ Добавить в любимые
+                    </button>
+                `;
+                
+                container.appendChild(recipeDiv);
+            });
+        }
+
+        // Добавить рецепт в любимые
+        function addToFavorites(recipeId) {
+            const recipe = testRecipes.find(r => r.id === recipeId);
+            if (!recipe) {
+                showStatus('Рецепт не найден', 'error');
+                return;
+            }
+
+            // Получаем текущие любимые рецепты
+            let favorites = [];
+            try {
+                const saved = localStorage.getItem('favoriteRecipes');
+                if (saved) {
+                    favorites = JSON.parse(saved);
+                }
+            } catch (error) {
+                console.error('Ошибка загрузки любимых рецептов:', error);
+            }
+
+            // Проверяем, не добавлен ли уже
+            if (favorites.some(fav => fav.id === recipeId)) {
+                showStatus(`Рецепт "${recipe.name}" уже в любимых!`, 'info');
+                return;
+            }
+
+            // Добавляем рецепт
+            favorites.push(recipe);
+            localStorage.setItem('favoriteRecipes', JSON.stringify(favorites));
+            
+            showStatus(`✅ Рецепт "${recipe.name}" добавлен в любимые!`, 'success');
+            
+            // Обновляем кнопку
+            updateButton(recipeId);
+        }
+
+        // Обновить кнопку после добавления
+        function updateButton(recipeId) {
+            const buttons = document.querySelectorAll('.add-btn');
+            buttons.forEach(button => {
+                if (button.onclick.toString().includes(recipeId)) {
+                    button.textContent = '❤️ В любимых';
+                    button.style.background = '#e83e8c';
+                    button.disabled = true;
+                }
+            });
+        }
+
+        // Очистить все любимые рецепты
+        function clearFavorites() {
+            if (confirm('Вы уверены, что хотите очистить все любимые рецепты?')) {
+                localStorage.removeItem('favoriteRecipes');
+                showStatus('🗑️ Все любимые рецепты очищены!', 'success');
+                
+                // Обновляем все кнопки
+                const buttons = document.querySelectorAll('.add-btn');
+                buttons.forEach(button => {
+                    button.textContent = '❤️ Добавить в любимые';
+                    button.style.background = '#20c997';
+                    button.disabled = false;
+                });
+            }
+        }
+
+        // Показать статус
+        function showStatus(message, type) {
+            const statusDiv = document.getElementById('status');
+            statusDiv.textContent = message;
+            statusDiv.className = `status ${type}`;
+            
+            setTimeout(() => {
+                statusDiv.textContent = '';
+                statusDiv.className = 'status';
+            }, 3000);
+        }
+
+        // Проверить существующие любимые рецепты
+        function checkExistingFavorites() {
+            try {
+                const saved = localStorage.getItem('favoriteRecipes');
+                if (saved) {
+                    const favorites = JSON.parse(saved);
+                    favorites.forEach(fav => {
+                        updateButton(fav.id);
+                    });
+                    showStatus(`📋 Найдено ${favorites.length} любимых рецептов`, 'info');
+                }
+            } catch (error) {
+                console.error('Ошибка проверки любимых рецептов:', error);
+            }
+        }
+
+        // Инициализация
+        document.addEventListener('DOMContentLoaded', function() {
+            displayRecipes();
+            checkExistingFavorites();
+        });
+    </script>
+</body>
+</html>
