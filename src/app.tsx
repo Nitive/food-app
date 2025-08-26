@@ -264,15 +264,11 @@ async function deleteIngredient(id: number) {
 // Функции для работы с календарем
 async function addToCalendar(date: string, recipeId: number, mealType: string) {
   try {
-    console.log('Добавление в календарь:', { date, recipeId, mealType })
     const newCalendarItem = await apiClient.addToCalendar(date, recipeId, mealType)
-    console.log('Получен новый элемент календаря:', newCalendarItem)
-
+    
     // Добавляем новый элемент в локальное состояние
     const currentCalendarItems = $calendarItems.get()
-    console.log('Текущие элементы календаря:', currentCalendarItems)
     $calendarItems.set([...currentCalendarItems, newCalendarItem])
-    console.log('Обновленные элементы календаря:', $calendarItems.get())
   } catch (error) {
     console.error('Ошибка добавления в календарь:', error)
   }
@@ -303,7 +299,6 @@ function closeAddToCalendarModal() {
 
 async function handleAddToCalendarConfirm(date: string, mealType: string) {
   const recipe = $selectedRecipeForCalendar.get()
-  console.log('Подтверждение добавления в календарь:', { recipe, date, mealType })
   if (recipe) {
     await addToCalendar(date, recipe.id, mealType)
     closeAddToCalendarModal()
