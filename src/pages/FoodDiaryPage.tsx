@@ -23,6 +23,7 @@ import {
   $recipes,
   $loading,
   $user,
+  exportFoodDiaryToPDF,
 } from '../app.js';
 import { UserMenu } from '../components/UserMenu.js';
 import { Breadcrumbs } from '../components/Breadcrumbs.js';
@@ -39,6 +40,7 @@ interface FoodEntry {
   fats: number;
   carbohydrates: number;
   timestamp: string;
+  date: string;
 }
 
 export function FoodDiaryPage() {
@@ -52,6 +54,15 @@ export function FoodDiaryPage() {
   const [selectedRecipe, setSelectedRecipe] = React.useState<number | null>(null);
   const [selectedMealType, setSelectedMealType] = React.useState<string>('lunch');
   const [servingSize, setServingSize] = React.useState<number>(1);
+  
+  // Состояние для выбора периода экспорта
+  const [exportStartDate, setExportStartDate] = React.useState<Date>(() => {
+    const date = new Date();
+    date.setDate(date.getDate() - 7); // По умолчанию неделя назад
+    return date;
+  });
+  const [exportEndDate, setExportEndDate] = React.useState<Date>(new Date());
+  const [exportModalOpened, setExportModalOpened] = React.useState(false);
 
   // Загружаем записи для выбранной даты (в реальном приложении это будет из API)
   React.useEffect(() => {
@@ -77,6 +88,7 @@ export function FoodDiaryPage() {
       fats: recipe.fats * servingSize,
       carbohydrates: recipe.carbohydrates * servingSize,
       timestamp: new Date().toISOString(),
+      date: selectedDate.toISOString().split('T')[0] || '',
     };
 
     setFoodEntries(prev => [...prev, newEntry]);
@@ -150,10 +162,7 @@ export function FoodDiaryPage() {
         <Group gap="xs">
           <QuickActions
             showExport={foodEntries.length > 0}
-            onExportPDF={() => {
-              // TODO: Реализовать экспорт дневника в PDF
-              alert('Экспорт дневника в разработке');
-            }}
+            onExportPDF={() => setExportModalOpened(true)}
             exportLabel="Экспорт дневника"
           />
 
@@ -466,6 +475,110 @@ export function FoodDiaryPage() {
               color="teal"
             >
               Добавить
+            </Button>
+          </Group>
+        </Stack>
+      </Modal>
+
+      {/* Модальное окно выбора периода экспорта */}
+      <Modal
+        opened={exportModalOpened}
+        onClose={() => setExportModalOpened(false)}
+        title="Экспорт дневника питания"
+        size="md"
+      >
+        <Stack gap="md">
+          <Text size="sm" c="dimmed">
+            Выберите период для экспорта данных из дневника питания
+          </Text>
+
+          <DateInput
+            label="Начальная дата"
+            placeholder="Выберите начальную дату"
+            value={exportStartDate}
+            onChange={(date) => {
+              if (date && typeof date === 'object') {
+                setExportStartDate(date);
+              }
+            }}
+            clearable={false}
+          />
+
+          <DateInput
+            label="Конечная дата"
+            placeholder="Выберите конечную дату"
+            value={exportEndDate}
+            onChange={(date) => {
+              if (date && typeof date === 'object') {
+                setExportEndDate(date);
+              }
+            }}
+            clearable={false}
+          />
+
+          {(() => {
+            // Фильтруем записи по выбранному периоду
+            const filteredEntries = foodEntries.filter(entry => {
+              const entryDate = new Date(entry.date);
+              return entryDate >= exportStartDate && entryDate <= exportEndDate;
+            });
+
+            const periodStats = filteredEntries.reduce((stats, entry) => ({
+              calories: stats.calories + entry.calories,
+              proteins: stats.proteins + entry.proteins,
+              fats: stats.fats + entry.fats,
+              carbohydrates: stats.carbohydrates + entry.carbohydrates,
+              count: stats.count + 1,
+            }), { calories: 0, proteins: 0, fats: 0, carbohydrates: 0, count: 0 });
+
+            return (
+              <Card withBorder p="md">
+                <Text size="sm" fw={500} mb="xs">Статистика за период:</Text>
+                <Group gap="md">
+                  <Text size="xs" c="dimmed">
+                    Записей: <strong>{periodStats.count}</strong>
+                  </Text>
+                  <Text size="xs" c="dimmed">
+                    Калории: <strong>{periodStats.calories.toFixed(1)}</strong> ккал
+                  </Text>
+                  <Text size="xs" c="dimmed">
+                    Белки: <strong>{periodStats.proteins.toFixed(1)}</strong>г
+                  </Text>
+                  <Text size="xs" c="dimmed">
+                    Жиры: <strong>{periodStats.fats.toFixed(1)}</strong>г
+                  </Text>
+                  <Text size="xs" c="dimmed">
+                    Углеводы: <strong>{periodStats.carbohydrates.toFixed(1)}</strong>г
+                  </Text>
+                </Group>
+              </Card>
+            );
+          })()}
+
+          <Group justify="flex-end" gap="xs">
+            <Button variant="light" onClick={() => setExportModalOpened(false)}>
+              Отмена
+            </Button>
+            <Button 
+              onClick={() => {
+                // Фильтруем записи по выбранному периоду
+                const filteredEntries = foodEntries.filter(entry => {
+                  const entryDate = new Date(entry.date);
+                  return entryDate >= exportStartDate && entryDate <= exportEndDate;
+                });
+
+                // Добавляем поле date к записям для экспорта
+                const entriesWithDate = filteredEntries.map(entry => ({
+                  ...entry,
+                  date: new Date(entry.timestamp).toISOString().split('T')[0] || '',
+                }));
+
+                exportFoodDiaryToPDF(entriesWithDate, exportStartDate, exportEndDate);
+                setExportModalOpened(false);
+              }}
+              color="teal"
+            >
+              Экспортировать в PDF
             </Button>
           </Group>
         </Stack>

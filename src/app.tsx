@@ -53,6 +53,21 @@ import {
   type CalendarItem,
   type User,
 } from './api-client.js';
+
+// Интерфейс для записей дневника питания
+interface FoodDiaryEntry {
+  id: string;
+  recipeId: number;
+  recipeName: string;
+  mealType: 'breakfast' | 'lunch' | 'dinner' | 'snack';
+  servingSize: number;
+  calories: number;
+  proteins: number;
+  fats: number;
+  carbohydrates: number;
+  timestamp: string;
+  date: string;
+}
 import { Login } from './components/Login.js';
 import { UserMenu } from './components/UserMenu.js';
 import { MainNavigation } from './components/MainNavigation.js';
@@ -560,6 +575,216 @@ function exportCalendarToPDF(calendarItems: CalendarItem[]) {
     doc.save(fileName);
   } catch (error) {
     console.error('Ошибка экспорта календаря в PDF:', error);
+    alert('Ошибка при создании PDF файла');
+  }
+}
+
+// Функция экспорта дневника питания в PDF
+function exportFoodDiaryToPDF(foodEntries: FoodDiaryEntry[], startDate: Date, endDate: Date) {
+  try {
+    const doc = new jsPDF();
+
+    // Заголовок
+    doc.setFontSize(20);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Дневник питания', 20, 30);
+
+    // Период отчета
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'normal');
+    const startDateStr = startDate.toLocaleDateString('ru-RU');
+    const endDateStr = endDate.toLocaleDateString('ru-RU');
+    doc.text(`Период: ${startDateStr} - ${endDateStr}`, 20, 45);
+
+    // Дата создания
+    const currentDate = new Date().toLocaleDateString('ru-RU', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
+    doc.text(`Создан: ${currentDate}`, 20, 55);
+
+    // Группируем записи по датам
+    const groupedByDate: Record<string, FoodDiaryEntry[]> = {};
+    foodEntries.forEach(entry => {
+      const dateKey = new Date(entry.date).toLocaleDateString('ru-RU');
+      if (!groupedByDate[dateKey]) {
+        groupedByDate[dateKey] = [];
+      }
+      groupedByDate[dateKey].push(entry);
+    });
+
+    // Сортируем даты
+    const sortedDates = Object.keys(groupedByDate).sort((a, b) => 
+      new Date(a.split('.').reverse().join('-')).getTime() - 
+      new Date(b.split('.').reverse().join('-')).getTime()
+    );
+
+    let yPosition = 80;
+    let pageNumber = 1;
+
+    sortedDates.forEach((date, dateIndex) => {
+      const entries = groupedByDate[date] || [];
+      
+      // Проверяем, нужно ли добавить новую страницу
+      if (yPosition > 250) {
+        doc.addPage();
+        yPosition = 30;
+        pageNumber++;
+      }
+
+      // Заголовок даты
+      doc.setFontSize(16);
+      doc.setFont('helvetica', 'bold');
+      doc.text(`📅 ${date}`, 20, yPosition);
+      yPosition += 15;
+
+      // Статистика дня
+      const dayStats = entries.reduce((stats, entry) => ({
+        calories: stats.calories + entry.calories,
+        proteins: stats.proteins + entry.proteins,
+        fats: stats.fats + entry.fats,
+        carbohydrates: stats.carbohydrates + entry.carbohydrates,
+        count: stats.count + 1,
+      }), { calories: 0, proteins: 0, fats: 0, carbohydrates: 0, count: 0 });
+
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'bold');
+      doc.text('📊 Статистика дня:', 25, yPosition);
+      yPosition += 10;
+
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+      doc.text(`Калории: ${dayStats.calories.toFixed(1)} ккал`, 30, yPosition);
+      yPosition += 8;
+      doc.text(`Белки: ${dayStats.proteins.toFixed(1)}г`, 30, yPosition);
+      yPosition += 8;
+      doc.text(`Жиры: ${dayStats.fats.toFixed(1)}г`, 30, yPosition);
+      yPosition += 8;
+      doc.text(`Углеводы: ${dayStats.carbohydrates.toFixed(1)}г`, 30, yPosition);
+      yPosition += 8;
+      doc.text(`Приемов пищи: ${dayStats.count}`, 30, yPosition);
+      yPosition += 15;
+
+      // Список приемов пищи
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'bold');
+      doc.text('🍽️ Приемы пищи:', 25, yPosition);
+      yPosition += 10;
+
+      entries.forEach((entry, entryIndex) => {
+        // Проверяем, нужно ли добавить новую страницу
+        if (yPosition > 250) {
+          doc.addPage();
+          yPosition = 30;
+          pageNumber++;
+        }
+
+        const mealTypeEmoji = {
+          breakfast: '🌅',
+          lunch: '🍽️',
+          dinner: '🌙',
+          snack: '🍎',
+        }[entry.mealType] || '🍽️';
+
+        const mealTypeLabel = {
+          breakfast: 'Завтрак',
+          lunch: 'Обед',
+          dinner: 'Ужин',
+          snack: 'Перекус',
+        }[entry.mealType] || 'Прием пищи';
+
+        doc.setFontSize(11);
+        doc.setFont('helvetica', 'bold');
+        doc.text(`${mealTypeEmoji} ${mealTypeLabel}`, 30, yPosition);
+        yPosition += 8;
+
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'normal');
+        doc.text(`• ${entry.recipeName} (${entry.servingSize} порция)`, 35, yPosition);
+        yPosition += 8;
+        doc.text(`  Калории: ${entry.calories.toFixed(1)} ккал, Белки: ${entry.proteins.toFixed(1)}г, Жиры: ${entry.fats.toFixed(1)}г, Углеводы: ${entry.carbohydrates.toFixed(1)}г`, 35, yPosition);
+        yPosition += 12;
+      });
+
+      // Разделитель между днями
+      if (dateIndex < sortedDates.length - 1) {
+        yPosition += 5;
+        doc.setLineWidth(0.5);
+        doc.line(20, yPosition, 190, yPosition);
+        yPosition += 10;
+      }
+    });
+
+    // Общая статистика за период
+    if (foodEntries.length > 0) {
+      // Проверяем, нужно ли добавить новую страницу
+      if (yPosition > 200) {
+        doc.addPage();
+        yPosition = 30;
+      }
+
+      const totalStats = foodEntries.reduce((stats, entry) => ({
+        calories: stats.calories + entry.calories,
+        proteins: stats.proteins + entry.proteins,
+        fats: stats.fats + entry.fats,
+        carbohydrates: stats.carbohydrates + entry.carbohydrates,
+        count: stats.count + 1,
+      }), { calories: 0, proteins: 0, fats: 0, carbohydrates: 0, count: 0 });
+
+      const avgStats = {
+        calories: totalStats.calories / sortedDates.length,
+        proteins: totalStats.proteins / sortedDates.length,
+        fats: totalStats.fats / sortedDates.length,
+        carbohydrates: totalStats.carbohydrates / sortedDates.length,
+      };
+
+      doc.setFontSize(16);
+      doc.setFont('helvetica', 'bold');
+      doc.text('📈 Общая статистика за период', 20, yPosition);
+      yPosition += 15;
+
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Итого:', 25, yPosition);
+      yPosition += 10;
+
+      doc.setFontSize(11);
+      doc.setFont('helvetica', 'normal');
+      doc.text(`Дней: ${sortedDates.length}`, 30, yPosition);
+      yPosition += 8;
+      doc.text(`Записей: ${totalStats.count}`, 30, yPosition);
+      yPosition += 8;
+      doc.text(`Общие калории: ${totalStats.calories.toFixed(1)} ккал`, 30, yPosition);
+      yPosition += 8;
+      doc.text(`Общие белки: ${totalStats.proteins.toFixed(1)}г`, 30, yPosition);
+      yPosition += 8;
+      doc.text(`Общие жиры: ${totalStats.fats.toFixed(1)}г`, 30, yPosition);
+      yPosition += 8;
+      doc.text(`Общие углеводы: ${totalStats.carbohydrates.toFixed(1)}г`, 30, yPosition);
+      yPosition += 15;
+
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Среднее за день:', 25, yPosition);
+      yPosition += 10;
+
+      doc.setFontSize(11);
+      doc.setFont('helvetica', 'normal');
+      doc.text(`Калории: ${avgStats.calories.toFixed(1)} ккал`, 30, yPosition);
+      yPosition += 8;
+      doc.text(`Белки: ${avgStats.proteins.toFixed(1)}г`, 30, yPosition);
+      yPosition += 8;
+      doc.text(`Жиры: ${avgStats.fats.toFixed(1)}г`, 30, yPosition);
+      yPosition += 8;
+      doc.text(`Углеводы: ${avgStats.carbohydrates.toFixed(1)}г`, 30, yPosition);
+    }
+
+    // Сохраняем файл
+    const fileName = `food-diary-${startDate.toISOString().split('T')[0]}-to-${endDate.toISOString().split('T')[0]}.pdf`;
+    doc.save(fileName);
+  } catch (error) {
+    console.error('Ошибка экспорта дневника питания в PDF:', error);
     alert('Ошибка при создании PDF файла');
   }
 }
@@ -3266,6 +3491,7 @@ export {
   $isAuthenticated,
   exportShoppingListToPDF,
   exportCalendarToPDF,
+  exportFoodDiaryToPDF,
   toggleFavoriteRecipe,
   isRecipeFavorite,
   openAddToCalendarModal,
