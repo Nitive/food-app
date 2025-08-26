@@ -78,6 +78,7 @@ export function verifyJWT(token: string): JWTPayload | null {
   try {
     return jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret') as JWTPayload
   } catch (error) {
+    console.error(error)
     return null
   }
 }

@@ -107,7 +107,7 @@ export function UserProfileModal({ opened, onClose }: UserProfileModalProps) {
         goal: user.goal || '',
       })
     }
-  }, [user])
+  }, [user, form])
 
   const handleSubmit = async (values: typeof form.values) => {
     setLoading(true)

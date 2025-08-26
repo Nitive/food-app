@@ -1,5 +1,4 @@
 import { Button, Group, Tooltip } from '@mantine/core'
-import { useStore } from '@nanostores/react'
 import { DownloadIcon, PlusIcon, TrashIcon } from '@primer/octicons-react'
 import { $createIngredientModal, $createRecipeModal } from '../app.js'
 
@@ -24,9 +23,6 @@ export function QuickActions({
   exportLabel = 'Экспорт в PDF',
   clearLabel = 'Очистить',
 }: QuickActionsProps) {
-  const createRecipeModal = useStore($createRecipeModal)
-  const createIngredientModal = useStore($createIngredientModal)
-
   return (
     <Group gap="xs">
       {showCreateRecipe && (

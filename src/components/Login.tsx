@@ -1,12 +1,8 @@
 import { Button, Container, Paper, Stack, Text, Title } from '@mantine/core'
 import React from 'react'
-import { apiClient, type User } from '../api-client.js'
+import { apiClient } from '../api-client.js'
 
-interface LoginProps {
-  onLogin: (user: User) => void
-}
-
-export function Login({ onLogin }: LoginProps) {
+export function Login() {
   const [loading, setLoading] = React.useState(false)
 
   const handleGoogleLogin = async () => {

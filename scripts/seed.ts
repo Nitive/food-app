@@ -72,7 +72,7 @@ async function main() {
           })
         } catch (error) {
           // Игнорируем ошибки дублирования
-          console.log(`⚠️ Игнорируем дублирование: ${ingredient.name} в рецепте ${recipe.name}`)
+          console.log(`⚠️ Игнорируем дублирование: ${ingredient.name} в рецепте ${recipe.name}`, error)
         }
       }
     }

@@ -1,4 +1,6 @@
 import '@mantine/core/styles.css'
+import '@mantine/dates/styles.css'
+import '@mantine/form/styles.css'
 
 import {
   ActionIcon,
@@ -188,38 +190,6 @@ async function checkAuth() {
   }
 }
 
-// Функция для проверки полноты профиля пользователя
-const isProfileComplete = (user: any) => {
-  if (!user) return false
-
-  const requiredFields = [
-    user.name,
-    user.age,
-    user.weight,
-    user.height,
-    user.gender,
-    user.activityLevel,
-    user.goal,
-    user.dailyCalories,
-  ]
-
-  // Проверяем, что все обязательные поля заполнены
-  return requiredFields.every((field) => field !== null && field !== undefined && field !== '')
-}
-
-function handleLogin(user: User) {
-  $user.set(user)
-  $isAuthenticated.set(true)
-  loadData() // Загружаем данные после входа
-
-  // Проверяем полноту профиля и показываем напоминание если нужно
-  window.setTimeout(() => {
-    if (!isProfileComplete(user)) {
-      openProfileReminderModal()
-    }
-  }, 1000) // Небольшая задержка, чтобы пользователь успел увидеть загрузку
-}
-
 function handleLogout() {
   $user.set(null)
   $isAuthenticated.set(false)
@@ -242,14 +212,6 @@ async function updateIngredientStock(ingredientId: number, amount: number) {
     await loadData() // Перезагружаем данные
   } catch (error) {
     console.error('Ошибка обновления наличия:', error)
-  }
-}
-
-async function clearAllData() {
-  try {
-    await loadData() // Перезагружаем данные
-  } catch (error) {
-    console.error('Ошибка очистки данных:', error)
   }
 }
 
@@ -537,7 +499,7 @@ function exportCalendarToPDF(calendarItems: CalendarItem[]) {
     doc.setFontSize(14)
     doc.setFont('helvetica', 'bold')
 
-    sortedDates.forEach((date, dateIndex) => {
+    sortedDates.forEach((date) => {
       // Проверяем, нужно ли добавить новую страницу
       if (yPosition > 250) {
         doc.addPage()
@@ -637,7 +599,6 @@ function exportFoodDiaryToPDF(foodEntries: FoodDiaryEntry[], startDate: Date, en
     )
 
     let yPosition = 80
-    let pageNumber = 1
 
     sortedDates.forEach((date, dateIndex) => {
       const entries = groupedByDate[date] || []
@@ -646,7 +607,6 @@ function exportFoodDiaryToPDF(foodEntries: FoodDiaryEntry[], startDate: Date, en
       if (yPosition > 250) {
         doc.addPage()
         yPosition = 30
-        pageNumber++
       }
 
       // Заголовок даты
@@ -691,12 +651,11 @@ function exportFoodDiaryToPDF(foodEntries: FoodDiaryEntry[], startDate: Date, en
       doc.text('🍽️ Приемы пищи:', 25, yPosition)
       yPosition += 10
 
-      entries.forEach((entry, entryIndex) => {
+      entries.forEach((entry) => {
         // Проверяем, нужно ли добавить новую страницу
         if (yPosition > 250) {
           doc.addPage()
           yPosition = 30
-          pageNumber++
         }
 
         const mealTypeEmoji =
@@ -819,7 +778,6 @@ function exportFoodDiaryToPDF(foodEntries: FoodDiaryEntry[], startDate: Date, en
 
 function RecipesPage() {
   const recipes = useStore($recipes)
-  const shoppingList = useStore($shoppingList)
   const favoriteRecipes = useStore($favoriteRecipes)
   const loading = useStore($loading)
   const user = useStore($user)
@@ -1708,14 +1666,6 @@ function IngredientsPage() {
   )
 }
 
-function Amount(props: { children: React.ReactNode }) {
-  return (
-    <Text component="span" c="gray.6" fw={500}>
-      {props.children}{' '}
-    </Text>
-  )
-}
-
 function CreateRecipeForm() {
   const [formData, setFormData] = React.useState({
     name: '',
@@ -1811,7 +1761,7 @@ function CreateRecipeForm() {
     }
   }
 
-  const getFilteredIngredients = (searchValue: string, index: number) => {
+  const getFilteredIngredients = (searchValue: string) => {
     if (!searchValue) return ingredients.map((ing) => ing.name)
 
     const filtered = ingredients
@@ -1945,7 +1895,7 @@ function CreateRecipeForm() {
                 placeholder="Начните вводить название ингредиента"
                 value={ingredient.name}
                 onChange={(value) => handleIngredientSelect(index, value)}
-                data={getFilteredIngredients(ingredientSearch[index] || '', index)}
+                data={getFilteredIngredients(ingredientSearch[index] || '')}
                 searchValue={ingredientSearch[index] || ''}
                 onSearchChange={(value) => handleIngredientSearch(index, value)}
                 searchable
@@ -3224,7 +3174,6 @@ function Recipe() {
 }
 
 function App() {
-  const user = useStore($user)
   const isAuthenticated = useStore($isAuthenticated)
   const loading = useStore($loading)
   // Хуки для модального окна календаря
@@ -3287,7 +3236,7 @@ function App() {
     return (
       <div style={{ fontFamily: 'Inter' }}>
         <Providers>
-          <Login onLogin={handleLogin} />
+          <Login />
         </Providers>
       </div>
     )
