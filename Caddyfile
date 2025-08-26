@@ -2,7 +2,7 @@
   email wild.pin7224@nitive.me
   servers :8080,:8443 {
     protocols h1 h2c
-    trusted_proxies static {$TRUSTED_PROXIES} 127.0.0.1/32
+    trusted_proxies_strict static {$TRUSTED_PROXIES} 127.0.0.1/32
   }
 
   http_port 8080
