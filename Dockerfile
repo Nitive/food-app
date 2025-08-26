@@ -1,17 +1,18 @@
-FROM node:22-bookworm-slim AS base
+FROM node:22-bookworm AS base
 WORKDIR /app
 COPY package.json pnpm-lock.yaml ./
 RUN corepack enable
 
 FROM base AS build
 RUN pnpm install --frozen-lockfile
-COPY . .
+COPY prisma ./prisma
 RUN pnpm prisma generate
+COPY . .
 RUN pnpm run build
 
 FROM base AS prod_deps
 RUN pnpm install --frozen-lockfile --prod
-COPY . .
+COPY prisma ./prisma
 RUN pnpm prisma generate
 
 FROM gcr.io/distroless/nodejs22-debian12

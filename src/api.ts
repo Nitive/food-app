@@ -12,10 +12,30 @@ import {
   verifyJWT,
 } from './auth.js';
 import { requireAuth, type AuthenticatedContext } from './middleware.js';
+import { serveStatic } from '@hono/node-server/serve-static';
+import { Hono } from 'hono';
+import { compress } from 'hono/compress';
+import fsp from 'node:fs/promises';
+import * as mime from 'mime-types';
 
 const prisma = new PrismaClient();
 
 const app = new Elysia({ adapter: node() as any })
+  .get('/*', async () => {
+    const indexFile = await fsp.readFile('./dist/client/index.html', 'utf-8');
+    return new Response(indexFile, {
+      status: 200,
+      headers: { 'Content-Type': 'text/html' },
+    });
+  })
+  .get('/assets/*', async ({ path }) => {
+    const assetFile = await fsp.readFile(`./dist/client${path}`, 'utf-8');
+
+    return new Response(assetFile, {
+      status: 200,
+      headers: { 'Content-Type': mime.lookup(path) },
+    });
+  })
   .use(cookie())
   .use(
     cors({
@@ -29,12 +49,6 @@ const app = new Elysia({ adapter: node() as any })
       methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
       allowedHeaders: ['Content-Type', 'Authorization', 'Cookie'],
       exposeHeaders: ['Set-Cookie'],
-    })
-  )
-  .use(
-    staticPlugin({
-      assets: 'dist/client',
-      prefix: '/',
     })
   )
   // Получить все рецепты
@@ -785,9 +799,11 @@ const app = new Elysia({ adapter: node() as any })
       },
     });
   })
-
   .listen(3000, ({ hostname, port }) => {
     console.log(`🦊 API сервер запущен на ${hostname}:${port}`);
+
+    process.on('SIGINT', () => app.stop());
+    process.on('SIGTERM', () => app.stop());
   });
 
 // Экспортируем тип для Eden
