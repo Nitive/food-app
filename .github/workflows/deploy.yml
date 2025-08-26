@@ -37,22 +37,6 @@ jobs:
           path: deployment.tar.gz
           retention-days: 1
 
-      - name: Deploy to server
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.SERVER_HOST }}
-          username: ${{ secrets.SERVER_USER }}
-          key: ${{ secrets.SERVER_SSH_KEY }}
-          port: ${{ secrets.SERVER_PORT }}
-          script: |
-            set -e
-
-            echo "🚀 Starting deployment..."
-
-            # Создаем директорию приложения
-            mkdir -p /opt/food-app
-            cd /opt/food-app
-
       - name: Download and extract deployment package
         uses: appleboy/scp-action@v0.1.7
         with:
@@ -74,6 +58,10 @@ jobs:
           script: |
             set -e
 
+            echo "🚀 Starting deployment..."
+
+            # Создаем директорию приложения
+            mkdir -p /opt/food-app
             cd /opt/food-app
 
             echo "📦 Extracting deployment package..."
