@@ -1,20 +1,26 @@
 import { node } from '@elysiajs/node'
 import { cors } from '@elysiajs/cors'
+import { cookie } from '@elysiajs/cookie'
 import { Elysia, t } from 'elysia'
 import { PrismaClient } from '@prisma/client'
-import { getGoogleUserInfo, findOrCreateUser, createJWT, getUserFromToken } from './auth.js'
+import { getGoogleUserInfo, findOrCreateUser, createJWT, getUserFromToken, verifyJWT } from './auth.js'
+import { requireAuth, type AuthenticatedContext } from './middleware.js'
 
 const prisma = new PrismaClient()
 
 const app = new Elysia({ adapter: node() as any })
+  .use(cookie())
   .use(cors({
     origin: ['http://localhost:5173', 'http://localhost:3000', 'http://127.0.0.1:5173', 'http://127.0.0.1:3000'],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization']
+    allowedHeaders: ['Content-Type', 'Authorization', 'Cookie'],
+    exposeHeaders: ['Set-Cookie']
   }))
   // Получить все рецепты
-  .get('/api/recipes', async () => {
+  .get('/api/recipes', async ({ cookie }) => {
+    await requireAuth({ cookie })
+    
     const recipes = await prisma.recipe.findMany({
       include: {
         ingredients: {
@@ -44,7 +50,8 @@ const app = new Elysia({ adapter: node() as any })
   })
 
   // Получить рецепт по ID
-  .get('/api/recipes/:id', async ({ params }) => {
+  .get('/api/recipes/:id', async ({ params, cookie }) => {
+    await requireAuth({ cookie })
     const recipe = await prisma.recipe.findUnique({
       where: { id: parseInt(params.id) },
       include: {
@@ -81,7 +88,8 @@ const app = new Elysia({ adapter: node() as any })
   // Создать новый рецепт
   .post(
     '/api/recipes',
-    async ({ body }) => {
+    async ({ body, cookie }) => {
+      await requireAuth({ cookie })
       const { name, calories, proteins, fats, carbohydrates, instructions, cookingTime, difficulty, ingredients } = body
 
       // Создаем рецепт
@@ -171,14 +179,16 @@ const app = new Elysia({ adapter: node() as any })
   )
 
   // Получить все ингредиенты
-  .get('/api/ingredients', async () => {
+  .get('/api/ingredients', async ({ cookie }) => {
+    await requireAuth({ cookie })
     return await prisma.ingredient.findMany()
   })
 
   // Создать новый ингредиент
   .post(
     '/api/ingredients',
-    async ({ body }) => {
+    async ({ body, cookie }) => {
+      await requireAuth({ cookie })
       const { name, amountType } = body
 
       const ingredient = await prisma.ingredient.create({
@@ -199,7 +209,8 @@ const app = new Elysia({ adapter: node() as any })
   )
 
   // Удалить ингредиент
-  .delete('/api/ingredients/:id', async ({ params }) => {
+  .delete('/api/ingredients/:id', async ({ params, cookie }) => {
+    await requireAuth({ cookie })
     const id = parseInt(params.id)
     
     // Проверяем, используется ли ингредиент в рецептах
@@ -224,7 +235,8 @@ const app = new Elysia({ adapter: node() as any })
   })
 
   // Получить корзину
-  .get('/api/cart', async () => {
+  .get('/api/cart', async ({ cookie }) => {
+    await requireAuth({ cookie })
     const cartItems = await prisma.cartItem.findMany({
       include: {
         recipe: {
@@ -262,7 +274,8 @@ const app = new Elysia({ adapter: node() as any })
   // Добавить в корзину
   .post(
     '/api/cart',
-    async ({ body }) => {
+    async ({ body, cookie }) => {
+      await requireAuth({ cookie })
       const { recipeId } = body
 
       // Проверяем, есть ли уже этот рецепт в корзине
@@ -315,7 +328,8 @@ const app = new Elysia({ adapter: node() as any })
   // Обновить количество в корзине
   .put(
     '/api/cart/:id',
-    async ({ params, body }) => {
+    async ({ params, body, cookie }) => {
+      await requireAuth({ cookie })
       const { quantity } = body
 
       if (quantity <= 0) {
@@ -351,7 +365,8 @@ const app = new Elysia({ adapter: node() as any })
   )
 
   // Удалить из корзины
-  .delete('/api/cart/:id', async ({ params }) => {
+  .delete('/api/cart/:id', async ({ params, cookie }) => {
+    await requireAuth({ cookie })
     await prisma.cartItem.delete({
       where: { id: parseInt(params.id) },
     })
@@ -359,13 +374,15 @@ const app = new Elysia({ adapter: node() as any })
   })
 
   // Очистить корзину
-  .delete('/api/cart', async () => {
+  .delete('/api/cart', async ({ cookie }) => {
+    await requireAuth({ cookie })
     await prisma.cartItem.deleteMany()
     return { deleted: true }
   })
 
   // Получить наличие ингредиентов
-  .get('/api/stock', async () => {
+  .get('/api/stock', async ({ cookie }) => {
+    await requireAuth({ cookie })
     return await prisma.stockItem.findMany({
       include: {
         ingredient: true,
@@ -376,7 +393,8 @@ const app = new Elysia({ adapter: node() as any })
   // Обновить наличие ингредиента
   .put(
     '/api/stock/:ingredientId',
-    async ({ params, body }) => {
+    async ({ params, body, cookie }) => {
+      await requireAuth({ cookie })
       const { amount } = body
       const ingredientId = parseInt(params.ingredientId)
 
@@ -406,7 +424,8 @@ const app = new Elysia({ adapter: node() as any })
   )
 
   // Получить список покупок
-  .get('/api/shopping-list', async () => {
+  .get('/api/shopping-list', async ({ cookie }) => {
+    await requireAuth({ cookie })
     const cartItems = await prisma.cartItem.findMany({
       include: {
         recipe: {
@@ -463,7 +482,8 @@ const app = new Elysia({ adapter: node() as any })
   })
 
   // Получить календарь планирования
-  .get('/api/calendar', async () => {
+  .get('/api/calendar', async ({ cookie }) => {
+    await requireAuth({ cookie })
     const calendarItems = await prisma.calendarItem.findMany({
       include: {
         recipe: true
@@ -489,7 +509,8 @@ const app = new Elysia({ adapter: node() as any })
   })
 
   // Добавить рецепт в календарь
-  .post('/api/calendar', async ({ body }) => {
+  .post('/api/calendar', async ({ body, cookie }) => {
+    await requireAuth({ cookie })
     const { date, recipeId } = body
 
     // Проверяем, есть ли уже рецепт на эту дату
@@ -535,7 +556,8 @@ const app = new Elysia({ adapter: node() as any })
   })
 
   // Удалить рецепт из календаря
-  .delete('/api/calendar/:id', async ({ params }) => {
+  .delete('/api/calendar/:id', async ({ params, cookie }) => {
+    await requireAuth({ cookie })
     await prisma.calendarItem.delete({
       where: { id: parseInt(params.id) }
     })
@@ -543,7 +565,8 @@ const app = new Elysia({ adapter: node() as any })
   })
 
   // Добавить все рецепты из календаря в корзину
-  .post('/api/calendar/add-to-cart', async () => {
+  .post('/api/calendar/add-to-cart', async ({ cookie }) => {
+    await requireAuth({ cookie })
     const calendarItems = await prisma.calendarItem.findMany({
       include: {
         recipe: true
@@ -602,7 +625,7 @@ const app = new Elysia({ adapter: node() as any })
   // Google OAuth endpoints
   .get('/api/auth/google/url', () => {
     const clientId = process.env.GOOGLE_CLIENT_ID
-    const redirectUri = 'http://localhost:5173/auth/callback'
+    const redirectUri = 'http://localhost:3000/api/auth/google/callback'
     const scope = 'email profile'
     
     const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
@@ -615,8 +638,12 @@ const app = new Elysia({ adapter: node() as any })
     return { authUrl }
   })
 
-  .post('/api/auth/google/callback', async ({ body }) => {
-    const { code } = body as { code: string }
+  .get('/api/auth/google/callback', async ({ query }) => {
+    const { code } = query
+    
+    if (!code || typeof code !== 'string') {
+      return new Response('Authorization code is required', { status: 400 })
+    }
     
     try {
       // Обмениваем код на access token
@@ -630,7 +657,7 @@ const app = new Elysia({ adapter: node() as any })
           client_secret: process.env.GOOGLE_CLIENT_SECRET!,
           code,
           grant_type: 'authorization_code',
-          redirect_uri: 'http://localhost:5173/auth/callback',
+          redirect_uri: 'http://localhost:3000/api/auth/google/callback',
         }),
       })
 
@@ -647,39 +674,39 @@ const app = new Elysia({ adapter: node() as any })
       // Создаем или находим пользователя в базе данных
       const user = await findOrCreateUser(userInfo)
       
-      // Создаем JWT токен
+            // Создаем JWT токен
       const jwtToken = createJWT(user)
       
-      return {
-        success: true,
-        token: jwtToken,
-        user: {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          picture: user.picture,
-        }
-      }
+      // Делаем редирект на фронтенд с куками
+      const cookieValue = `authToken=${jwtToken}; HttpOnly; SameSite=Lax; Path=/; Max-Age=${7 * 24 * 60 * 60}`
+      
+      return new Response(null, {
+        status: 302,
+        headers: {
+          'Location': 'http://localhost:5173?auth=success',
+          'Set-Cookie': cookieValue,
+        },
+      });
     } catch (error) {
       console.error('OAuth error:', error)
-      return {
-        success: false,
-        error: 'Authentication failed'
-      }
+      
+      // Делаем редирект на фронтенд с ошибкой
+      return new Response(null, {
+        status: 302,
+        headers: {
+          'Location': 'http://localhost:5173?auth=error',
+        },
+      });
     }
-  }, {
-    body: t.Object({
-      code: t.String()
-    })
   })
 
-  .get('/api/auth/me', async ({ headers }) => {
-    const authHeader = headers.authorization
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+  .get('/api/auth/me', async ({ headers, cookie }) => {
+    const token = cookie.authToken?.value
+    
+    if (!token || typeof token !== 'string') {
       return { authenticated: false }
     }
 
-    const token = authHeader.substring(7)
     const user = await getUserFromToken(token)
     
     if (!user) {
@@ -698,8 +725,15 @@ const app = new Elysia({ adapter: node() as any })
   })
 
   .post('/api/auth/logout', () => {
-    return { success: true }
+    return new Response(JSON.stringify({ success: true }), {
+      headers: {
+        'Content-Type': 'application/json',
+        'Set-Cookie': 'authToken=; HttpOnly; SameSite=Lax; Path=/; Max-Age=0',
+      },
+    })
   })
+
+
 
   .listen(3000, ({ hostname, port }) => {
     console.log(`🦊 API сервер запущен на ${hostname}:${port}`)

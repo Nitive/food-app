@@ -1,7 +1,11 @@
 import { treaty } from '@elysiajs/eden'
 import type { App } from './api.js'
 
-const client = treaty<App>('http://localhost:3000')
+const client = treaty<App>('http://localhost:3000', {
+  fetch: {
+    credentials: 'include'
+  }
+})
 
 export interface Recipe {
   id: number
@@ -196,30 +200,15 @@ export const apiClient = {
     return data
   },
 
-  async googleAuthCallback(code: string): Promise<AuthResponse> {
-    const { data } = await client.api.auth.google.callback.post({ code })
-    if (!data) throw new Error('Failed to authenticate')
-    return data as unknown as AuthResponse
-  },
+
 
   async getMe(): Promise<AuthMeResponse> {
-    const token = localStorage.getItem('authToken')
-    if (!token) {
-      return { authenticated: false }
-    }
-
-    const { data } = await client.api.auth.me.get({
-      headers: {
-        Authorization: `Bearer ${token}`
-      }
-    })
+    const { data } = await client.api.auth.me.get()
     return data || { authenticated: false }
   },
 
   async logout(): Promise<{ success: boolean }> {
     const { data } = await client.api.auth.logout.post()
-    localStorage.removeItem('authToken')
-    localStorage.removeItem('user')
     return data || { success: true }
   },
 }

@@ -15,59 +15,12 @@ export function Login({ onLogin }: LoginProps) {
       // Получаем URL для авторизации
       const { authUrl } = await apiClient.getGoogleAuthUrl()
       
-      // Открываем окно авторизации
-      const width = 500
-      const height = 600
-      const left = window.screenX + (window.outerWidth - width) / 2
-      const top = window.screenY + (window.outerHeight - height) / 2
-      
-      const popup = window.open(
-        authUrl,
-        'google-auth',
-        `width=${width},height=${height},left=${left},top=${top}`
-      )
-
-      if (!popup) {
-        alert('Пожалуйста, разрешите всплывающие окна для этого сайта')
-        return
-      }
-
-      // Слушаем сообщения от popup окна
-      const handleMessage = async (event: MessageEvent) => {
-        if (event.origin !== window.location.origin) return
-        
-        if (event.data.type === 'GOOGLE_AUTH_SUCCESS') {
-          const { code } = event.data
-          
-          try {
-            const response = await apiClient.googleAuthCallback(code)
-            
-            if (response.success && response.token && response.user) {
-              // Сохраняем токен и информацию о пользователе
-              localStorage.setItem('authToken', response.token)
-              localStorage.setItem('user', JSON.stringify(response.user))
-              
-              // Вызываем callback
-              onLogin(response.user)
-            } else {
-              alert('Ошибка авторизации: ' + (response.error || 'Неизвестная ошибка'))
-            }
-          } catch (error) {
-            console.error('Auth error:', error)
-            alert('Ошибка авторизации')
-          }
-          
-          popup.close()
-          window.removeEventListener('message', handleMessage)
-        }
-      }
-
-      window.addEventListener('message', handleMessage)
+      // Делаем редирект на Google
+      window.location.href = authUrl
       
     } catch (error) {
       console.error('Login error:', error)
       alert('Ошибка при попытке входа')
-    } finally {
       setLoading(false)
     }
   }

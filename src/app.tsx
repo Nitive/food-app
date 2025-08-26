@@ -43,7 +43,6 @@ import {
 } from './api-client.js'
 import { Login } from './components/Login.js'
 import { UserMenu } from './components/UserMenu.js'
-import { AuthCallback } from './components/AuthCallback.js'
 
 function Providers(props: { children: React.ReactNode }) {
   return (
@@ -184,6 +183,8 @@ function handleLogout() {
   $stockItems.set([])
   $shoppingList.set([])
   $calendarItems.set([])
+  // Очищаем localStorage
+  localStorage.removeItem('user')
 }
 
 // Функции для работы с наличием ингредиентов
@@ -2311,6 +2312,23 @@ function App() {
     checkAuth()
   }, [])
 
+  // Обрабатываем параметры URL после редиректа от Google
+  React.useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search)
+    const authStatus = urlParams.get('auth')
+    
+    if (authStatus === 'success') {
+      // Очищаем URL параметры
+      window.history.replaceState({}, document.title, window.location.pathname)
+      // Проверяем авторизацию заново
+      checkAuth()
+    } else if (authStatus === 'error') {
+      // Очищаем URL параметры
+      window.history.replaceState({}, document.title, window.location.pathname)
+      alert('Ошибка авторизации. Попробуйте еще раз.')
+    }
+  }, [])
+
   // Загружаем данные при монтировании компонента (только если авторизованы)
   React.useEffect(() => {
     if (isAuthenticated) {
@@ -2354,7 +2372,6 @@ function App() {
           <Route path="ingredients" element={<IngredientsPage />} />
           <Route path="calendar" element={<CalendarPage />} />
           <Route path="recipe/:id" element={<Recipe />} />
-          <Route path="auth/callback" element={<AuthCallback />} />
         </Routes>
         <CreateRecipeForm />
         <CreateIngredientForm />
