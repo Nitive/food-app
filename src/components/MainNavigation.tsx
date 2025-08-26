@@ -75,9 +75,24 @@ export function MainNavigation() {
   const NavigationContent = () => (
     <>
       <Box mb="md">
-        <Text size="lg" fw={700} mb="md" c="teal">
-          🍽️ Food App
-        </Text>
+        <Link to="/" style={{ textDecoration: 'none' }} onClick={() => setMobileOpened(false)}>
+          <Text
+            size="lg"
+            fw={700}
+            mb="md"
+            c="teal"
+            style={{
+              cursor: 'pointer',
+              transition: 'all 0.2s ease',
+              '&:hover': {
+                color: 'var(--mantine-color-teal-7)',
+                transform: 'scale(1.02)',
+              },
+            }}
+          >
+            🍽️ Food App
+          </Text>
+        </Link>
       </Box>
 
       <Box style={{ flex: 1 }}>
@@ -171,13 +186,18 @@ export function MainNavigation() {
       <Drawer
         opened={mobileOpened}
         onClose={() => setMobileOpened(false)}
-        title="🍽️ Food App"
+        title={
+          <Link to="/" style={{ textDecoration: 'none', color: 'white' }} onClick={() => setMobileOpened(false)}>
+            🍽️ Food App
+          </Link>
+        }
         size="280px"
         overlayProps={{ opacity: 0.5, blur: 4 }}
         styles={{
           header: {
             backgroundColor: 'var(--mantine-color-teal-6)',
             color: 'white',
+            cursor: 'pointer',
           },
         }}
       >
