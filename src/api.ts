@@ -1077,7 +1077,7 @@ const app = new Elysia({ adapter: node() as any })
       return new Response(null, {
         status: 302,
         headers: {
-          Location: 'http://localhost:5173?auth=success',
+          Location: new URL('/', getRedirectUri(request)).toString(),
           'Set-Cookie': cookieValue,
         },
       })

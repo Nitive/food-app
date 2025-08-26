@@ -30,13 +30,6 @@ jobs:
             Caddyfile \
             .dockerignore
 
-      - name: Upload deployment package
-        uses: actions/upload-artifact@v4
-        with:
-          name: deployment-package
-          path: deployment.tar.gz
-          retention-days: 1
-
       - name: Download and extract deployment package
         uses: appleboy/scp-action@v0.1.7
         with:
