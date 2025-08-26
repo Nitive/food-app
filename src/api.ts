@@ -31,10 +31,12 @@ const app = new Elysia({ adapter: node() as any })
       exposeHeaders: ['Set-Cookie'],
     })
   )
-  .use(staticPlugin({
-    assets: 'dist/client',
-    prefix: '/'
-  }))
+  .use(
+    staticPlugin({
+      assets: 'dist/client',
+      prefix: '/',
+    })
+  )
   // Получить все рецепты
   .get('/api/recipes', async ({ cookie }) => {
     await requireAuth({ cookie });

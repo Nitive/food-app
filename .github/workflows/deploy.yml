@@ -2,169 +2,169 @@ name: Deploy to Production
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   workflow_dispatch:
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
-    
+
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '22'
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
 
-    - name: Setup pnpm
-      uses: pnpm/action-setup@v4
-      with:
-        version: '10.12.1'
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: '10.12.1'
 
-    - name: Install dependencies
-      run: pnpm install --frozen-lockfile
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
 
-    - name: Generate Prisma Client
-      run: pnpm prisma generate
+      - name: Generate Prisma Client
+        run: pnpm prisma generate
 
-    - name: Run type check
-      run: pnpm run types
+      - name: Run type check
+        run: pnpm run types
 
-    - name: Run linting
-      run: pnpm run lint:check
+      - name: Run linting
+        run: pnpm run lint:check
 
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v3
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
-    - name: Build Docker image
-      run: |
-        docker build -t food-app:${{ github.sha }} .
-        docker save food-app:${{ github.sha }} | gzip > food-app.tar.gz
+      - name: Build Docker image
+        run: |
+          docker build -t food-app:${{ github.sha }} .
+          docker save food-app:${{ github.sha }} | gzip > food-app.tar.gz
 
-    - name: Create deployment package
-      run: |
-        # Создаем архив с Docker образом и конфигурацией
-        tar -czf deployment.tar.gz \
-          food-app.tar.gz \
-          docker-compose.yml \
-          Caddyfile \
-          .dockerignore
+      - name: Create deployment package
+        run: |
+          # Создаем архив с Docker образом и конфигурацией
+          tar -czf deployment.tar.gz \
+            food-app.tar.gz \
+            docker-compose.yml \
+            Caddyfile \
+            .dockerignore
 
-    - name: Upload deployment package
-      uses: actions/upload-artifact@v4
-      with:
-        name: deployment-package
-        path: deployment.tar.gz
-        retention-days: 1
+      - name: Upload deployment package
+        uses: actions/upload-artifact@v4
+        with:
+          name: deployment-package
+          path: deployment.tar.gz
+          retention-days: 1
 
-    - name: Deploy to server
-      uses: appleboy/ssh-action@v1.0.3
-      with:
-        host: ${{ secrets.SERVER_HOST }}
-        username: ${{ secrets.SERVER_USER }}
-        key: ${{ secrets.SERVER_SSH_KEY }}
-        port: ${{ secrets.SERVER_PORT }}
-        script: |
-          set -e
-          
-          echo "🚀 Starting deployment..."
-          
-          # Создаем директорию приложения
-          mkdir -p /opt/food-app
-          cd /opt/food-app
-          
-          # Останавливаем старые контейнеры
-          echo "🛑 Stopping old containers..."
-          docker-compose down || true
-          
-          # Очищаем старые образы
-          echo "🧹 Cleaning old images..."
-          docker system prune -f
+      - name: Deploy to server
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          port: ${{ secrets.SERVER_PORT }}
+          script: |
+            set -e
 
-    - name: Download and extract deployment package
-      uses: appleboy/scp-action@v0.1.7
-      with:
-        host: ${{ secrets.SERVER_HOST }}
-        username: ${{ secrets.SERVER_USER }}
-        key: ${{ secrets.SERVER_SSH_KEY }}
-        port: ${{ secrets.SERVER_PORT }}
-        source: "deployment.tar.gz"
-        target: "/opt/food-app"
-        strip_components: 0
+            echo "🚀 Starting deployment..."
 
-    - name: Deploy application
-      uses: appleboy/ssh-action@v1.0.3
-      with:
-        host: ${{ secrets.SERVER_HOST }}
-        username: ${{ secrets.SERVER_USER }}
-        key: ${{ secrets.SERVER_SSH_KEY }}
-        port: ${{ secrets.SERVER_PORT }}
-        script: |
-          set -e
-          
-          cd /opt/food-app
-          
-          echo "📦 Extracting deployment package..."
-          tar -xzf deployment.tar.gz
-          
-          echo "🐳 Loading Docker image..."
-          docker load < food-app.tar.gz
-          
-          # Создаем .env файл
-          echo "📝 Creating .env file..."
-          cat > .env << EOF
-          # База данных
-          DATABASE_URL=postgresql://food_user:food_password@postgres:5432/food_app
-          
-          # Google OAuth
-          GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}
-          GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}
-          
-          # JWT секрет
-          JWT_SECRET=${{ secrets.JWT_SECRET }}
-          
-          # Окружение
-          NODE_ENV=production
-          PORT=3000
-          EOF
-          
-          echo "🔨 Starting containers..."
-          docker-compose up -d
-          
-          echo "⏳ Waiting for services to start..."
-          sleep 30
-          
-          echo "🗄️ Running database migrations..."
-          docker-compose exec -T app npx prisma migrate deploy
-          
-          echo "🌱 Seeding database..."
-          docker-compose exec -T app npx prisma db seed || true
-          
-          echo "✅ Checking service status..."
-          docker-compose ps
-          
-          echo "🔍 Checking logs..."
-          docker-compose logs --tail=20
-          
-          # Очищаем временные файлы
-          rm -f deployment.tar.gz food-app.tar.gz
+            # Создаем директорию приложения
+            mkdir -p /opt/food-app
+            cd /opt/food-app
 
-    - name: Health check
-      run: |
-        echo "🏥 Performing health check..."
-        sleep 10
-        curl -f https://${{ secrets.DOMAIN }} || exit 1
+            # Останавливаем старые контейнеры
+            echo "🛑 Stopping old containers..."
+            docker-compose down || true
 
-    - name: Notify deployment success
-      if: success()
-      run: |
-        echo "🎉 Deployment completed successfully!"
-        echo "🌐 Application is available at: https://${{ secrets.DOMAIN }}"
+            # Очищаем старые образы
+            echo "🧹 Cleaning old images..."
+            docker system prune -f
 
-    - name: Notify deployment failure
-      if: failure()
-      run: |
-        echo "❌ Deployment failed!"
-        echo "Check the logs above for more details."
+      - name: Download and extract deployment package
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          port: ${{ secrets.SERVER_PORT }}
+          source: 'deployment.tar.gz'
+          target: '/opt/food-app'
+          strip_components: 0
+
+      - name: Deploy application
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          port: ${{ secrets.SERVER_PORT }}
+          script: |
+            set -e
+
+            cd /opt/food-app
+
+            echo "📦 Extracting deployment package..."
+            tar -xzf deployment.tar.gz
+
+            echo "🐳 Loading Docker image..."
+            docker load < food-app.tar.gz
+
+            # Создаем .env файл
+            echo "📝 Creating .env file..."
+            cat > .env << EOF
+            # База данных
+            DATABASE_URL=postgresql://food_user:food_password@postgres:5432/food_app
+
+            # Google OAuth
+            GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}
+            GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}
+
+            # JWT секрет
+            JWT_SECRET=${{ secrets.JWT_SECRET }}
+
+            # Окружение
+            NODE_ENV=production
+            PORT=3000
+            EOF
+
+            echo "🔨 Starting containers..."
+            docker-compose up -d
+
+            echo "⏳ Waiting for services to start..."
+            sleep 30
+
+            echo "🗄️ Running database migrations..."
+            docker-compose exec -T app npx prisma migrate deploy
+
+            echo "🌱 Seeding database..."
+            docker-compose exec -T app npx prisma db seed || true
+
+            echo "✅ Checking service status..."
+            docker-compose ps
+
+            echo "🔍 Checking logs..."
+            docker-compose logs --tail=20
+
+            # Очищаем временные файлы
+            rm -f deployment.tar.gz food-app.tar.gz
+
+      - name: Health check
+        run: |
+          echo "🏥 Performing health check..."
+          sleep 10
+          curl -f https://${{ secrets.DOMAIN }} || exit 1
+
+      - name: Notify deployment success
+        if: success()
+        run: |
+          echo "🎉 Deployment completed successfully!"
+          echo "🌐 Application is available at: https://${{ secrets.DOMAIN }}"
+
+      - name: Notify deployment failure
+        if: failure()
+        run: |
+          echo "❌ Deployment failed!"
+          echo "Check the logs above for more details."

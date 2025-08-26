@@ -7,11 +7,13 @@
 ## 📦 Установленные пакеты
 
 ### ESLint и плагины
+
 ```bash
 pnpm add -D eslint @typescript-eslint/parser @typescript-eslint/eslint-plugin eslint-plugin-react eslint-plugin-react-hooks eslint-plugin-jsx-a11y prettier eslint-config-prettier eslint-plugin-prettier @eslint/js
 ```
 
 ### Пакеты
+
 - **eslint** - основной линтер
 - **@typescript-eslint/parser** - парсер для TypeScript
 - **@typescript-eslint/eslint-plugin** - правила для TypeScript
@@ -26,6 +28,7 @@ pnpm add -D eslint @typescript-eslint/parser @typescript-eslint/eslint-plugin es
 ## ⚙️ Конфигурация
 
 ### ESLint (eslint.config.js)
+
 ```javascript
 import js from '@eslint/js';
 import typescript from '@typescript-eslint/eslint-plugin';
@@ -76,7 +79,10 @@ export default [
       'react/react-in-jsx-scope': 'off',
       'react/prop-types': 'off',
       'react/no-unescaped-entities': 'off',
-      '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
+      '@typescript-eslint/no-unused-vars': [
+        'warn',
+        { argsIgnorePattern: '^_' },
+      ],
       '@typescript-eslint/no-explicit-any': 'warn',
       '@typescript-eslint/explicit-function-return-type': 'off',
       '@typescript-eslint/explicit-module-boundary-types': 'off',
@@ -98,6 +104,7 @@ export default [
 ```
 
 ### Prettier (.prettierrc)
+
 ```json
 {
   "semi": true,
@@ -115,6 +122,7 @@ export default [
 ## 📜 Скрипты
 
 ### Добавленные скрипты в package.json
+
 ```json
 {
   "scripts": {
@@ -130,6 +138,7 @@ export default [
 ```
 
 ### Описание скриптов
+
 - **`npm run types`** - проверка типов TypeScript
 - **`npm run lint`** - исправление ошибок ESLint
 - **`npm run lint:check`** - проверка ESLint без исправлений
@@ -141,6 +150,7 @@ export default [
 ## 🔧 Правила ESLint
 
 ### Основные правила
+
 - **`prettier/prettier: 'error'`** - ошибки форматирования
 - **`react/react-in-jsx-scope: 'off'`** - не требовать импорт React
 - **`react/prop-types: 'off'`** - отключить проверку prop-types (используем TypeScript)
@@ -151,7 +161,9 @@ export default [
 - **`no-var: 'error'`** - запретить var
 
 ### Глобальные переменные
+
 Настроены глобальные переменные для браузера и Node.js:
+
 - `window`, `document`, `console`
 - `process`, `fetch`, `Response`
 - `URLSearchParams`, `alert`, `navigator`
@@ -160,6 +172,7 @@ export default [
 ## 🎨 Настройки Prettier
 
 ### Форматирование
+
 - **`semi: true`** - точки с запятой
 - **`trailingComma: "es5"`** - запятые в конце
 - **`singleQuote: true`** - одинарные кавычки
@@ -173,6 +186,7 @@ export default [
 ## 🚀 Использование
 
 ### Автоматическая проверка после изменений
+
 ```bash
 # Полная проверка
 npm run check
@@ -182,12 +196,15 @@ npm run fix
 ```
 
 ### Интеграция с IDE
+
 Для VS Code рекомендуется установить расширения:
+
 - **ESLint** - интеграция с ESLint
 - **Prettier** - интеграция с Prettier
 - **TypeScript** - поддержка TypeScript
 
 ### Настройки VS Code
+
 ```json
 {
   "editor.formatOnSave": true,
@@ -202,11 +219,13 @@ npm run fix
 ## 📊 Результаты проверки
 
 ### Текущий статус
+
 - ✅ **TypeScript**: 0 ошибок
 - ⚠️ **ESLint**: 75 предупреждений (0 ошибок)
 - ✅ **Prettier**: все файлы отформатированы
 
 ### Типы предупреждений
+
 - **Неиспользуемые переменные** - можно удалить или переименовать с `_`
 - **Использование `any`** - рекомендуется указать конкретные типы
 - **Console statements** - для продакшена лучше убрать
@@ -215,7 +234,9 @@ npm run fix
 ## 🔄 Автоматизация
 
 ### Pre-commit хуки
+
 Можно настроить автоматическую проверку перед коммитом:
+
 ```bash
 # Установка husky
 pnpm add -D husky lint-staged
@@ -225,7 +246,9 @@ npx husky add .husky/pre-commit "npm run check"
 ```
 
 ### CI/CD
+
 Для автоматической проверки в CI/CD:
+
 ```yaml
 # GitHub Actions
 - name: Check code quality
@@ -235,6 +258,7 @@ npx husky add .husky/pre-commit "npm run check"
 ## 📝 Заключение
 
 Настройка ESLint и Prettier обеспечивает:
+
 - **Качество кода** - автоматическое выявление проблем
 - **Единообразие** - единый стиль кода
 - **Производительность** - раннее выявление ошибок

@@ -21,11 +21,7 @@ module.exports = {
     ecmaVersion: 'latest',
     sourceType: 'module',
   },
-  plugins: [
-    'react',
-    '@typescript-eslint',
-    'prettier',
-  ],
+  plugins: ['react', '@typescript-eslint', 'prettier'],
   rules: {
     'prettier/prettier': 'error',
     'react/react-in-jsx-scope': 'off',
@@ -43,10 +39,5 @@ module.exports = {
       version: 'detect',
     },
   },
-  ignorePatterns: [
-    'dist/',
-    'node_modules/',
-    '*.config.js',
-    '*.config.ts',
-  ],
-}
+  ignorePatterns: ['dist/', 'node_modules/', '*.config.js', '*.config.ts'],
+};
