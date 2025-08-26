@@ -1,7 +1,7 @@
 import { treaty } from '@elysiajs/eden'
 import type { App } from './api.js'
 
-const backendUrl = ['localhost', '127.0.0.1'].includes(window.location.host)
+const backendUrl = ['localhost', '127.0.0.1'].includes(window.location.hostname)
   ? 'http://localhost:3000'
   : window.location.origin
 
