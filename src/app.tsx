@@ -81,6 +81,7 @@ import { StatsPage } from './pages/StatsPage.js'
 function Providers(props: { children: React.ReactNode }) {
   return (
     <MantineProvider
+      defaultColorScheme="light"
       theme={{
         fontFamily:
           'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif',
