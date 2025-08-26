@@ -730,6 +730,7 @@ const app = new Elysia({ adapter: node() as any })
       date: item.date,
       mealType: item.mealType,
       recipeId: item.recipeId,
+      userId: item.userId,
       recipe: {
         id: item.recipe.id,
         name: item.recipe.name,
@@ -779,6 +780,7 @@ const app = new Elysia({ adapter: node() as any })
         date: calendarItem.date,
         mealType: calendarItem.mealType,
         recipeId: calendarItem.recipeId,
+        userId: calendarItem.userId,
         recipe: {
           id: calendarItem.recipe.id,
           name: calendarItem.recipe.name,
