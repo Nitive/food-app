@@ -1,3 +1,5 @@
+import 'dotenv/config'
+
 import { cookie } from '@elysiajs/cookie'
 import { cors } from '@elysiajs/cors'
 import { node } from '@elysiajs/node'
@@ -1021,8 +1023,12 @@ const app = new Elysia({ adapter: node() as any })
     const redirectUri = getRedirectUri(request)
     const scope = 'email profile'
 
+    if (!clientId) {
+      throw new Error('GOOGLE_CLIENT_ID is not set')
+    }
+
     const authUrl = new URL('https://accounts.google.com/o/oauth2/v2/auth')
-    authUrl.searchParams.set('client_id', clientId!)
+    authUrl.searchParams.set('client_id', clientId)
     authUrl.searchParams.set('redirect_uri', redirectUri)
     authUrl.searchParams.set('response_type', 'code')
     authUrl.searchParams.set('scope', scope)

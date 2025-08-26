@@ -107,7 +107,8 @@ export function UserProfileModal({ opened, onClose }: UserProfileModalProps) {
         goal: user.goal || '',
       })
     }
-  }, [user, form])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user])
 
   const handleSubmit = async (values: typeof form.values) => {
     setLoading(true)
