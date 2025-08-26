@@ -14,27 +14,28 @@
 - SSH ключ для доступа к серверу
 - Google OAuth credentials (для авторизации)
 
-### 2. Настройка переменных окружения
+### 2. Настройка GitHub Secrets
 
-Отредактируйте файл `.env.production` или создайте его:
+Добавьте необходимые секреты в GitHub репозиторий (см. `GITHUB_SECRETS.md`):
 
 ```bash
-# База данных
-DATABASE_URL=postgresql://food_user:food_password@postgres:5432/food_app
-
-# Google OAuth (замените на ваши значения)
-GOOGLE_CLIENT_ID=your_google_client_id
-GOOGLE_CLIENT_SECRET=your_google_client_secret
-
-# JWT секрет (сгенерируйте случайную строку)
-JWT_SECRET=your_jwt_secret
-
-# Окружение
-NODE_ENV=production
-PORT=3000
+SERVER_HOST = 138.68.124.16
+SERVER_USER = root
+SERVER_SSH_KEY = ваш_ssh_ключ
+SERVER_PORT = 22
+DOMAIN = food.nitive.me
+GOOGLE_CLIENT_ID = ваш_google_client_id
+GOOGLE_CLIENT_SECRET = ваш_google_client_secret
+JWT_SECRET = ваш_jwt_секрет
 ```
 
-### 3. Запуск деплоя
+### 3. Автоматический деплой
+
+После настройки секретов:
+- **Автоматический деплой** - при каждом push в ветку `main`
+- **Ручной деплой** - в Actions → Deploy to Production → Run workflow
+
+### 4. Ручной деплой (локально)
 
 ```bash
 # Деплой на IP адрес

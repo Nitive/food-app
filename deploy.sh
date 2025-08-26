@@ -35,10 +35,22 @@ NODE_ENV=production
 PORT=3000
 EOF
 
-# Копируем файлы на сервер
-echo "📤 Копируем файлы на сервер..."
-rsync -avz --exclude 'node_modules' --exclude '.git' --exclude 'dist' \
-    ./ root@$SERVER_IP:/opt/food-app/
+    # Собираем Docker образ
+    echo "🔨 Собираем Docker образ..."
+    docker build -t food-app:latest .
+    docker save food-app:latest | gzip > food-app.tar.gz
+
+    # Создаем архив для деплоя
+    echo "📦 Создаем архив для деплоя..."
+    tar -czf deployment.tar.gz \
+        food-app.tar.gz \
+        docker-compose.yml \
+        Caddyfile \
+        .dockerignore
+
+    # Копируем архив на сервер
+    echo "📤 Копируем архив на сервер..."
+    scp deployment.tar.gz root@$SERVER_IP:/opt/food-app/
 
 # Подключаемся к серверу и выполняем деплой
 echo "🔧 Выполняем деплой на сервере..."
@@ -66,14 +78,20 @@ ssh root@$SERVER_IP << EOF
     mkdir -p /opt/food-app
     cd /opt/food-app
     
+        echo "📦 Распаковываем архив..."
+    tar -xzf deployment.tar.gz
+    
+    echo "🐳 Загружаем Docker образ..."
+    docker load < food-app.tar.gz
+    
     echo "🔧 Настраиваем Caddyfile для домена..."
     if [ -n "$DOMAIN" ]; then
-        # Заменяем localhost на домен в Caddyfile
-        sed -i "s/localhost/$DOMAIN/g" Caddyfile
-        # Раскомментируем секцию с доменом
-        sed -i '/^# example.com {/,/^# }/s/^# //' Caddyfile
-        # Удаляем секцию localhost
-        sed -i '/^localhost {/,/^}/d' Caddyfile
+      # Заменяем localhost на домен в Caddyfile
+      sed -i "s/localhost/$DOMAIN/g" Caddyfile
+      # Раскомментируем секцию с доменом
+      sed -i '/^# example.com {/,/^# }/s/^# //' Caddyfile
+      # Удаляем секцию localhost
+      sed -i '/^localhost {/,/^}/d' Caddyfile
     fi
     
     echo "🐳 Останавливаем старые контейнеры..."
@@ -82,8 +100,8 @@ ssh root@$SERVER_IP << EOF
     echo "🧹 Очищаем старые образы..."
     docker system prune -f
     
-    echo "🔨 Собираем и запускаем приложение..."
-    docker-compose up -d --build
+    echo "🔨 Запускаем приложение..."
+    docker-compose up -d
     
     echo "⏳ Ждем запуска сервисов..."
     sleep 30
@@ -99,6 +117,9 @@ ssh root@$SERVER_IP << EOF
     
     echo "🔍 Проверяем логи..."
     docker-compose logs --tail=20
+    
+    echo "🧹 Очищаем временные файлы..."
+    rm -f deployment.tar.gz food-app.tar.gz
 EOF
 
 echo "🎉 Деплой завершен!"

@@ -21,3 +21,4 @@ build
 .nuxt
 .cache
 .parcel-cache
+.github
