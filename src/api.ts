@@ -5,6 +5,7 @@ import { PrismaClient } from '@prisma/client'
 import { Elysia, t } from 'elysia'
 import * as mime from 'mime-types'
 import fsp from 'node:fs/promises'
+import { URL } from 'node:url'
 import { createJWT, findOrCreateUser, getGoogleUserInfo, getUserFromToken } from './auth.js'
 import { requireAuth } from './middleware.js'
 
@@ -32,7 +33,7 @@ const app = new Elysia({ adapter: node() as any })
   .use(cookie())
   .use(
     cors({
-      origin: ['http://localhost:5173', 'http://localhost:3000', 'http://127.0.0.1:5173', 'http://127.0.0.1:3000'],
+      origin: ['http://localhost:3000', 'http://127.0.0.1:3000'],
       credentials: true,
       methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
       allowedHeaders: ['Content-Type', 'Authorization', 'Cookie'],
@@ -1007,9 +1008,9 @@ const app = new Elysia({ adapter: node() as any })
   })
 
   // Google OAuth endpoints
-  .get('/api/auth/google/url', () => {
+  .get('/api/auth/google/url', ({ request }) => {
     const clientId = process.env.GOOGLE_CLIENT_ID
-    const redirectUri = 'http://localhost:3000/api/auth/google/callback'
+    const redirectUri = new URL('/api/auth/google/callback', request.url).toString()
     const scope = 'email profile'
 
     const authUrl =

@@ -1,6 +1,5 @@
 import '@mantine/core/styles.css'
 import '@mantine/dates/styles.css'
-import '@mantine/form/styles.css'
 
 import {
   ActionIcon,
