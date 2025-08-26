@@ -125,6 +125,7 @@ export function EditRecipeForm({
 
   const amountTypes = [
     { value: 'г', label: 'грамм' },
+    { value: 'гр', label: 'грамм' },
     { value: 'кг', label: 'килограмм' },
     { value: 'мл', label: 'миллилитр' },
     { value: 'л', label: 'литр' },

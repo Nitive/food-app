@@ -266,29 +266,61 @@ const app = new Elysia({ adapter: node() as any })
         },
       });
 
-      // Удаляем старые связи с ингредиентами
-      await prisma.recipeIngredient.deleteMany({
+      // Получаем текущие связи с ингредиентами
+      const existingRecipeIngredients = await prisma.recipeIngredient.findMany({
         where: { recipeId: id },
+        include: { ingredient: true },
       });
 
-      // Создаем новые связи с ингредиентами
+      // Создаем или обновляем ингредиенты и их связи
       for (const ing of ingredients) {
         // Создаем или находим ингредиент
         const ingredient = await prisma.ingredient.upsert({
           where: { name: ing.name },
-          update: {},
+          update: {
+            amountType: ing.amountType, // Обновляем единицы измерения если изменились
+          },
           create: {
             name: ing.name,
             amountType: ing.amountType,
           },
         });
 
-        // Связываем ингредиент с рецептом
-        await prisma.recipeIngredient.create({
-          data: {
-            recipeId: id,
-            ingredientId: ingredient.id,
-            amount: ing.amount,
+        // Ищем существующую связь
+        const existingLink = existingRecipeIngredients.find(
+          link => link.ingredient.name === ing.name
+        );
+
+        if (existingLink) {
+          // Обновляем существующую связь
+          await prisma.recipeIngredient.update({
+            where: { id: existingLink.id },
+            data: {
+              amount: ing.amount,
+            },
+          });
+        } else {
+          // Создаем новую связь
+          await prisma.recipeIngredient.create({
+            data: {
+              recipeId: id,
+              ingredientId: ingredient.id,
+              amount: ing.amount,
+            },
+          });
+        }
+      }
+
+      // Удаляем связи с ингредиентами, которых больше нет в рецепте
+      const currentIngredientNames = ingredients.map(ing => ing.name);
+      const ingredientsToRemove = existingRecipeIngredients.filter(
+        link => !currentIngredientNames.includes(link.ingredient.name)
+      );
+
+      if (ingredientsToRemove.length > 0) {
+        await prisma.recipeIngredient.deleteMany({
+          where: {
+            id: { in: ingredientsToRemove.map(link => link.id) },
           },
         });
       }

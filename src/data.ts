@@ -1,7 +1,7 @@
 interface Ingredients {
   name: string;
   amount: number;
-  amountType: 'гр' | 'мл' | 'шт' | 'по вкусу';
+  amountType: 'гр' | 'мл' | 'шт' | 'по вкусу' | 'г' | 'л';
 }
 
 interface Recipe {
@@ -95,21 +95,23 @@ export const recipes: Recipe[] = [
     fats: 3,
     carbohydrates: 12,
     ingredients: [
-      { name: 'Свёкла', amount: 0, amountType: 'по вкусу' },
-      { name: 'Лук', amount: 0, amountType: 'по вкусу' },
-      { name: 'Чеснок', amount: 0, amountType: 'по вкусу' },
-      { name: 'Болгарский перец', amount: 0, amountType: 'по вкусу' },
-      { name: 'Морковь', amount: 0, amountType: 'по вкусу' },
-      { name: 'Корень сельдерея', amount: 0, amountType: 'по вкусу' },
-      { name: 'Капуста', amount: 0, amountType: 'по вкусу' },
-      { name: 'Картофель', amount: 0, amountType: 'по вкусу' },
-      { name: 'Укроп', amount: 0, amountType: 'по вкусу' },
-      { name: 'Томатная паста', amount: 0, amountType: 'по вкусу' },
-      { name: 'Уксус', amount: 0, amountType: 'по вкусу' },
-      { name: 'Подсолнечное масло', amount: 0, amountType: 'по вкусу' },
-      { name: 'Соль', amount: 0, amountType: 'по вкусу' },
-      { name: 'Перец молотый', amount: 0, amountType: 'по вкусу' },
-      { name: 'Сахар', amount: 0, amountType: 'по вкусу' },
+      { name: 'Свёкла', amount: 300, amountType: 'гр' },
+      { name: 'Лук репчатый', amount: 100, amountType: 'гр' },
+      { name: 'Чеснок', amount: 20, amountType: 'гр' },
+      { name: 'Болгарский перец', amount: 150, amountType: 'гр' },
+      { name: 'Морковь', amount: 200, amountType: 'гр' },
+      { name: 'Корень сельдерея', amount: 100, amountType: 'гр' },
+      { name: 'Капуста белокочанная', amount: 300, amountType: 'гр' },
+      { name: 'Картофель', amount: 400, amountType: 'гр' },
+      { name: 'Укроп свежий', amount: 30, amountType: 'гр' },
+      { name: 'Томатная паста', amount: 50, amountType: 'гр' },
+      { name: 'Уксус 9%', amount: 15, amountType: 'мл' },
+      { name: 'Подсолнечное масло', amount: 30, amountType: 'мл' },
+      { name: 'Соль', amount: 10, amountType: 'гр' },
+      { name: 'Перец черный молотый', amount: 5, amountType: 'гр' },
+      { name: 'Сахар', amount: 10, amountType: 'гр' },
+      { name: 'Лавровый лист', amount: 2, amountType: 'шт' },
+      { name: 'Вода', amount: 2000, amountType: 'мл' },
     ],
   },
   {
