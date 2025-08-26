@@ -2031,6 +2031,10 @@ function CalendarPage() {
   const [currentWeek, setCurrentWeek] = React.useState(new Date());
   const [searchQuery, setSearchQuery] = React.useState('');
   const [quickMealType, setQuickMealType] = React.useState<string | null>(null);
+  
+  // Состояние для drag & drop
+  const [draggedItem, setDraggedItem] = React.useState<CalendarItem | null>(null);
+  const [dragOverDate, setDragOverDate] = React.useState<Date | null>(null);
 
   const handleAddToCalendar = () => {
     if (selectedDate && selectedRecipe) {
@@ -2124,6 +2128,59 @@ function CalendarPage() {
     return days;
   };
 
+  // Функции для drag & drop
+  const handleDragStart = (e: React.DragEvent, item: CalendarItem) => {
+    setDraggedItem(item);
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', item.id.toString());
+  };
+
+  const handleDragOver = (e: React.DragEvent, date: Date) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    setDragOverDate(date);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragOverDate(null);
+  };
+
+  const handleDrop = async (e: React.DragEvent, targetDate: Date) => {
+    e.preventDefault();
+    setDragOverDate(null);
+
+    if (draggedItem) {
+      const targetDateString = targetDate.toISOString().split('T')[0] || '';
+      const originalDateString = new Date(draggedItem.date).toISOString().split('T')[0] || '';
+
+      // Если дата не изменилась, ничего не делаем
+      if (targetDateString === originalDateString) {
+        setDraggedItem(null);
+        return;
+      }
+
+      try {
+        // Удаляем рецепт с исходной даты
+        await removeFromCalendar(draggedItem.id);
+        
+        // Добавляем рецепт на новую дату
+        await addToCalendar(targetDateString, draggedItem.recipeId, draggedItem.mealType);
+        
+        setDraggedItem(null);
+      } catch (error) {
+        console.error('Ошибка при перемещении рецепта:', error);
+        alert('Ошибка при перемещении рецепта');
+        setDraggedItem(null);
+      }
+    }
+  };
+
+  const handleDragEnd = () => {
+    setDraggedItem(null);
+    setDragOverDate(null);
+  };
+
   const getEventsForDate = (date: Date) => {
     const dateString = date.toISOString().split('T')[0];
     return calendarItems.filter(item => {
@@ -2149,6 +2206,8 @@ function CalendarPage() {
     weekEnd.setDate(weekStart.getDate() + 6);
     const isCurrentWeek = date >= weekStart && date <= weekEnd;
 
+    const isDragOver = dragOverDate && dragOverDate.toDateString() === date.toDateString();
+    
     return (
       <Box
         style={{
@@ -2158,12 +2217,16 @@ function CalendarPage() {
           cursor: isCurrentWeek ? 'pointer' : 'default',
           backgroundColor: isSelected
             ? 'var(--mantine-color-teal-1)'
-            : isWeekend
-              ? 'var(--mantine-color-gray-0)'
-              : 'transparent',
+            : isDragOver
+              ? 'var(--mantine-color-blue-1)'
+              : isWeekend
+                ? 'var(--mantine-color-gray-0)'
+                : 'transparent',
           border: isToday
             ? '2px solid var(--mantine-color-teal-6)'
-            : '1px solid var(--mantine-color-gray-3)',
+            : isDragOver
+              ? '2px dashed var(--mantine-color-blue-6)'
+              : '1px solid var(--mantine-color-gray-3)',
           borderRadius: 4,
           transition: 'all 0.2s ease',
           opacity: isCurrentWeek ? 1 : 0.4,
@@ -2179,6 +2242,9 @@ function CalendarPage() {
           e.currentTarget.style.boxShadow = 'none';
         }}
         onClick={() => isCurrentWeek && handleDateClick(date)}
+        onDragOver={e => isCurrentWeek && handleDragOver(e, date)}
+        onDragLeave={e => isCurrentWeek && handleDragLeave(e)}
+        onDrop={e => isCurrentWeek && handleDrop(e, date)}
       >
         <Group justify="space-between" align="flex-start" mb={4}>
           <Text
@@ -2214,19 +2280,27 @@ function CalendarPage() {
                   snack: '🍎',
                 }[event.mealType] || '🍽️';
 
+              const isDragging = draggedItem && draggedItem.id === event.id;
+              
               return (
                 <Badge
                   key={event.id}
                   size="xs"
                   variant="filled"
-                  color="teal"
+                  color={isDragging ? "gray" : "teal"}
                   style={{
                     fontSize: '10px',
                     padding: '2px 4px',
                     display: 'flex',
                     alignItems: 'center',
                     gap: '2px',
+                    cursor: 'grab',
+                    opacity: isDragging ? 0.5 : 1,
+                    transform: isDragging ? 'rotate(5deg)' : 'none',
                   }}
+                  draggable
+                  onDragStart={e => handleDragStart(e, event)}
+                  onDragEnd={handleDragEnd}
                 >
                   <span style={{ fontSize: '8px' }}>{mealTypeEmoji}</span>
                   {event.recipe.name.length > 10
@@ -2286,7 +2360,8 @@ function CalendarPage() {
 
       <Text c="dimmed">
         Планируйте свое питание на неделю. Кликните на день, чтобы добавить
-        рецепт. Все рецепты из календаря можно добавить в корзину одним кликом.
+        рецепт. Перетаскивайте рецепты между днями для быстрого планирования.
+        Все рецепты из календаря можно добавить в корзину одним кликом.
         Выходные дни выделены серым цветом, а суббота и воскресенье - розовым.
       </Text>
 
@@ -2423,11 +2498,24 @@ function CalendarPage() {
                         snack: 'Перекус',
                       }[item.mealType] || 'Прием пищи';
 
+                    const isDragging = draggedItem && draggedItem.id === item.id;
+                    
                     return (
                       <Group
                         key={item.id}
                         justify="space-between"
                         align="center"
+                        style={{
+                          padding: '8px',
+                          borderRadius: '4px',
+                          backgroundColor: isDragging ? 'var(--mantine-color-gray-1)' : 'transparent',
+                          cursor: 'grab',
+                          opacity: isDragging ? 0.5 : 1,
+                          transform: isDragging ? 'rotate(2deg)' : 'none',
+                        }}
+                        draggable
+                        onDragStart={e => handleDragStart(e, item)}
+                        onDragEnd={handleDragEnd}
                       >
                         <div>
                           <Group gap="xs" align="center">
