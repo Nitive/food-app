@@ -22,7 +22,7 @@ services:
 
   # Приложение
   app:
-    image: food-app:latest
+    image: ${FOOD_APP_IMAGE:-food-app:latest}
     container_name: food_app
     environment:
       DATABASE_URL: postgresql://food_user:food_password@postgres:5432/food_app

@@ -73,14 +73,6 @@ jobs:
             mkdir -p /opt/food-app
             cd /opt/food-app
 
-            # Останавливаем старые контейнеры
-            echo "🛑 Stopping old containers..."
-            docker-compose down || true
-
-            # Очищаем старые образы
-            echo "🧹 Cleaning old images..."
-            docker system prune -f
-
       - name: Download and extract deployment package
         uses: appleboy/scp-action@v0.1.7
         with:
@@ -109,6 +101,7 @@ jobs:
 
             echo "🐳 Loading Docker image..."
             docker load < food-app.tar.gz
+            export FOOD_APP_IMAGE=food-app:${{ github.sha }}
 
             # Создаем .env файл
             echo "📝 Creating .env file..."
@@ -148,6 +141,10 @@ jobs:
 
             # Очищаем временные файлы
             rm -f deployment.tar.gz food-app.tar.gz
+
+            # Очищаем старые образы
+            echo "🧹 Cleaning old images..."
+            docker system prune -f
 
       - name: Health check
         run: |
