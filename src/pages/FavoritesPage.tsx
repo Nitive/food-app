@@ -23,6 +23,7 @@ import {
   HeartFillIcon,
   PlusIcon,
   TrashIcon,
+  CalendarIcon,
 } from '@primer/octicons-react';
 import { useStore } from '@nanostores/react';
 import {
@@ -30,7 +31,7 @@ import {
   $cartItems,
   $user,
   toggleFavoriteRecipe,
-  addToCart,
+  openAddToCalendarModal,
   getIngredientStock,
 } from '../app.js';
 import { UserMenu } from '../components/UserMenu.js';
@@ -80,13 +81,13 @@ export function FavoritesPage() {
     toggleFavoriteRecipe(recipe);
   };
 
-  const handleAddToCart = (recipeId: number) => {
-    addToCart(recipeId);
+  const handleAddToCalendar = (recipe: Recipe) => {
+    openAddToCalendarModal(recipe);
   };
 
-  const handleAddAllToCart = () => {
+  const handleAddAllToCalendar = () => {
     filteredAndSortedRecipes.forEach(recipe => {
-      addToCart(recipe.id);
+      openAddToCalendarModal(recipe);
     });
   };
 
@@ -177,12 +178,12 @@ export function FavoritesPage() {
           />
           {filteredAndSortedRecipes.length > 0 && (
             <Button
-              leftSection={<span>🛒</span>}
-              onClick={handleAddAllToCart}
+              leftSection={<CalendarIcon size={16} />}
+              onClick={handleAddAllToCalendar}
               variant="light"
               color="teal"
             >
-              Добавить все в корзину ({filteredAndSortedRecipes.length})
+              Добавить все в календарь ({filteredAndSortedRecipes.length})
             </Button>
           )}
         </Flex>
@@ -363,13 +364,13 @@ export function FavoritesPage() {
                       Подробнее
                     </Button>
                     <Button
-                      onClick={() => handleAddToCart(recipe.id)}
-                      leftSection={<PlusIcon size={16} />}
+                      onClick={() => handleAddToCalendar(recipe)}
+                      leftSection={<CalendarIcon size={16} />}
                       variant="filled"
                       color="teal"
                       size="sm"
                     >
-                      В корзину
+                      В календарь
                     </Button>
                   </Group>
                 </Stack>

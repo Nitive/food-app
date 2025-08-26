@@ -530,6 +530,7 @@ const app = new Elysia({ adapter: node() as any })
     return calendarItems.map(item => ({
       id: item.id,
       date: item.date,
+      mealType: item.mealType,
       recipeId: item.recipeId,
       recipe: {
         id: item.recipe.id,
@@ -547,24 +548,28 @@ const app = new Elysia({ adapter: node() as any })
     '/api/calendar',
     async ({ body, cookie }) => {
       await requireAuth({ cookie });
-      const { date, recipeId } = body;
+      const { date, recipeId, mealType } = body;
 
-      // Проверяем, есть ли уже рецепт на эту дату
+      // Проверяем, есть ли уже рецепт на эту дату для этого приема пищи
       const existingItem = await prisma.calendarItem.findFirst({
         where: {
           date: new Date(date),
           recipeId,
+          mealType,
         },
       });
 
       if (existingItem) {
-        throw new Error('Этот рецепт уже добавлен на эту дату');
+        throw new Error(
+          'Этот рецепт уже добавлен на эту дату для этого приема пищи'
+        );
       }
 
       const calendarItem = await prisma.calendarItem.create({
         data: {
           date: new Date(date),
           recipeId,
+          mealType,
         },
         include: {
           recipe: true,
@@ -574,6 +579,7 @@ const app = new Elysia({ adapter: node() as any })
       return {
         id: calendarItem.id,
         date: calendarItem.date,
+        mealType: calendarItem.mealType,
         recipeId: calendarItem.recipeId,
         recipe: {
           id: calendarItem.recipe.id,
@@ -589,6 +595,7 @@ const app = new Elysia({ adapter: node() as any })
       body: t.Object({
         date: t.String(),
         recipeId: t.Number(),
+        mealType: t.String(),
       }),
     }
   )

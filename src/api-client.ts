@@ -53,6 +53,7 @@ export interface ShoppingListItem {
 export interface CalendarItem {
   id: number;
   date: Date;
+  mealType: string; // breakfast, lunch, dinner, snack
   recipeId: number;
   recipe: {
     id: number;
@@ -184,8 +185,16 @@ export const apiClient = {
     return data || [];
   },
 
-  async addToCalendar(date: string, recipeId: number): Promise<CalendarItem> {
-    const { data } = await client.api.calendar.post({ date, recipeId });
+  async addToCalendar(
+    date: string,
+    recipeId: number,
+    mealType: string
+  ): Promise<CalendarItem> {
+    const { data } = await client.api.calendar.post({
+      date,
+      recipeId,
+      mealType,
+    });
     if (!data) throw new Error('Failed to add to calendar');
     return data as unknown as CalendarItem;
   },

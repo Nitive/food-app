@@ -34,6 +34,7 @@ import {
   DownloadIcon,
   HeartIcon,
   HeartFillIcon,
+  CalendarIcon,
 } from '@primer/octicons-react';
 import { atom } from 'nanostores';
 import React from 'react';
@@ -60,6 +61,7 @@ import { CartPage } from './pages/CartPage.js';
 import { ShoppingListPage } from './pages/ShoppingListPage.js';
 import { StatsPage } from './pages/StatsPage.js';
 import { FavoritesPage } from './pages/FavoritesPage.js';
+import { AddToCalendarModal } from './components/AddToCalendarModal.js';
 
 function Providers(props: { children: React.ReactNode }) {
   return (
@@ -108,6 +110,10 @@ const $createRecipeModal = atom(false);
 
 // Состояние модального окна создания ингредиента
 const $createIngredientModal = atom(false);
+
+// Состояние модального окна добавления в календарь
+const $addToCalendarModal = atom(false);
+const $selectedRecipeForCalendar = atom<Recipe | null>(null);
 
 // Состояние авторизации
 const $user = atom<User | null>(null);
@@ -290,9 +296,9 @@ async function deleteIngredient(id: number) {
 }
 
 // Функции для работы с календарем
-async function addToCalendar(date: string, recipeId: number) {
+async function addToCalendar(date: string, recipeId: number, mealType: string) {
   try {
-    await apiClient.addToCalendar(date, recipeId);
+    await apiClient.addToCalendar(date, recipeId, mealType);
     await loadData(); // Перезагружаем данные
   } catch (error) {
     console.error('Ошибка добавления в календарь:', error);
@@ -314,6 +320,25 @@ async function addCalendarToCart() {
     await loadData(); // Перезагружаем данные
   } catch (error) {
     console.error('Ошибка добавления календаря в корзину:', error);
+  }
+}
+
+// Функции для работы с модальным окном календаря
+function openAddToCalendarModal(recipe: Recipe) {
+  $selectedRecipeForCalendar.set(recipe);
+  $addToCalendarModal.set(true);
+}
+
+function closeAddToCalendarModal() {
+  $addToCalendarModal.set(false);
+  $selectedRecipeForCalendar.set(null);
+}
+
+async function handleAddToCalendarConfirm(date: string, mealType: string) {
+  const recipe = $selectedRecipeForCalendar.get();
+  if (recipe) {
+    await addToCalendar(date, recipe.id, mealType);
+    closeAddToCalendarModal();
   }
 }
 
@@ -968,9 +993,9 @@ function RecipesPage() {
                       variant="light"
                       size="xs"
                       fullWidth
-                      onClick={() => addToCart(recipe.id)}
+                      onClick={() => openAddToCalendarModal(recipe)}
                     >
-                      Добавить в корзину
+                      Добавить в календарь
                     </Button>
                   </Group>
                 </Stack>
@@ -1029,9 +1054,9 @@ function RecipesPage() {
                     <ActionIcon
                       variant="light"
                       color="teal"
-                      onClick={() => addToCart(recipe.id)}
+                      onClick={() => openAddToCalendarModal(recipe)}
                     >
-                      <PlusIcon size={16} />
+                      <CalendarIcon size={16} />
                     </ActionIcon>
                   </Group>
                 </Table.Td>
@@ -2112,7 +2137,7 @@ function CalendarPage() {
     if (selectedDate && selectedRecipe) {
       const dateString = selectedDate.toISOString().split('T')[0];
       if (dateString) {
-        addToCalendar(dateString, selectedRecipe);
+        addToCalendar(dateString, selectedRecipe, 'lunch'); // По умолчанию обед
         setSelectedDate(null);
         setSelectedRecipe(null);
       }
@@ -2252,26 +2277,36 @@ function CalendarPage() {
 
         {events.length > 0 && isCurrentMonth && (
           <Stack gap={2}>
-            {events.slice(0, 2).map(event => (
-              <Badge
-                key={event.id}
-                size="xs"
-                variant="filled"
-                color="teal"
-                style={{
-                  fontSize: '10px',
-                  padding: '2px 4px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '2px',
-                }}
-              >
-                <span style={{ fontSize: '8px' }}>🍽️</span>
-                {event.recipe.name.length > 12
-                  ? event.recipe.name.substring(0, 12) + '...'
-                  : event.recipe.name}
-              </Badge>
-            ))}
+            {events.slice(0, 2).map(event => {
+              const mealTypeEmoji =
+                {
+                  breakfast: '🌅',
+                  lunch: '🍽️',
+                  dinner: '🌙',
+                  snack: '🍎',
+                }[event.mealType] || '🍽️';
+
+              return (
+                <Badge
+                  key={event.id}
+                  size="xs"
+                  variant="filled"
+                  color="teal"
+                  style={{
+                    fontSize: '10px',
+                    padding: '2px 4px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '2px',
+                  }}
+                >
+                  <span style={{ fontSize: '8px' }}>{mealTypeEmoji}</span>
+                  {event.recipe.name.length > 10
+                    ? event.recipe.name.substring(0, 10) + '...'
+                    : event.recipe.name}
+                </Badge>
+              );
+            })}
             {events.length > 2 && (
               <Text size="xs" c="dimmed">
                 +{events.length - 2} еще
@@ -2468,27 +2503,54 @@ function CalendarPage() {
                 </Title>
 
                 <Stack gap="xs" mb="md">
-                  {getEventsForDate(selectedDate).map(item => (
-                    <Group key={item.id} justify="space-between" align="center">
-                      <div>
-                        <Text fw={500} size="sm">
-                          {item.recipe.name}
-                        </Text>
-                        <Text size="xs" c="dimmed">
-                          КБЖУ: {item.recipe.calories}/{item.recipe.proteins}/
-                          {item.recipe.fats}/{item.recipe.carbohydrates}
-                        </Text>
-                      </div>
-                      <ActionIcon
-                        variant="light"
-                        color="red"
-                        size="sm"
-                        onClick={() => removeFromCalendar(item.id)}
+                  {getEventsForDate(selectedDate).map(item => {
+                    const mealTypeEmoji =
+                      {
+                        breakfast: '🌅',
+                        lunch: '🍽️',
+                        dinner: '🌙',
+                        snack: '🍎',
+                      }[item.mealType] || '🍽️';
+
+                    const mealTypeLabel =
+                      {
+                        breakfast: 'Завтрак',
+                        lunch: 'Обед',
+                        dinner: 'Ужин',
+                        snack: 'Перекус',
+                      }[item.mealType] || 'Прием пищи';
+
+                    return (
+                      <Group
+                        key={item.id}
+                        justify="space-between"
+                        align="center"
                       >
-                        <TrashIcon size={12} />
-                      </ActionIcon>
-                    </Group>
-                  ))}
+                        <div>
+                          <Group gap="xs" align="center">
+                            <Text size="xs" c="dimmed">
+                              {mealTypeEmoji} {mealTypeLabel}
+                            </Text>
+                          </Group>
+                          <Text fw={500} size="sm">
+                            {item.recipe.name}
+                          </Text>
+                          <Text size="xs" c="dimmed">
+                            КБЖУ: {item.recipe.calories}/{item.recipe.proteins}/
+                            {item.recipe.fats}/{item.recipe.carbohydrates}
+                          </Text>
+                        </div>
+                        <ActionIcon
+                          variant="light"
+                          color="red"
+                          size="sm"
+                          onClick={() => removeFromCalendar(item.id)}
+                        >
+                          <TrashIcon size={12} />
+                        </ActionIcon>
+                      </Group>
+                    );
+                  })}
                 </Stack>
 
                 <Divider mb="md" />
@@ -2993,6 +3055,9 @@ function App() {
   const user = useStore($user);
   const isAuthenticated = useStore($isAuthenticated);
   const loading = useStore($loading);
+  // Хуки для модального окна календаря
+  const addToCalendarModalOpened = useStore($addToCalendarModal);
+  const selectedRecipeForCalendar = useStore($selectedRecipeForCalendar);
 
   // Проверяем авторизацию при монтировании компонента
   React.useEffect(() => {
@@ -3076,6 +3141,12 @@ function App() {
         </div>
         <CreateRecipeForm />
         <CreateIngredientForm />
+        <AddToCalendarModal
+          opened={addToCalendarModalOpened}
+          onClose={closeAddToCalendarModal}
+          onConfirm={handleAddToCalendarConfirm}
+          recipeName={selectedRecipeForCalendar?.name || ''}
+        />
       </Providers>
     </div>
   );
@@ -3093,6 +3164,8 @@ export {
   $favoriteRecipes,
   $createRecipeModal,
   $createIngredientModal,
+  $addToCalendarModal,
+  $selectedRecipeForCalendar,
   $user,
   $isAuthenticated,
   exportShoppingListToPDF,
@@ -3100,6 +3173,9 @@ export {
   exportCalendarToPDF,
   toggleFavoriteRecipe,
   isRecipeFavorite,
+  openAddToCalendarModal,
+  closeAddToCalendarModal,
+  handleAddToCalendarConfirm,
   addToCart,
   getIngredientStock,
 };
