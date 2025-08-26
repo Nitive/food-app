@@ -2112,7 +2112,7 @@ function CalendarPage() {
 
   const getSelectedDayStats = () => {
     if (!selectedDate) {
-      return { totalCalories: 0, totalRecipes: 0 };
+      return { totalCalories: 0, totalRecipes: 0, totalProteins: 0 };
     }
     
     const events = getEventsForDate(selectedDate);
@@ -2120,9 +2120,13 @@ function CalendarPage() {
       (sum, event) => sum + event.recipe.calories,
       0
     );
+    const totalProteins = events.reduce(
+      (sum, event) => sum + event.recipe.proteins,
+      0
+    );
     const totalRecipes = events.length;
 
-    return { totalCalories, totalRecipes };
+    return { totalCalories, totalRecipes, totalProteins };
   };
 
   const getWeekStart = (date: Date) => {
@@ -2488,17 +2492,30 @@ function CalendarPage() {
                           </Badge>
                         </Group>
                         <Group justify="space-between">
+                          <Text size="sm" fw={500}>Белки:</Text>
+                          <Badge size="sm" color="green" variant="light">
+                            {stats.totalProteins}г
+                          </Badge>
+                        </Group>
+                        <Group justify="space-between">
                           <Text size="sm" fw={500}>Количество рецептов:</Text>
                           <Badge size="sm" color="blue" variant="light">
                             {stats.totalRecipes}
                           </Badge>
                         </Group>
                         {stats.totalCalories > 0 && (
-                          <Text size="xs" c="dimmed" mt="xs">
-                            {stats.totalCalories < 1200 ? '⚠️ Малокалорийный день' : 
-                             stats.totalCalories > 2500 ? '⚠️ Высококалорийный день' : 
-                             '✅ Сбалансированное питание'}
-                          </Text>
+                          <Stack gap="xs" mt="xs">
+                            <Text size="xs" c="dimmed">
+                              {stats.totalCalories < 1200 ? '⚠️ Малокалорийный день' : 
+                               stats.totalCalories > 2500 ? '⚠️ Высококалорийный день' : 
+                               '✅ Сбалансированное питание'}
+                            </Text>
+                            {stats.totalProteins < 80 && (
+                              <Text size="xs" c="orange" fw={500}>
+                                ⚠️ Мало белка (рекомендуется минимум 80г)
+                              </Text>
+                            )}
+                          </Stack>
                         )}
                       </Stack>
                     );
