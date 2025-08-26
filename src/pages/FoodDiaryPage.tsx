@@ -23,6 +23,42 @@ import { Breadcrumbs } from '../components/Breadcrumbs.js'
 import { QuickActions } from '../components/QuickActions.js'
 import { UserMenu } from '../components/UserMenu.js'
 
+// Функция для расчета рекомендуемых калорий на основе профиля пользователя
+const getRecommendedCalories = (user: any) => {
+  if (!user || !user.age || !user.weight || !user.height || !user.gender || !user.activityLevel) {
+    return null
+  }
+
+  // Формула Миффлина-Сан Жеора для расчета BMR
+  let bmr = 0
+  if (user.gender === 'male') {
+    bmr = 88.362 + 13.397 * user.weight + 4.799 * user.height - 5.677 * user.age
+  } else {
+    bmr = 447.593 + 9.247 * user.weight + 3.098 * user.height - 4.33 * user.age
+  }
+
+  // Множители активности
+  const activityMultipliers = {
+    sedentary: 1.2,
+    lightly_active: 1.375,
+    moderately_active: 1.55,
+    very_active: 1.725,
+    extremely_active: 1.9,
+  }
+
+  const tdee = bmr * (activityMultipliers[user.activityLevel as keyof typeof activityMultipliers] || 1.2)
+
+  // Корректировка по цели
+  let recommended = tdee
+  if (user.goal === 'lose_weight') {
+    recommended = tdee - 500 // Дефицит 500 калорий для похудения
+  } else if (user.goal === 'gain_weight') {
+    recommended = tdee + 300 // Профицит 300 калорий для набора веса
+  }
+
+  return Math.round(recommended)
+}
+
 interface FoodEntry {
   id: string
   recipeId: number
@@ -277,7 +313,23 @@ export function FoodDiaryPage() {
                     Калории:
                   </Text>
                   <Badge size="lg" color="teal" variant="light">
-                    {stats.totalCalories} ккал
+                    {(() => {
+                      const recommendedCalories = getRecommendedCalories(user)
+                      if (recommendedCalories) {
+                        const percentage = Math.round((stats.totalCalories / recommendedCalories) * 100)
+                        let color = 'teal'
+                        if (percentage < 80) color = 'orange'
+                        else if (percentage > 120) color = 'red'
+                        else color = 'green'
+
+                        return (
+                          <span style={{ color: `var(--mantine-color-${color}-6)` }}>
+                            {stats.totalCalories}/{recommendedCalories} ккал
+                          </span>
+                        )
+                      }
+                      return `${stats.totalCalories} ккал`
+                    })()}
                   </Badge>
                 </Group>
               </Grid.Col>

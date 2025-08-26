@@ -2125,6 +2125,93 @@ function CalendarPage() {
     return { totalCalories, totalRecipes, totalProteins }
   }
 
+  // Функция для расчета рекомендуемых калорий на основе профиля пользователя
+  const getRecommendedCalories = () => {
+    const currentUser = $user.get()
+    if (
+      !currentUser ||
+      !currentUser.age ||
+      !currentUser.weight ||
+      !currentUser.height ||
+      !currentUser.gender ||
+      !currentUser.activityLevel
+    ) {
+      return null
+    }
+
+    // Формула Миффлина-Сан Жеора для расчета BMR
+    let bmr = 0
+    if (currentUser.gender === 'male') {
+      bmr = 88.362 + 13.397 * currentUser.weight + 4.799 * currentUser.height - 5.677 * currentUser.age
+    } else {
+      bmr = 447.593 + 9.247 * currentUser.weight + 3.098 * currentUser.height - 4.33 * currentUser.age
+    }
+
+    // Множители активности
+    const activityMultipliers = {
+      sedentary: 1.2,
+      lightly_active: 1.375,
+      moderately_active: 1.55,
+      very_active: 1.725,
+      extremely_active: 1.9,
+    }
+
+    const tdee = bmr * (activityMultipliers[currentUser.activityLevel as keyof typeof activityMultipliers] || 1.2)
+
+    // Корректировка по цели
+    let recommended = tdee
+    if (currentUser.goal === 'lose_weight') {
+      recommended = tdee - 500 // Дефицит 500 калорий для похудения
+    } else if (currentUser.goal === 'gain_weight') {
+      recommended = tdee + 300 // Профицит 300 калорий для набора веса
+    }
+
+    return Math.round(recommended)
+  }
+
+  // Функция для получения рекомендаций по питанию
+  const getNutritionRecommendation = (totalCalories: number) => {
+    const recommendedCalories = getRecommendedCalories()
+    const currentUser = $user.get()
+
+    if (!recommendedCalories || !currentUser) {
+      // Если нет данных профиля, используем старую логику
+      if (totalCalories < 1200) {
+        return { type: 'low', message: '⚠️ Малокалорийный день', color: 'orange' }
+      } else if (totalCalories > 2500) {
+        return { type: 'high', message: '⚠️ Высококалорийный день', color: 'red' }
+      } else {
+        return { type: 'balanced', message: '✅ Сбалансированное питание', color: 'green' }
+      }
+    }
+
+    // Определяем диапазон калорий (±10% от рекомендуемого)
+    const minCalories = Math.round(recommendedCalories * 0.9)
+    const maxCalories = Math.round(recommendedCalories * 1.1)
+
+    if (totalCalories < minCalories) {
+      const deficit = recommendedCalories - totalCalories
+      return {
+        type: 'low',
+        message: `⚠️ Малокалорийный день (не хватает ~${deficit} ккал)`,
+        color: 'orange',
+      }
+    } else if (totalCalories > maxCalories) {
+      const excess = totalCalories - recommendedCalories
+      return {
+        type: 'high',
+        message: `⚠️ Высококалорийный день (превышение ~${excess} ккал)`,
+        color: 'red',
+      }
+    } else {
+      return {
+        type: 'balanced',
+        message: `✅ Сбалансированное питание (${totalCalories}/${recommendedCalories} ккал)`,
+        color: 'green',
+      }
+    }
+  }
+
   const getWeekStart = (date: Date) => {
     const weekStart = new Date(date)
     const dayOfWeek = date.getDay()
@@ -2267,7 +2354,23 @@ function CalendarPage() {
           </Text>
           {totalCalories > 0 && isCurrentWeek && (
             <Text size="xs" c="dimmed" fw={500}>
-              {totalCalories} ккал
+              {(() => {
+                const recommendedCalories = getRecommendedCalories()
+                if (recommendedCalories) {
+                  const percentage = Math.round((totalCalories / recommendedCalories) * 100)
+                  let color = 'dimmed'
+                  if (percentage < 80) color = 'orange'
+                  else if (percentage > 120) color = 'red'
+                  else color = 'green'
+
+                  return (
+                    <span style={{ color: `var(--mantine-color-${color}-6)` }}>
+                      {totalCalories}/{recommendedCalories} ккал ({percentage}%)
+                    </span>
+                  )
+                }
+                return `${totalCalories} ккал`
+              })()}
             </Text>
           )}
         </Group>
@@ -2338,14 +2441,28 @@ function CalendarPage() {
             if (selectedDate) {
               return (
                 <Text size="sm" c="dimmed" mt={4}>
-                  Выбранный день ({selectedDate.toLocaleDateString('ru-RU')}): {selectedStats.totalRecipes} рецептов,{' '}
-                  {selectedStats.totalCalories} ккал
+                  {(() => {
+                    const recommendedCalories = getRecommendedCalories()
+                    if (recommendedCalories) {
+                      const percentage = Math.round((selectedStats.totalCalories / recommendedCalories) * 100)
+                      return `Выбранный день (${selectedDate.toLocaleDateString('ru-RU')}): ${selectedStats.totalRecipes} рецептов, ${selectedStats.totalCalories}/${recommendedCalories} ккал (${percentage}%)`
+                    }
+                    return `Выбранный день (${selectedDate.toLocaleDateString('ru-RU')}): ${selectedStats.totalRecipes} рецептов, ${selectedStats.totalCalories} ккал`
+                  })()}
                 </Text>
               )
             } else {
               return (
                 <Text size="sm" c="dimmed" mt={4}>
-                  На этой неделе: {weekStats.totalRecipes} рецептов, {weekStats.totalCalories} ккал
+                  {(() => {
+                    const recommendedCalories = getRecommendedCalories()
+                    if (recommendedCalories) {
+                      const weeklyRecommended = recommendedCalories * 7
+                      const percentage = Math.round((weekStats.totalCalories / weeklyRecommended) * 100)
+                      return `На этой неделе: ${weekStats.totalRecipes} рецептов, ${weekStats.totalCalories}/${weeklyRecommended} ккал (${percentage}%)`
+                    }
+                    return `На этой неделе: ${weekStats.totalRecipes} рецептов, ${weekStats.totalCalories} ккал`
+                  })()}
                 </Text>
               )
             }
@@ -2459,7 +2576,23 @@ function CalendarPage() {
                             Ожидаемые калории:
                           </Text>
                           <Badge size="lg" color="teal" variant="light">
-                            {stats.totalCalories} ккал
+                            {(() => {
+                              const recommendedCalories = getRecommendedCalories()
+                              if (recommendedCalories) {
+                                const percentage = Math.round((stats.totalCalories / recommendedCalories) * 100)
+                                let color = 'teal'
+                                if (percentage < 80) color = 'orange'
+                                else if (percentage > 120) color = 'red'
+                                else color = 'green'
+
+                                return (
+                                  <span style={{ color: `var(--mantine-color-${color}-6)` }}>
+                                    {stats.totalCalories}/{recommendedCalories} ккал
+                                  </span>
+                                )
+                              }
+                              return `${stats.totalCalories} ккал`
+                            })()}
                           </Badge>
                         </Group>
                         <Group justify="space-between">
@@ -2480,13 +2613,14 @@ function CalendarPage() {
                         </Group>
                         {stats.totalCalories > 0 && (
                           <Stack gap="xs" mt="xs">
-                            <Text size="xs" c="dimmed">
-                              {stats.totalCalories < 1200
-                                ? '⚠️ Малокалорийный день'
-                                : stats.totalCalories > 2500
-                                  ? '⚠️ Высококалорийный день'
-                                  : '✅ Сбалансированное питание'}
-                            </Text>
+                            {(() => {
+                              const recommendation = getNutritionRecommendation(stats.totalCalories)
+                              return (
+                                <Text size="xs" c={recommendation.color}>
+                                  {recommendation.message}
+                                </Text>
+                              )
+                            })()}
                             {stats.totalProteins < 80 && (
                               <Text size="xs" c="orange" fw={500}>
                                 ⚠️ Мало белка (рекомендуется минимум 80г)
