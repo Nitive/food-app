@@ -1,47 +1,62 @@
-# Конфигурация Caddy для Food App
-# Домен: food.nitive.me
+{
+  email wild.pin7224@nitive.me
+  servers :8080,:8443 {
+    protocols h1 h2c
+    trusted_proxies static {$TRUSTED_PROXIES} 127.0.0.1/32
+  }
 
-# Для локальной разработки
-localhost {
-    # Проксирование API запросов к приложению
-    handle /api/* {
-        reverse_proxy app:3000
-    }
+  http_port 8080
+  https_port 8443
+}
 
-    # Статические файлы (если есть)
-    handle /* {
-        file_server
-        try_files {path} /index.html
-    }
+(security_headers) {
+    header * {
+        # disable clients from sniffing the media type
+        # https://cheatsheetseries.owasp.org/cheatsheets/HTTP_Headers_Cheat_Sheet.html#x-content-type-options
+        X-Content-Type-Options "nosniff"
 
-    # Логирование
-    log {
-        output stdout
-        format console
+        # clickjacking protection
+        # https://cheatsheetseries.owasp.org/cheatsheets/HTTP_Headers_Cheat_Sheet.html#x-frame-options
+        X-Frame-Options "SAMEORIGIN"
+
+        # xss protection
+        # https://cheatsheetseries.owasp.org/cheatsheets/HTTP_Headers_Cheat_Sheet.html#x-xss-protection
+        X-XSS-Protection "1; mode=block"
+
+        # Always force HTTPS in browsers
+        Strict-Transport-Security "max-age=31536000"
+
+        # Remove Server and X-Powered-By headers
+        -Server
+        -X-Powered-By
+
+        # keep referrer data off of HTTP connections
+        # https://cheatsheetseries.owasp.org/cheatsheets/HTTP_Headers_Cheat_Sheet.html#referrer-policy
+        Referrer-Policy strict-origin-when-cross-origin
     }
 }
 
-# Для продакшена с доменом
+(protect_ip) {
+    @protect_ip {
+        path /internal/*
+        # Trusted
+        not client_ip {$TRUSTED_PROXIES} 127.0.0.1/32
+    }
+
+    respond @protect_ip "IP is not allowed" 401
+}
+
 food.nitive.me {
-    # Проксирование API запросов к приложению
-    handle /api/* {
-        reverse_proxy app:3000
-    }
+    import security_headers
+    import protect_ip
 
-    # Статические файлы
-    handle /* {
-        file_server
-        try_files {path} /index.html
-    }
+    reverse_proxy /* http://app:3000
+}
 
-    # Автоматический HTTPS
-    tls {
-        on_demand
-    }
-
-    # Логирование
+:8081 {
+    respond "health"
     log {
-        output stdout
-        format console
+        output discard
     }
 }
+
