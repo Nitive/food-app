@@ -58,7 +58,6 @@ export default [
       'no-var': 'error',
       'no-case-declarations': 'off',
       'no-redeclare': 'off',
-      'max-warnings': 100,
     },
     settings: {
       react: {
