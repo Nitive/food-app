@@ -1,0 +1,62 @@
+version: '3.8'
+
+services:
+  # База данных PostgreSQL
+  postgres:
+    image: postgres:15-alpine
+    container_name: food_app_db
+    environment:
+      POSTGRES_DB: food_app
+      POSTGRES_USER: food_user
+      POSTGRES_PASSWORD: food_password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U food_user -d food_app"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Приложение
+  app:
+    build: .
+    container_name: food_app
+    environment:
+      DATABASE_URL: postgresql://food_user:food_password@postgres:5432/food_app
+      NODE_ENV: production
+      PORT: 3000
+      # Добавьте здесь другие переменные окружения
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
+      JWT_SECRET: ${JWT_SECRET}
+    ports:
+      - "3000:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    volumes:
+      - ./uploads:/app/uploads
+
+  # Caddy для проксирования и автоматического HTTPS
+  caddy:
+    image: caddy:2-alpine
+    container_name: food_app_caddy
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - app
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  caddy_data:
+  caddy_config:

@@ -1,0 +1,47 @@
+# Конфигурация Caddy для Food App
+# Домен: food.nitive.me
+
+# Для локальной разработки
+localhost {
+    # Проксирование API запросов к приложению
+    handle /api/* {
+        reverse_proxy app:3000
+    }
+
+    # Статические файлы (если есть)
+    handle /* {
+        file_server
+        try_files {path} /index.html
+    }
+
+    # Логирование
+    log {
+        output stdout
+        format console
+    }
+}
+
+# Для продакшена с доменом
+food.nitive.me {
+    # Проксирование API запросов к приложению
+    handle /api/* {
+        reverse_proxy app:3000
+    }
+
+    # Статические файлы
+    handle /* {
+        file_server
+        try_files {path} /index.html
+    }
+
+    # Автоматический HTTPS
+    tls {
+        on_demand
+    }
+
+    # Логирование
+    log {
+        output stdout
+        format console
+    }
+}
