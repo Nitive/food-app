@@ -119,6 +119,28 @@ export const apiClient = {
     return data as unknown as Recipe;
   },
 
+  async updateRecipe(
+    id: number,
+    recipeData: {
+      name: string;
+      calories: number;
+      proteins: number;
+      fats: number;
+      carbohydrates: number;
+      ingredients: { name: string; amount: number; amountType: string }[];
+    }
+  ): Promise<Recipe> {
+    const { data } = await client.api.recipes({ id }).put(recipeData);
+    if (!data) throw new Error('Failed to update recipe');
+    return data as unknown as Recipe;
+  },
+
+  async deleteRecipe(id: number): Promise<{ deleted: boolean }> {
+    const { data } = await client.api.recipes({ id }).delete();
+    if (!data) throw new Error('Failed to delete recipe');
+    return data as unknown as { deleted: boolean };
+  },
+
   async getIngredients(): Promise<Ingredient[]> {
     const { data } = await client.api.ingredients.get();
     return data || [];

@@ -224,6 +224,157 @@ const app = new Elysia({ adapter: node() as any })
     }
   )
 
+  // Обновить рецепт
+  .put(
+    '/api/recipes/:id',
+    async ({ params, body, cookie }) => {
+      await requireAuth({ cookie });
+      const id = parseInt(params.id);
+      const {
+        name,
+        calories,
+        proteins,
+        fats,
+        carbohydrates,
+        instructions,
+        cookingTime,
+        difficulty,
+        ingredients,
+      } = body;
+
+      // Проверяем, существует ли рецепт
+      const existingRecipe = await prisma.recipe.findUnique({
+        where: { id },
+      });
+
+      if (!existingRecipe) {
+        throw new Error('Recipe not found');
+      }
+
+      // Обновляем рецепт
+      const recipe = await prisma.recipe.update({
+        where: { id },
+        data: {
+          name,
+          calories,
+          proteins,
+          fats,
+          carbohydrates,
+          instructions: instructions || null,
+          cookingTime: cookingTime || null,
+          difficulty: difficulty || null,
+        },
+      });
+
+      // Удаляем старые связи с ингредиентами
+      await prisma.recipeIngredient.deleteMany({
+        where: { recipeId: id },
+      });
+
+      // Создаем новые связи с ингредиентами
+      for (const ing of ingredients) {
+        // Создаем или находим ингредиент
+        const ingredient = await prisma.ingredient.upsert({
+          where: { name: ing.name },
+          update: {},
+          create: {
+            name: ing.name,
+            amountType: ing.amountType,
+          },
+        });
+
+        // Связываем ингредиент с рецептом
+        await prisma.recipeIngredient.create({
+          data: {
+            recipeId: id,
+            ingredientId: ingredient.id,
+            amount: ing.amount,
+          },
+        });
+      }
+
+      // Возвращаем обновленный рецепт с ингредиентами
+      const updatedRecipe = await prisma.recipe.findUnique({
+        where: { id },
+        include: {
+          ingredients: {
+            include: {
+              ingredient: true,
+            },
+          },
+        },
+      });
+
+      return {
+        id: updatedRecipe!.id,
+        name: updatedRecipe!.name,
+        calories: updatedRecipe!.calories,
+        proteins: updatedRecipe!.proteins,
+        fats: updatedRecipe!.fats,
+        carbohydrates: updatedRecipe!.carbohydrates,
+        instructions: updatedRecipe!.instructions,
+        cookingTime: updatedRecipe!.cookingTime,
+        difficulty: updatedRecipe!.difficulty,
+        ingredients: updatedRecipe!.ingredients.map(ri => ({
+          name: ri.ingredient.name,
+          amount: ri.amount,
+          amountType: ri.ingredient.amountType,
+        })),
+      };
+    },
+    {
+      body: t.Object({
+        name: t.String(),
+        calories: t.Number(),
+        proteins: t.Number(),
+        fats: t.Number(),
+        carbohydrates: t.Number(),
+        instructions: t.Optional(t.String()),
+        cookingTime: t.Optional(t.Number()),
+        difficulty: t.Optional(t.String()),
+        ingredients: t.Array(
+          t.Object({
+            name: t.String(),
+            amount: t.Number(),
+            amountType: t.String(),
+          })
+        ),
+      }),
+    }
+  )
+
+  // Удалить рецепт
+  .delete('/api/recipes/:id', async ({ params, cookie }) => {
+    await requireAuth({ cookie });
+    const id = parseInt(params.id);
+
+    // Проверяем, существует ли рецепт
+    const existingRecipe = await prisma.recipe.findUnique({
+      where: { id },
+    });
+
+    if (!existingRecipe) {
+      throw new Error('Recipe not found');
+    }
+
+    // Удаляем связи с ингредиентами
+    await prisma.recipeIngredient.deleteMany({
+      where: { recipeId: id },
+    });
+
+    // Удаляем рецепт из календаря
+    await prisma.calendarItem.deleteMany({
+      where: { recipeId: id },
+    });
+
+    // Удаляем рецепт
+    await prisma.recipe.delete({
+      where: { id },
+    });
+
+    return { deleted: true };
+  })
+
   // Получить все ингредиенты
   .get('/api/ingredients', async ({ cookie }) => {
     await requireAuth({ cookie });

@@ -35,6 +35,7 @@ import {
   HeartIcon,
   HeartFillIcon,
   CalendarIcon,
+  PencilIcon,
 } from '@primer/octicons-react';
 import { atom } from 'nanostores';
 import React from 'react';
@@ -62,6 +63,7 @@ import { ShoppingListPage } from './pages/ShoppingListPage.js';
 import { StatsPage } from './pages/StatsPage.js';
 import { FavoritesPage } from './pages/FavoritesPage.js';
 import { AddToCalendarModal } from './components/AddToCalendarModal.js';
+import { EditRecipeForm } from './components/EditRecipeForm.js';
 
 function Providers(props: { children: React.ReactNode }) {
   return (
@@ -113,6 +115,10 @@ const $createIngredientModal = atom(false);
 // Состояние модального окна добавления в календарь
 const $addToCalendarModal = atom(false);
 const $selectedRecipeForCalendar = atom<Recipe | null>(null);
+
+// Состояние модального окна редактирования рецепта
+const $editRecipeModal = atom(false);
+const $selectedRecipeForEdit = atom<Recipe | null>(null);
 
 // Состояние авторизации
 const $user = atom<User | null>(null);
@@ -290,6 +296,52 @@ async function handleAddToCalendarConfirm(date: string, mealType: string) {
   if (recipe) {
     await addToCalendar(date, recipe.id, mealType);
     closeAddToCalendarModal();
+  }
+}
+
+// Функции для работы с редактированием рецептов
+function openEditRecipeModal(recipe: Recipe) {
+  $selectedRecipeForEdit.set(recipe);
+  $editRecipeModal.set(true);
+}
+
+function closeEditRecipeModal() {
+  $editRecipeModal.set(false);
+  $selectedRecipeForEdit.set(null);
+}
+
+async function handleEditRecipeSave(recipeData: {
+  name: string;
+  calories: number;
+  proteins: number;
+  fats: number;
+  carbohydrates: number;
+  instructions?: string;
+  cookingTime?: number;
+  difficulty?: string;
+  ingredients: { name: string; amount: number; amountType: string }[];
+}) {
+  try {
+    if ($selectedRecipeForEdit.get()) {
+      await apiClient.updateRecipe($selectedRecipeForEdit.get()!.id, recipeData);
+      await loadData(); // Перезагружаем данные
+      closeEditRecipeModal();
+    }
+  } catch (error) {
+    console.error('Ошибка обновления рецепта:', error);
+    alert('Ошибка при обновлении рецепта');
+  }
+}
+
+async function handleDeleteRecipe(recipeId: number) {
+  if (confirm('Вы уверены, что хотите удалить этот рецепт?')) {
+    try {
+      await apiClient.deleteRecipe(recipeId);
+      await loadData(); // Перезагружаем данные
+    } catch (error) {
+      console.error('Ошибка удаления рецепта:', error);
+      alert('Ошибка при удалении рецепта');
+    }
   }
 }
 
@@ -775,7 +827,28 @@ function RecipesPage() {
                           <HeartIcon size={16} />
                         )}
                       </ActionIcon>
-
+                      <ActionIcon
+                        variant="subtle"
+                        color="blue"
+                        onClick={e => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          openEditRecipeModal(recipe);
+                        }}
+                      >
+                        <PencilIcon size={16} />
+                      </ActionIcon>
+                      <ActionIcon
+                        variant="subtle"
+                        color="red"
+                        onClick={e => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          handleDeleteRecipe(recipe.id);
+                        }}
+                      >
+                        <TrashIcon size={16} />
+                      </ActionIcon>
                     </Group>
                   </Group>
 
@@ -875,6 +948,20 @@ function RecipesPage() {
                       onClick={() => openAddToCalendarModal(recipe)}
                     >
                       <CalendarIcon size={16} />
+                    </ActionIcon>
+                    <ActionIcon
+                      variant="subtle"
+                      color="blue"
+                      onClick={() => openEditRecipeModal(recipe)}
+                    >
+                      <PencilIcon size={16} />
+                    </ActionIcon>
+                    <ActionIcon
+                      variant="subtle"
+                      color="red"
+                      onClick={() => handleDeleteRecipe(recipe.id)}
+                    >
+                      <TrashIcon size={16} />
                     </ActionIcon>
                   </Group>
                 </Table.Td>
@@ -2586,7 +2673,20 @@ function Recipe() {
           >
             ❤️
           </ActionIcon>
-
+          <ActionIcon
+            variant="subtle"
+            color="blue"
+            onClick={() => openEditRecipeModal(recipe)}
+          >
+            <PencilIcon size={16} />
+          </ActionIcon>
+          <ActionIcon
+            variant="subtle"
+            color="red"
+            onClick={() => handleDeleteRecipe(recipe.id)}
+          >
+            <TrashIcon size={16} />
+          </ActionIcon>
         </Group>
       </Group>
 
@@ -2901,6 +3001,10 @@ function App() {
   const addToCalendarModalOpened = useStore($addToCalendarModal);
   const selectedRecipeForCalendar = useStore($selectedRecipeForCalendar);
 
+  // Хуки для модального окна редактирования рецепта
+  const editRecipeModalOpened = useStore($editRecipeModal);
+  const selectedRecipeForEdit = useStore($selectedRecipeForEdit);
+
   // Проверяем авторизацию при монтировании компонента
   React.useEffect(() => {
     checkAuth();
@@ -2989,6 +3093,12 @@ function App() {
           onConfirm={handleAddToCalendarConfirm}
           recipeName={selectedRecipeForCalendar?.name || ''}
         />
+        <EditRecipeForm
+          opened={editRecipeModalOpened}
+          onClose={closeEditRecipeModal}
+          recipe={selectedRecipeForEdit}
+          onSave={handleEditRecipeSave}
+        />
       </Providers>
     </div>
   );
@@ -3016,6 +3126,10 @@ export {
   openAddToCalendarModal,
   closeAddToCalendarModal,
   handleAddToCalendarConfirm,
+  openEditRecipeModal,
+  closeEditRecipeModal,
+  handleEditRecipeSave,
+  handleDeleteRecipe,
   getIngredientStock,
 };
 
