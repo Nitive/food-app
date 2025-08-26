@@ -224,6 +224,9 @@ export function FoodDiaryPage() {
                 // TODO: Реализовать logout
                 alert('Logout в разработке')
               }}
+              onOpenProfile={() => {
+                alert('Профиль пользователя')
+              }}
             />
           )}
         </Group>

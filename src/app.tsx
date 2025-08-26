@@ -52,6 +52,7 @@ import { Login } from './components/Login.js'
 import { MainNavigation } from './components/MainNavigation.js'
 import { QuickActions } from './components/QuickActions.js'
 import { UserMenu } from './components/UserMenu.js'
+import { UserProfileModal } from './components/UserProfileModal.js'
 
 // Интерфейс для записей дневника питания
 interface FoodDiaryEntry {
@@ -126,6 +127,7 @@ const $createIngredientModal = atom(false)
 
 // Состояние модального окна добавления в календарь
 const $addToCalendarModal = atom(false)
+const $profileModal = atom(false)
 const $selectedRecipeForCalendar = atom<Recipe | null>(null)
 
 // Состояние модального окна редактирования рецепта
@@ -265,7 +267,7 @@ async function deleteIngredient(id: number) {
 async function addToCalendar(date: string, recipeId: number, mealType: string) {
   try {
     const newCalendarItem = await apiClient.addToCalendar(date, recipeId, mealType)
-    
+
     // Добавляем новый элемент в локальное состояние
     const currentCalendarItems = $calendarItems.get()
     $calendarItems.set([...currentCalendarItems, newCalendarItem])
@@ -295,6 +297,14 @@ function openAddToCalendarModal(recipe: Recipe) {
 function closeAddToCalendarModal() {
   $addToCalendarModal.set(false)
   $selectedRecipeForCalendar.set(null)
+}
+
+function openProfileModal() {
+  $profileModal.set(true)
+}
+
+function closeProfileModal() {
+  $profileModal.set(false)
 }
 
 async function handleAddToCalendarConfirm(date: string, mealType: string) {
@@ -846,7 +856,7 @@ function RecipesPage() {
         </div>
         <Group gap="xs">
           <QuickActions showCreateRecipe={true} />
-          {user && <UserMenu user={user} onLogout={handleLogout} />}
+          {user && <UserMenu user={user} onLogout={handleLogout} onOpenProfile={openProfileModal} />}
         </Group>
       </Group>
 
@@ -1292,7 +1302,7 @@ function IngredientsPage() {
         </div>
         <Group gap="xs">
           <QuickActions showCreateIngredient={true} showClear={true} clearLabel="Очистить все данные" />
-          {user && <UserMenu user={user} onLogout={handleLogout} />}
+          {user && <UserMenu user={user} onLogout={handleLogout} onOpenProfile={openProfileModal} />}
         </Group>
       </Group>
 
@@ -2348,7 +2358,7 @@ function CalendarPage() {
             exportLabel="Экспорт календаря"
           />
 
-          {user && <UserMenu user={user} onLogout={handleLogout} />}
+          {user && <UserMenu user={user} onLogout={handleLogout} onOpenProfile={openProfileModal} />}
         </Group>
       </Group>
 
@@ -3049,6 +3059,7 @@ function App() {
   const loading = useStore($loading)
   // Хуки для модального окна календаря
   const addToCalendarModalOpened = useStore($addToCalendarModal)
+  const profileModalOpened = useStore($profileModal)
   const selectedRecipeForCalendar = useStore($selectedRecipeForCalendar)
 
   // Хуки для модального окна редактирования рецепта
@@ -3150,6 +3161,7 @@ function App() {
           recipe={selectedRecipeForEdit}
           onSave={handleEditRecipeSave}
         />
+        <UserProfileModal opened={profileModalOpened} onClose={closeProfileModal} />
       </Providers>
     </div>
   )
@@ -3172,6 +3184,7 @@ export {
   $user,
   closeAddToCalendarModal,
   closeEditRecipeModal,
+  closeProfileModal,
   exportCalendarToPDF,
   exportFoodDiaryToPDF,
   exportShoppingListToPDF,
@@ -3182,6 +3195,7 @@ export {
   isRecipeFavorite,
   openAddToCalendarModal,
   openEditRecipeModal,
+  openProfileModal,
   toggleFavoriteRecipe,
 }
 

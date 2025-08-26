@@ -1116,6 +1116,85 @@ const app = new Elysia({ adapter: node() as any })
       },
     })
   })
+
+  // User Profile endpoints
+  .get('/api/profile', async ({ cookie }) => {
+    const user = await requireAuth({ cookie })
+
+    const userProfile = await prisma.user.findUnique({
+      where: { id: user.user.id },
+    })
+
+    if (!userProfile) {
+      throw new Error('User not found')
+    }
+
+    return {
+      id: userProfile.id,
+      email: userProfile.email,
+      name: userProfile.name,
+      picture: userProfile.picture,
+      height: userProfile.height,
+      weight: userProfile.weight,
+      targetWeight: userProfile.targetWeight,
+      dailyCalories: userProfile.dailyCalories,
+      age: userProfile.age,
+      gender: userProfile.gender,
+      activityLevel: userProfile.activityLevel,
+      goal: userProfile.goal,
+    }
+  })
+
+  .put(
+    '/api/profile',
+    async ({ body, cookie }) => {
+      const user = await requireAuth({ cookie })
+      const { name, height, weight, targetWeight, dailyCalories, age, gender, activityLevel, goal } = body
+
+      const updatedUser = await prisma.user.update({
+        where: { id: user.user.id },
+        data: {
+          name: name || null,
+          height: height || null,
+          weight: weight || null,
+          targetWeight: targetWeight || null,
+          dailyCalories: dailyCalories || null,
+          age: age || null,
+          gender: gender || null,
+          activityLevel: activityLevel || null,
+          goal: goal || null,
+        },
+      })
+
+      return {
+        id: updatedUser.id,
+        email: updatedUser.email,
+        name: updatedUser.name,
+        picture: updatedUser.picture,
+        height: updatedUser.height,
+        weight: updatedUser.weight,
+        targetWeight: updatedUser.targetWeight,
+        dailyCalories: updatedUser.dailyCalories,
+        age: updatedUser.age,
+        gender: updatedUser.gender,
+        activityLevel: updatedUser.activityLevel,
+        goal: updatedUser.goal,
+      }
+    },
+    {
+      body: t.Object({
+        name: t.Optional(t.String()),
+        height: t.Optional(t.Number()),
+        weight: t.Optional(t.Number()),
+        targetWeight: t.Optional(t.Number()),
+        dailyCalories: t.Optional(t.Number()),
+        age: t.Optional(t.Number()),
+        gender: t.Optional(t.String()),
+        activityLevel: t.Optional(t.String()),
+        goal: t.Optional(t.String()),
+      }),
+    }
+  )
   .listen(3000, ({ hostname, port }) => {
     console.log(`🦊 API сервер запущен на ${hostname}:${port}`)
 

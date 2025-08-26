@@ -1,13 +1,14 @@
 import { ActionIcon, Avatar, Group, Menu, Text } from '@mantine/core'
-import { SignOutIcon } from '@primer/octicons-react'
+import { PersonIcon, SignOutIcon } from '@primer/octicons-react'
 import { apiClient, type User } from '../api-client.js'
 
 interface UserMenuProps {
   user: User
   onLogout: () => void
+  onOpenProfile: () => void
 }
 
-export function UserMenu({ user, onLogout }: UserMenuProps) {
+export function UserMenu({ user, onLogout, onOpenProfile }: UserMenuProps) {
   const handleLogout = async () => {
     try {
       await apiClient.logout()
@@ -40,6 +41,10 @@ export function UserMenu({ user, onLogout }: UserMenuProps) {
               </Text>
             </div>
           </Group>
+        </Menu.Item>
+
+        <Menu.Item leftSection={<PersonIcon size={14} />} onClick={onOpenProfile}>
+          Профиль
         </Menu.Item>
 
         <Menu.Item color="rose" leftSection={<SignOutIcon size={14} />} onClick={handleLogout}>

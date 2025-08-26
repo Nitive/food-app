@@ -90,6 +90,17 @@ model User {
   name          String?
   picture       String?
   googleId      String    @unique
+  
+  // Расширенный профиль
+  height        Float?    // Рост в см
+  weight        Float?    // Текущий вес в кг
+  targetWeight  Float?    // Желаемый вес в кг
+  dailyCalories Int?      // Цель по калориям на день
+  age           Int?      // Возраст
+  gender        String?   // Пол: male, female, other
+  activityLevel String?   // Уровень активности: sedentary, lightly_active, moderately_active, very_active, extremely_active
+  goal          String?   // Цель: lose_weight, maintain_weight, gain_weight
+  
   recipes       Recipe[]  // Рецепты, созданные пользователем
   calendarItems CalendarItem[]
   foodDiaryEntries FoodDiaryEntry[]

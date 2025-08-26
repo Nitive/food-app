@@ -76,7 +76,7 @@ export function ShoppingListPage() {
             onExportPDF={() => exportShoppingListToPDF(shoppingList.items)}
             exportLabel="Экспорт списка"
           />
-          {user && <UserMenu user={user} onLogout={handleLogout} />}
+          {user && <UserMenu user={user} onLogout={handleLogout} onOpenProfile={() => alert('Профиль пользователя')} />}
         </Group>
       </Group>
 

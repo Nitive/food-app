@@ -64,7 +64,7 @@ export function StatsPage() {
         </div>
         <Group gap="xs">
           <QuickActions />
-          {user && <UserMenu user={user} onLogout={handleLogout} />}
+          {user && <UserMenu user={user} onLogout={handleLogout} onOpenProfile={() => alert('Профиль пользователя')} />}
         </Group>
       </Group>
 

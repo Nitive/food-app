@@ -74,7 +74,7 @@ export function FavoritesPage() {
   if (favoriteRecipes.length === 0) {
     return (
       <div>
-        {user && <UserMenu user={user} onLogout={() => {}} />}
+        {user && <UserMenu user={user} onLogout={() => {}} onOpenProfile={() => alert('Профиль пользователя')} />}
         <Breadcrumbs />
         <QuickActions />
 
@@ -108,7 +108,7 @@ export function FavoritesPage() {
 
   return (
     <div>
-      {user && <UserMenu user={user} onLogout={() => {}} />}
+      {user && <UserMenu user={user} onLogout={() => {}} onOpenProfile={() => alert('Профиль пользователя')} />}
       <Breadcrumbs />
       <QuickActions />
 

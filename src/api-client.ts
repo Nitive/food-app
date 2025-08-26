@@ -87,6 +87,14 @@ export interface User {
   email: string
   name?: string | null
   picture?: string | null
+  height?: number | null
+  weight?: number | null
+  targetWeight?: number | null
+  dailyCalories?: number | null
+  age?: number | null
+  gender?: string | null
+  activityLevel?: string | null
+  goal?: string | null
 }
 
 export interface AuthResponse {
@@ -310,5 +318,28 @@ export const apiClient = {
     const { data } = await client.api['food-diary']({ id }).delete()
     if (!data) throw new Error('Failed to remove food diary entry')
     return data as unknown as { deleted: boolean }
+  },
+
+  // User Profile functions
+  async getUserProfile(): Promise<User> {
+    const { data } = await client.api.profile.get()
+    if (!data) throw new Error('Failed to get user profile')
+    return data as unknown as User
+  },
+
+  async updateUserProfile(profileData: {
+    name?: string
+    height?: number
+    weight?: number
+    targetWeight?: number
+    dailyCalories?: number
+    age?: number
+    gender?: string
+    activityLevel?: string
+    goal?: string
+  }): Promise<User> {
+    const { data } = await client.api.profile.put(profileData)
+    if (!data) throw new Error('Failed to update user profile')
+    return data as unknown as User
   },
 }
