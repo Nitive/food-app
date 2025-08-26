@@ -1,17 +1,17 @@
 interface Ingredients {
-  name: string
-  amount: number
-  amountType: 'гр' | 'мл' | 'шт' | 'по вкусу'
+  name: string;
+  amount: number;
+  amountType: 'гр' | 'мл' | 'шт' | 'по вкусу';
 }
 
 interface Recipe {
-  id: number
-  name: string
-  calories: number
-  proteins: number
-  fats: number
-  carbohydrates: number
-  ingredients: Ingredients[]
+  id: number;
+  name: string;
+  calories: number;
+  proteins: number;
+  fats: number;
+  carbohydrates: number;
+  ingredients: Ingredients[];
 }
 
 export const recipes: Recipe[] = [
@@ -124,7 +124,11 @@ export const recipes: Recipe[] = [
       { name: 'Лук', amount: 0, amountType: 'по вкусу' },
       { name: 'Куриная грудка', amount: 0, amountType: 'по вкусу' },
       { name: 'Картофель', amount: 0, amountType: 'по вкусу' },
-      { name: 'Красная чечевица со специями Yelli', amount: 0, amountType: 'по вкусу' },
+      {
+        name: 'Красная чечевица со специями Yelli',
+        amount: 0,
+        amountType: 'по вкусу',
+      },
     ],
   },
   {
@@ -417,4 +421,4 @@ export const recipes: Recipe[] = [
       { name: 'Оливковое масло', amount: 0, amountType: 'по вкусу' },
     ],
   },
-]
+];

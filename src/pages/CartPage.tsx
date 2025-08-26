@@ -1,41 +1,73 @@
-import React from 'react'
-import { Stack, Title, Table, Text, Group, ActionIcon, NumberInput, Button, Card, LoadingOverlay } from '@mantine/core'
-import { DashIcon, TrashIcon } from '@primer/octicons-react'
-import { Link } from 'react-router-dom'
-import { useStore } from '@nanostores/react'
-import { $cartItems, $loading, $user } from '../app.js'
-import { UserMenu } from '../components/UserMenu.js'
-import { Breadcrumbs } from '../components/Breadcrumbs.js'
-import { QuickActions } from '../components/QuickActions.js'
-import { exportCartToPDF } from '../app.js'
+import React from 'react';
+import {
+  Stack,
+  Title,
+  Table,
+  Text,
+  Group,
+  ActionIcon,
+  NumberInput,
+  Button,
+  Card,
+  LoadingOverlay,
+} from '@mantine/core';
+import { DashIcon, TrashIcon } from '@primer/octicons-react';
+import { Link } from 'react-router-dom';
+import { useStore } from '@nanostores/react';
+import { $cartItems, $loading, $user } from '../app.js';
+import { UserMenu } from '../components/UserMenu.js';
+import { Breadcrumbs } from '../components/Breadcrumbs.js';
+import { QuickActions } from '../components/QuickActions.js';
+import { exportCartToPDF } from '../app.js';
 
 export function CartPage() {
-  const cartItems = useStore($cartItems)
-  const loading = useStore($loading)
-  const user = useStore($user)
+  const cartItems = useStore($cartItems);
+  const loading = useStore($loading);
+  const user = useStore($user);
 
   const stats = {
-    calories: cartItems.reduce((sum: number, item: any) => sum + (item.recipe.calories * item.quantity), 0).toFixed(1),
-    proteins: cartItems.reduce((sum: number, item: any) => sum + (item.recipe.proteins * item.quantity), 0).toFixed(1),
-    fats: cartItems.reduce((sum: number, item: any) => sum + (item.recipe.fats * item.quantity), 0).toFixed(1),
-    carbohydrates: cartItems.reduce((sum: number, item: any) => sum + (item.recipe.carbohydrates * item.quantity), 0).toFixed(1),
-  }
+    calories: cartItems
+      .reduce(
+        (sum: number, item: any) => sum + item.recipe.calories * item.quantity,
+        0
+      )
+      .toFixed(1),
+    proteins: cartItems
+      .reduce(
+        (sum: number, item: any) => sum + item.recipe.proteins * item.quantity,
+        0
+      )
+      .toFixed(1),
+    fats: cartItems
+      .reduce(
+        (sum: number, item: any) => sum + item.recipe.fats * item.quantity,
+        0
+      )
+      .toFixed(1),
+    carbohydrates: cartItems
+      .reduce(
+        (sum: number, item: any) =>
+          sum + item.recipe.carbohydrates * item.quantity,
+        0
+      )
+      .toFixed(1),
+  };
 
   const handleLogout = () => {
     // Функция будет передана из основного компонента
-  }
+  };
 
   const clearCart = () => {
     // Функция будет передана из основного компонента
-  }
+  };
 
   const updateCartQuantity = (id: number, quantity: number) => {
     // Функция будет передана из основного компонента
-  }
+  };
 
   const removeFromCart = (id: number) => {
     // Функция будет передана из основного компонента
-  }
+  };
 
   return (
     <Stack gap="lg" pos="relative">
@@ -59,10 +91,10 @@ export function CartPage() {
             clearLabel="Очистить корзину"
           />
           {user && (
-            <UserMenu 
-              user={user} 
+            <UserMenu
+              user={user}
               cartItems={cartItems}
-              onLogout={handleLogout} 
+              onLogout={handleLogout}
               onCartClick={() => {}}
             />
           )}
@@ -101,7 +133,10 @@ export function CartPage() {
                   <Table.Td>
                     <Link
                       to={`/recipe/${item.recipe.id}`}
-                      style={{ color: 'var(--mantine-color-teal-6)', textDecoration: 'none' }}
+                      style={{
+                        color: 'var(--mantine-color-teal-6)',
+                        textDecoration: 'none',
+                      }}
                     >
                       {item.recipe.name}
                     </Link>
@@ -111,13 +146,17 @@ export function CartPage() {
                       <ActionIcon
                         variant="light"
                         color="rose"
-                        onClick={() => updateCartQuantity(item.id, item.quantity - 1)}
+                        onClick={() =>
+                          updateCartQuantity(item.id, item.quantity - 1)
+                        }
                       >
                         <DashIcon size={16} />
                       </ActionIcon>
                       <NumberInput
                         value={item.quantity}
-                        onChange={(value) => updateCartQuantity(item.id, Number(value) || 0)}
+                        onChange={value =>
+                          updateCartQuantity(item.id, Number(value) || 0)
+                        }
                         min={1}
                         max={99}
                         w={80}
@@ -127,11 +166,16 @@ export function CartPage() {
                   </Table.Td>
                   <Table.Td>
                     <Text size="sm">
-                      {item.recipe.calories}/{item.recipe.proteins}/{item.recipe.fats}/{item.recipe.carbohydrates}
+                      {item.recipe.calories}/{item.recipe.proteins}/
+                      {item.recipe.fats}/{item.recipe.carbohydrates}
                     </Text>
                   </Table.Td>
                   <Table.Td>
-                    <ActionIcon variant="light" color="rose" onClick={() => removeFromCart(item.id)}>
+                    <ActionIcon
+                      variant="light"
+                      color="rose"
+                      onClick={() => removeFromCart(item.id)}
+                    >
                       <TrashIcon size={16} />
                     </ActionIcon>
                   </Table.Td>
@@ -144,7 +188,8 @@ export function CartPage() {
           <Card withBorder p="md">
             <Group justify="space-between" align="center">
               <Text fw={500}>
-                Общий КБЖУ: {stats.calories}/{stats.proteins}/{stats.fats}/{stats.carbohydrates}
+                Общий КБЖУ: {stats.calories}/{stats.proteins}/{stats.fats}/
+                {stats.carbohydrates}
               </Text>
               <Button variant="light" color="rose" onClick={clearCart}>
                 Очистить корзину
@@ -154,5 +199,5 @@ export function CartPage() {
         </>
       )}
     </Stack>
-  )
+  );
 }

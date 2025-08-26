@@ -1,32 +1,40 @@
-import React from 'react'
-import { Menu, Avatar, Text, Group, ActionIcon, Badge } from '@mantine/core'
-import { SignOutIcon } from '@primer/octicons-react'
-import { apiClient, type User, type CartItem } from '../api-client.js'
+import React from 'react';
+import { Menu, Avatar, Text, Group, ActionIcon, Badge } from '@mantine/core';
+import { SignOutIcon } from '@primer/octicons-react';
+import { apiClient, type User, type CartItem } from '../api-client.js';
 
 interface UserMenuProps {
-  user: User
-  cartItems: CartItem[]
-  onLogout: () => void
-  onCartClick: () => void
+  user: User;
+  cartItems: CartItem[];
+  onLogout: () => void;
+  onCartClick: () => void;
 }
 
-export function UserMenu({ user, cartItems, onLogout, onCartClick }: UserMenuProps) {
+export function UserMenu({
+  user,
+  cartItems,
+  onLogout,
+  onCartClick,
+}: UserMenuProps) {
   const handleLogout = async () => {
     try {
-      await apiClient.logout()
-      onLogout()
+      await apiClient.logout();
+      onLogout();
     } catch (error) {
-      console.error('Logout error:', error)
+      console.error('Logout error:', error);
       // Даже если запрос не прошел, очищаем локальное хранилище
-      onLogout()
+      onLogout();
     }
-  }
+  };
 
   // Вычисляем статистику корзины
   const cartStats = {
     totalItems: cartItems.length,
-    totalCalories: cartItems.reduce((sum, item) => sum + (item.recipe.calories * item.quantity), 0)
-  }
+    totalCalories: cartItems.reduce(
+      (sum, item) => sum + item.recipe.calories * item.quantity,
+      0
+    ),
+  };
 
   return (
     <Menu shadow="md" width={200}>
@@ -50,7 +58,7 @@ export function UserMenu({ user, cartItems, onLogout, onCartClick }: UserMenuPro
                 minWidth: '18px',
                 height: '18px',
                 fontSize: '10px',
-                padding: '0 4px'
+                padding: '0 4px',
               }}
             >
               {cartItems.length}
@@ -108,5 +116,5 @@ export function UserMenu({ user, cartItems, onLogout, onCartClick }: UserMenuPro
         </Menu.Item>
       </Menu.Dropdown>
     </Menu>
-  )
+  );
 }

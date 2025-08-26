@@ -1,78 +1,93 @@
-import React from 'react'
-import { Box, NavLink, Text, Group, Badge, ActionIcon, Drawer } from '@mantine/core'
-import { Link, useLocation } from 'react-router-dom'
-import { useStore } from '@nanostores/react'
-import { $recipes, $cartItems, $shoppingList, $calendarItems, $ingredients, $favoriteRecipes } from '../app.js'
-import { ThreeBarsIcon } from '@primer/octicons-react'
+import React from 'react';
+import {
+  Box,
+  NavLink,
+  Text,
+  Group,
+  Badge,
+  ActionIcon,
+  Drawer,
+} from '@mantine/core';
+import { Link, useLocation } from 'react-router-dom';
+import { useStore } from '@nanostores/react';
+import {
+  $recipes,
+  $cartItems,
+  $shoppingList,
+  $calendarItems,
+  $ingredients,
+  $favoriteRecipes,
+} from '../app.js';
+import { ThreeBarsIcon } from '@primer/octicons-react';
 
 interface NavigationItem {
-  path: string
-  icon: string
-  label: string
-  badge?: number
-  color?: string
+  path: string;
+  icon: string;
+  label: string;
+  badge?: number;
+  color?: string;
 }
 
 export function MainNavigation() {
-  const location = useLocation()
-  const recipes = useStore($recipes)
-  const cartItems = useStore($cartItems)
-  const shoppingList = useStore($shoppingList)
-  const calendarItems = useStore($calendarItems)
-  const ingredients = useStore($ingredients)
-  const favoriteRecipes = useStore($favoriteRecipes)
-  const [mobileOpened, setMobileOpened] = React.useState(false)
+  const location = useLocation();
+  const recipes = useStore($recipes);
+  const cartItems = useStore($cartItems);
+  const shoppingList = useStore($shoppingList);
+  const calendarItems = useStore($calendarItems);
+  const ingredients = useStore($ingredients);
+  const favoriteRecipes = useStore($favoriteRecipes);
+  const [mobileOpened, setMobileOpened] = React.useState(false);
 
   const navigationItems: NavigationItem[] = [
-    { 
-      path: '/recipes', 
-      icon: '🏠', 
-      label: 'Рецепты', 
+    {
+      path: '/recipes',
+      icon: '🏠',
+      label: 'Рецепты',
       badge: recipes.length,
-      color: 'teal'
+      color: 'teal',
     },
-    { 
-      path: '/favorites', 
-      icon: '❤️', 
-      label: 'Сохраненные рецепты', 
+    {
+      path: '/favorites',
+      icon: '❤️',
+      label: 'Сохраненные рецепты',
       badge: favoriteRecipes.length,
-      color: 'pink'
+      color: 'pink',
     },
-    { 
-      path: '/cart', 
-      icon: '🛒', 
-      label: 'Корзина', 
+    {
+      path: '/cart',
+      icon: '🛒',
+      label: 'Корзина',
       badge: cartItems.length,
-      color: 'sage'
+      color: 'sage',
     },
-    { 
-      path: '/shopping-list', 
-      icon: '📋', 
-      label: 'Список покупок', 
+    {
+      path: '/shopping-list',
+      icon: '📋',
+      label: 'Список покупок',
       badge: shoppingList.length,
-      color: 'amber'
+      color: 'amber',
     },
-    { 
-      path: '/calendar', 
-      icon: '📅', 
-      label: 'Календарь', 
+    {
+      path: '/calendar',
+      icon: '📅',
+      label: 'Календарь',
       badge: calendarItems.length,
-      color: 'indigo'
+      color: 'indigo',
     },
-    { 
-      path: '/ingredients', 
-      icon: '📦', 
-      label: 'Ингредиенты', 
+    {
+      path: '/ingredients',
+      icon: '📦',
+      label: 'Ингредиенты',
       badge: ingredients.length,
-      color: 'slate'
+      color: 'slate',
     },
-    { 
-      path: '/stats', 
-      icon: '📊', 
+    {
+      path: '/stats',
+      icon: '📊',
       label: 'Статистика',
-      color: 'rose'
+      color: 'rose',
     },
-  ]
+  ];
 
   const NavigationContent = () => (
     <>
@@ -83,7 +98,7 @@ export function MainNavigation() {
       </Box>
 
       <Box style={{ flex: 1 }}>
-        {navigationItems.map((item) => (
+        {navigationItems.map(item => (
           <NavLink
             key={item.path}
             component={Link}
@@ -105,7 +120,7 @@ export function MainNavigation() {
             style={{
               marginBottom: '4px',
               borderRadius: '8px',
-              transition: 'all 0.2s ease'
+              transition: 'all 0.2s ease',
             }}
             onClick={() => setMobileOpened(false)}
           />
@@ -113,28 +128,31 @@ export function MainNavigation() {
       </Box>
 
       <Box>
-        <Box p="xs" style={{ 
-          backgroundColor: 'var(--mantine-color-gray-0)', 
-          borderRadius: '8px',
-          border: '1px solid var(--mantine-color-gray-2)'
-        }}>
+        <Box
+          p="xs"
+          style={{
+            backgroundColor: 'var(--mantine-color-gray-0)',
+            borderRadius: '8px',
+            border: '1px solid var(--mantine-color-gray-2)',
+          }}
+        >
           <Text size="xs" c="dimmed" ta="center">
             Версия 1.0.0
           </Text>
         </Box>
       </Box>
     </>
-  )
+  );
 
   return (
     <>
       {/* Десктопная навигация */}
-      <Box 
-        w={240} 
-        p="md" 
-        style={{ 
+      <Box
+        w={240}
+        p="md"
+        style={{
           borderRight: '1px solid var(--mantine-color-gray-3)',
-          display: 'none'
+          display: 'none',
         }}
         className="desktop-navigation"
       >
@@ -148,7 +166,7 @@ export function MainNavigation() {
           position: 'fixed',
           top: '15px',
           left: '15px',
-          zIndex: 1000
+          zIndex: 1000,
         }}
       >
         <ActionIcon
@@ -159,7 +177,7 @@ export function MainNavigation() {
           style={{
             boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
             width: '48px',
-            height: '48px'
+            height: '48px',
           }}
         >
           <ThreeBarsIcon size={24} />
@@ -176,8 +194,8 @@ export function MainNavigation() {
         styles={{
           header: {
             backgroundColor: 'var(--mantine-color-teal-6)',
-            color: 'white'
-          }
+            color: 'white',
+          },
         }}
       >
         <Box p="md">
@@ -185,5 +203,5 @@ export function MainNavigation() {
         </Box>
       </Drawer>
     </>
-  )
+  );
 }
