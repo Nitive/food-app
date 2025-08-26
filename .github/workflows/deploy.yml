@@ -105,9 +105,12 @@ jobs:
 
             # Создаем .env файл
             echo "📝 Creating .env file..."
+            touch .env
+            chmod 600 .env
             cat > .env << EOF
             # База данных
-            DATABASE_URL=postgresql://food_user:food_password@postgres:5432/food_app
+            DATABASE_URL=postgresql://food_user:${{ secrets.POSTGRES_PASSWORD }}@postgres:5432/food_app
+            POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}
 
             # Google OAuth
             GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}
@@ -121,23 +124,17 @@ jobs:
             PORT=3000
             EOF
 
-            echo "🔨 Starting containers..."
-            docker-compose up -d
-
-            echo "⏳ Waiting for services to start..."
-            sleep 30
-
             echo "🗄️ Running database migrations..."
-            docker-compose exec -T app npx prisma migrate deploy
+            docker run -it --env-file .env --network=food-app_default --entrypoint=/nodejs/bin/node "$FOOD_APP_IMAGE" /app/node_modules/prisma/build/index.js migrate deploy
 
-            echo "🌱 Seeding database..."
-            docker-compose exec -T app npx prisma db seed || true
+            echo "🔨 Starting containers..."
+            docker compose up -d
 
             echo "✅ Checking service status..."
-            docker-compose ps
+            docker compose ps
 
             echo "🔍 Checking logs..."
-            docker-compose logs --tail=20
+            docker compose logs --tail=20
 
             # Очищаем временные файлы
             rm -f deployment.tar.gz food-app.tar.gz

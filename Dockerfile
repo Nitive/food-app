@@ -19,5 +19,6 @@ FROM gcr.io/distroless/nodejs22-debian12
 WORKDIR /app
 COPY package.json pnpm-lock.yaml ./
 COPY --from=build /app/dist ./dist
+COPY --from=build /app/prisma ./prisma
 COPY --from=prod_deps /app/node_modules ./node_modules
 CMD ["/app/dist/src/api.js"]
