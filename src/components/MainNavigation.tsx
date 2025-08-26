@@ -38,6 +38,13 @@ export function MainNavigation() {
 
   const navigationItems: NavigationItem[] = [
     {
+      path: '/',
+      icon: '📅',
+      label: 'Календарь',
+      badge: calendarItems.length,
+      color: 'indigo',
+    },
+    {
       path: '/recipes',
       icon: '🏠',
       label: 'Рецепты',
@@ -51,20 +58,12 @@ export function MainNavigation() {
       badge: favoriteRecipes.length,
       color: 'pink',
     },
-
     {
       path: '/shopping-list',
       icon: '📋',
       label: 'Список покупок',
       badge: shoppingList.items.length,
       color: 'amber',
-    },
-    {
-      path: '/calendar',
-      icon: '📅',
-      label: 'Календарь',
-      badge: calendarItems.length,
-      color: 'indigo',
     },
     {
       path: '/ingredients',

@@ -3139,7 +3139,7 @@ function App() {
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
             <div className="main-content" style={{ flex: 1, padding: '20px' }}>
               <Routes>
-                <Route index element={<RecipesPage />} />
+                <Route index element={<CalendarPage />} />
                 <Route path="recipes" element={<RecipesPage />} />
                 <Route path="favorites" element={<FavoritesPage />} />
 

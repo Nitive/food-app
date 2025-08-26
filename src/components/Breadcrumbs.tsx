@@ -15,14 +15,14 @@ export function Breadcrumbs() {
     const pathSegments = location.pathname.split('/').filter(Boolean);
 
     if (pathSegments.length === 0) {
-      return [{ label: 'Главная', icon: '🏠' }];
+      return [{ label: 'Календарь', icon: '📅' }];
     }
 
     const breadcrumbs: BreadcrumbItem[] = [];
     let currentPath = '';
 
     // Добавляем главную страницу
-    breadcrumbs.push({ label: 'Главная', path: '/', icon: '🏠' });
+    breadcrumbs.push({ label: 'Календарь', path: '/', icon: '📅' });
 
     pathSegments.forEach((segment: string, index: number) => {
       currentPath += `/${segment}`;
