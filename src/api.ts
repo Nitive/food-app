@@ -2,6 +2,7 @@ import { node } from '@elysiajs/node'
 import { cors } from '@elysiajs/cors'
 import { Elysia, t } from 'elysia'
 import { PrismaClient } from '@prisma/client'
+import { getGoogleUserInfo, findOrCreateUser, createJWT, getUserFromToken } from './auth.js'
 
 const prisma = new PrismaClient()
 
@@ -596,6 +597,108 @@ const app = new Elysia({ adapter: node() as any })
     }
 
     return results
+  })
+
+  // Google OAuth endpoints
+  .get('/api/auth/google/url', () => {
+    const clientId = process.env.GOOGLE_CLIENT_ID
+    const redirectUri = 'http://localhost:5173/auth/callback'
+    const scope = 'email profile'
+    
+    const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
+      `client_id=${clientId}&` +
+      `redirect_uri=${encodeURIComponent(redirectUri)}&` +
+      `response_type=code&` +
+      `scope=${encodeURIComponent(scope)}&` +
+      `access_type=offline`
+    
+    return { authUrl }
+  })
+
+  .post('/api/auth/google/callback', async ({ body }) => {
+    const { code } = body as { code: string }
+    
+    try {
+      // Обмениваем код на access token
+      const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams({
+          client_id: process.env.GOOGLE_CLIENT_ID!,
+          client_secret: process.env.GOOGLE_CLIENT_SECRET!,
+          code,
+          grant_type: 'authorization_code',
+          redirect_uri: 'http://localhost:5173/auth/callback',
+        }),
+      })
+
+      if (!tokenResponse.ok) {
+        throw new Error('Failed to exchange code for token')
+      }
+
+      const tokenData = await tokenResponse.json()
+      const { access_token } = tokenData
+
+      // Получаем информацию о пользователе
+      const userInfo = await getGoogleUserInfo(access_token)
+      
+      // Создаем или находим пользователя в базе данных
+      const user = await findOrCreateUser(userInfo)
+      
+      // Создаем JWT токен
+      const jwtToken = createJWT(user)
+      
+      return {
+        success: true,
+        token: jwtToken,
+        user: {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          picture: user.picture,
+        }
+      }
+    } catch (error) {
+      console.error('OAuth error:', error)
+      return {
+        success: false,
+        error: 'Authentication failed'
+      }
+    }
+  }, {
+    body: t.Object({
+      code: t.String()
+    })
+  })
+
+  .get('/api/auth/me', async ({ headers }) => {
+    const authHeader = headers.authorization
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return { authenticated: false }
+    }
+
+    const token = authHeader.substring(7)
+    const user = await getUserFromToken(token)
+    
+    if (!user) {
+      return { authenticated: false }
+    }
+
+    return {
+      authenticated: true,
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        picture: user.picture,
+      }
+    }
+  })
+
+  .post('/api/auth/logout', () => {
+    return { success: true }
   })
 
   .listen(3000, ({ hostname, port }) => {

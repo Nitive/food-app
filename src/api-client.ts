@@ -60,6 +60,25 @@ export interface CalendarItem {
   }
 }
 
+export interface User {
+  id: number
+  email: string
+  name?: string | null
+  picture?: string | null
+}
+
+export interface AuthResponse {
+  success: boolean
+  token?: string
+  user?: User
+  error?: string
+}
+
+export interface AuthMeResponse {
+  authenticated: boolean
+  user?: User
+}
+
 export const apiClient = {
   async getRecipes(): Promise<Recipe[]> {
     const { data } = await client.api.recipes.get()
@@ -168,5 +187,39 @@ export const apiClient = {
     const { data } = await client.api.calendar['add-to-cart'].post()
     if (!data) throw new Error('Failed to add calendar to cart')
     return data as unknown as CartItem[]
+  },
+
+  // Auth functions
+  async getGoogleAuthUrl(): Promise<{ authUrl: string }> {
+    const { data } = await client.api.auth.google.url.get()
+    if (!data) throw new Error('Failed to get auth URL')
+    return data
+  },
+
+  async googleAuthCallback(code: string): Promise<AuthResponse> {
+    const { data } = await client.api.auth.google.callback.post({ code })
+    if (!data) throw new Error('Failed to authenticate')
+    return data as unknown as AuthResponse
+  },
+
+  async getMe(): Promise<AuthMeResponse> {
+    const token = localStorage.getItem('authToken')
+    if (!token) {
+      return { authenticated: false }
+    }
+
+    const { data } = await client.api.auth.me.get({
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    })
+    return data || { authenticated: false }
+  },
+
+  async logout(): Promise<{ success: boolean }> {
+    const { data } = await client.api.auth.logout.post()
+    localStorage.removeItem('authToken')
+    localStorage.removeItem('user')
+    return data || { success: true }
   },
 }

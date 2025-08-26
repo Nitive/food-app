@@ -39,7 +39,11 @@ import {
   type ShoppingListItem,
   type StockItem,
   type CalendarItem,
+  type User,
 } from './api-client.js'
+import { Login } from './components/Login.js'
+import { UserMenu } from './components/UserMenu.js'
+import { AuthCallback } from './components/AuthCallback.js'
 
 function Providers(props: { children: React.ReactNode }) {
   return (
@@ -75,6 +79,10 @@ const $createRecipeModal = atom(false)
 
 // Состояние модального окна создания ингредиента
 const $createIngredientModal = atom(false)
+
+// Состояние авторизации
+const $user = atom<User | null>(null)
+const $isAuthenticated = atom(false)
 
 // Загрузка данных
 async function loadData() {
@@ -137,6 +145,45 @@ async function clearCart() {
   } catch (error) {
     console.error('Ошибка очистки корзины:', error)
   }
+}
+
+// Функции для работы с авторизацией
+async function checkAuth() {
+  try {
+    const response = await apiClient.getMe()
+    if (response.authenticated && response.user) {
+      $user.set(response.user)
+      $isAuthenticated.set(true)
+      return true
+    } else {
+      $user.set(null)
+      $isAuthenticated.set(false)
+      return false
+    }
+  } catch (error) {
+    console.error('Ошибка проверки авторизации:', error)
+    $user.set(null)
+    $isAuthenticated.set(false)
+    return false
+  }
+}
+
+function handleLogin(user: User) {
+  $user.set(user)
+  $isAuthenticated.set(true)
+  loadData() // Загружаем данные после входа
+}
+
+function handleLogout() {
+  $user.set(null)
+  $isAuthenticated.set(false)
+  // Очищаем все данные
+  $recipes.set([])
+  $cartItems.set([])
+  $ingredients.set([])
+  $stockItems.set([])
+  $shoppingList.set([])
+  $calendarItems.set([])
 }
 
 // Функции для работы с наличием ингредиентов
@@ -234,6 +281,7 @@ function RecipesPage() {
   const cartItems = useStore($cartItems)
   const shoppingList = useStore($shoppingList)
   const loading = useStore($loading)
+  const user = useStore($user)
   const [searchQuery, setSearchQuery] = React.useState('')
   const [sortBy, setSortBy] = React.useState<'name' | 'calories' | 'popularity'>('name')
   const [filterCategory, setFilterCategory] = React.useState<string | null>(null)
@@ -336,6 +384,7 @@ function RecipesPage() {
           <Button component={Link} to="/ingredients" variant="light">
             Управление ингредиентами
           </Button>
+          {user && <UserMenu user={user} onLogout={handleLogout} />}
         </Group>
       </Group>
 
@@ -648,6 +697,7 @@ function IngredientsPage() {
   const ingredients = useStore($ingredients)
   const stockItems = useStore($stockItems)
   const loading = useStore($loading)
+  const user = useStore($user)
   const [searchQuery, setSearchQuery] = React.useState('')
   const [filterCategory, setFilterCategory] = React.useState<string | null>(null)
   const [sortBy, setSortBy] = React.useState<'name' | 'amount' | 'category'>('name')
@@ -797,6 +847,7 @@ function IngredientsPage() {
           <Button component={Link} to="/" variant="light">
             Назад к рецептам
           </Button>
+          {user && <UserMenu user={user} onLogout={handleLogout} />}
         </Group>
       </Group>
 
@@ -1509,6 +1560,7 @@ function CalendarPage() {
   const recipes = useStore($recipes)
   const calendarItems = useStore($calendarItems)
   const loading = useStore($loading)
+  const user = useStore($user)
   const [selectedDate, setSelectedDate] = React.useState<Date | null>(null)
   const [selectedRecipe, setSelectedRecipe] = React.useState<number | null>(null)
   const [currentMonth, setCurrentMonth] = React.useState(new Date())
@@ -1732,6 +1784,7 @@ function CalendarPage() {
           <Button component={Link} to="/" variant="light">
             Назад к рецептам
           </Button>
+          {user && <UserMenu user={user} onLogout={handleLogout} />}
         </Group>
       </Group>
 
@@ -2249,10 +2302,41 @@ function Recipe() {
 }
 
 function App() {
-  // Загружаем данные при монтировании компонента
+  const user = useStore($user)
+  const isAuthenticated = useStore($isAuthenticated)
+  const loading = useStore($loading)
+
+  // Проверяем авторизацию при монтировании компонента
   React.useEffect(() => {
-    loadData()
+    checkAuth()
   }, [])
+
+  // Загружаем данные при монтировании компонента (только если авторизованы)
+  React.useEffect(() => {
+    if (isAuthenticated) {
+      loadData()
+    }
+  }, [isAuthenticated])
+
+  // Если проверяем авторизацию, показываем загрузку
+  if (loading && !isAuthenticated) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+        <LoadingOverlay visible />
+      </div>
+    )
+  }
+
+  // Если не авторизованы, показываем страницу входа
+  if (!isAuthenticated) {
+    return (
+      <div style={{ fontFamily: 'Inter' }}>
+        <Providers>
+          <Login onLogin={handleLogin} />
+        </Providers>
+      </div>
+    )
+  }
 
   return (
     <div
@@ -2270,6 +2354,7 @@ function App() {
           <Route path="ingredients" element={<IngredientsPage />} />
           <Route path="calendar" element={<CalendarPage />} />
           <Route path="recipe/:id" element={<Recipe />} />
+          <Route path="auth/callback" element={<AuthCallback />} />
         </Routes>
         <CreateRecipeForm />
         <CreateIngredientForm />
