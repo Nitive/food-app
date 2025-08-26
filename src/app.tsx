@@ -2028,7 +2028,7 @@ function CalendarPage() {
   const [selectedRecipe, setSelectedRecipe] = React.useState<number | null>(
     null
   );
-  const [currentMonth, setCurrentMonth] = React.useState(new Date());
+  const [currentWeek, setCurrentWeek] = React.useState(new Date());
   const [searchQuery, setSearchQuery] = React.useState('');
   const [quickMealType, setQuickMealType] = React.useState<string | null>(null);
 
@@ -2088,10 +2088,7 @@ function CalendarPage() {
   );
 
   const getWeekStats = () => {
-    const today = new Date();
-    const weekStart = new Date(today);
-    weekStart.setDate(today.getDate() - today.getDay() + 1);
-
+    const weekStart = getWeekStart(currentWeek);
     let totalCalories = 0;
     let totalRecipes = 0;
 
@@ -2107,6 +2104,24 @@ function CalendarPage() {
     }
 
     return { totalCalories, totalRecipes };
+  };
+
+  const getWeekStart = (date: Date) => {
+    const weekStart = new Date(date);
+    const dayOfWeek = date.getDay();
+    const diff = date.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
+    weekStart.setDate(diff);
+    return weekStart;
+  };
+
+  const getWeekDays = (weekStart: Date) => {
+    const days = [];
+    for (let i = 0; i < 7; i++) {
+      const date = new Date(weekStart);
+      date.setDate(weekStart.getDate() + i);
+      days.push(date);
+    }
+    return days;
   };
 
   const getEventsForDate = (date: Date) => {
@@ -2128,10 +2143,11 @@ function CalendarPage() {
       0
     );
 
-    // Проверяем, принадлежит ли дата текущему месяцу
-    const isCurrentMonth =
-      date.getMonth() === currentMonth.getMonth() &&
-      date.getFullYear() === currentMonth.getFullYear();
+    // Проверяем, принадлежит ли дата текущей неделе
+    const weekStart = getWeekStart(currentWeek);
+    const weekEnd = new Date(weekStart);
+    weekEnd.setDate(weekStart.getDate() + 6);
+    const isCurrentWeek = date >= weekStart && date <= weekEnd;
 
     return (
       <Box
@@ -2139,7 +2155,7 @@ function CalendarPage() {
           position: 'relative',
           minHeight: 100,
           padding: 8,
-          cursor: isCurrentMonth ? 'pointer' : 'default',
+          cursor: isCurrentWeek ? 'pointer' : 'default',
           backgroundColor: isSelected
             ? 'var(--mantine-color-teal-1)'
             : isWeekend
@@ -2150,10 +2166,10 @@ function CalendarPage() {
             : '1px solid var(--mantine-color-gray-3)',
           borderRadius: 4,
           transition: 'all 0.2s ease',
-          opacity: isCurrentMonth ? 1 : 0.4,
+          opacity: isCurrentWeek ? 1 : 0.4,
         }}
         onMouseEnter={e => {
-          if (!isSelected && isCurrentMonth) {
+          if (!isSelected && isCurrentWeek) {
             e.currentTarget.style.transform = 'scale(1.02)';
             e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.1)';
           }
@@ -2162,7 +2178,7 @@ function CalendarPage() {
           e.currentTarget.style.transform = 'scale(1)';
           e.currentTarget.style.boxShadow = 'none';
         }}
-        onClick={() => isCurrentMonth && handleDateClick(date)}
+        onClick={() => isCurrentWeek && handleDateClick(date)}
       >
         <Group justify="space-between" align="flex-start" mb={4}>
           <Text
@@ -2173,21 +2189,21 @@ function CalendarPage() {
                 ? 'teal'
                 : isWeekend
                   ? 'dimmed'
-                  : isCurrentMonth
+                  : isCurrentWeek
                     ? 'inherit'
                     : 'dimmed'
             }
           >
             {date.getDate()}
           </Text>
-          {totalCalories > 0 && isCurrentMonth && (
+          {totalCalories > 0 && isCurrentWeek && (
             <Text size="xs" c="dimmed" fw={500}>
               {totalCalories} ккал
             </Text>
           )}
         </Group>
 
-        {events.length > 0 && isCurrentMonth && (
+        {events.length > 0 && isCurrentWeek && (
           <Stack gap={2}>
             {events.slice(0, 2).map(event => {
               const mealTypeEmoji =
@@ -2230,39 +2246,8 @@ function CalendarPage() {
     );
   };
 
-  const getMonthDays = (date: Date) => {
-    const year = date.getFullYear();
-    const month = date.getMonth();
-    const firstDay = new Date(year, month, 1);
-    const lastDay = new Date(year, month + 1, 0);
-    const startDate = new Date(firstDay);
-    const firstDayOfWeek = firstDay.getDay();
-    startDate.setDate(
-      startDate.getDate() - (firstDayOfWeek === 0 ? 6 : firstDayOfWeek - 1)
-    );
-
-    const days = [];
-    const currentDate = new Date(startDate);
-
-    while (currentDate <= lastDay || currentDate.getDay() !== 1) {
-      days.push(new Date(currentDate));
-      currentDate.setDate(currentDate.getDate() + 1);
-    }
-
-    return days;
-  };
-
-  const getWeeks = (days: Date[]) => {
-    const weeks = [];
-    for (let i = 0; i < days.length; i += 7) {
-      weeks.push(days.slice(i, i + 7));
-    }
-    return weeks;
-  };
-
-  const monthDays = getMonthDays(currentMonth);
-  const weeks = getWeeks(monthDays);
-  const weekDays = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
+  const weekDays = getWeekDays(getWeekStart(currentWeek));
+  const weekDayLabels = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
 
   return (
     <Stack gap="lg" pos="relative">
@@ -2300,7 +2285,7 @@ function CalendarPage() {
       <Breadcrumbs />
 
       <Text c="dimmed">
-        Планируйте свое питание на месяц. Кликните на день, чтобы добавить
+        Планируйте свое питание на неделю. Кликните на день, чтобы добавить
         рецепт. Все рецепты из календаря можно добавить в корзину одним кликом.
         Выходные дни выделены серым цветом, а суббота и воскресенье - розовым.
       </Text>
@@ -2310,7 +2295,11 @@ function CalendarPage() {
           {/* Навигация календаря */}
           <Group justify="space-between" mb="md">
             <Title order={3}>
-              {currentMonth.toLocaleDateString('ru-RU', {
+              {getWeekStart(currentWeek).toLocaleDateString('ru-RU', {
+                day: 'numeric',
+                month: 'long',
+              })} - {new Date(getWeekStart(currentWeek).getTime() + 6 * 24 * 60 * 60 * 1000).toLocaleDateString('ru-RU', {
+                day: 'numeric',
                 month: 'long',
                 year: 'numeric',
               })}
@@ -2319,35 +2308,29 @@ function CalendarPage() {
               <Button
                 variant="light"
                 size="sm"
-                onClick={() =>
-                  setCurrentMonth(
-                    new Date(
-                      currentMonth.getFullYear(),
-                      currentMonth.getMonth() - 1
-                    )
-                  )
-                }
+                onClick={() => {
+                  const prevWeek = new Date(currentWeek);
+                  prevWeek.setDate(currentWeek.getDate() - 7);
+                  setCurrentWeek(prevWeek);
+                }}
               >
                 ←
               </Button>
               <Button
                 variant="light"
                 size="sm"
-                onClick={() => setCurrentMonth(new Date())}
+                onClick={() => setCurrentWeek(new Date())}
               >
                 Сегодня
               </Button>
               <Button
                 variant="light"
                 size="sm"
-                onClick={() =>
-                  setCurrentMonth(
-                    new Date(
-                      currentMonth.getFullYear(),
-                      currentMonth.getMonth() + 1
-                    )
-                  )
-                }
+                onClick={() => {
+                  const nextWeek = new Date(currentWeek);
+                  nextWeek.setDate(currentWeek.getDate() + 7);
+                  setCurrentWeek(nextWeek);
+                }}
               >
                 →
               </Button>
@@ -2359,7 +2342,7 @@ function CalendarPage() {
             <Stack gap="md" style={{ width: '100%' }}>
               {/* Заголовки дней недели */}
               <Grid columns={7} style={{ width: '100%' }}>
-                {weekDays.map((day, index) => (
+                {weekDayLabels.map((day, index) => (
                   <Grid.Col key={day} span={1}>
                     <Text
                       ta="center"
@@ -2375,17 +2358,13 @@ function CalendarPage() {
               </Grid>
 
               {/* Календарные дни */}
-              <Stack gap="md">
-                {weeks.map((week, weekIndex) => (
-                  <Grid columns={7} key={weekIndex} style={{ width: '100%' }}>
-                    {week.map((date, dayIndex) => (
-                      <Grid.Col key={dayIndex} span={1}>
-                        {renderDay(date)}
-                      </Grid.Col>
-                    ))}
-                  </Grid>
+              <Grid columns={7} style={{ width: '100%' }}>
+                {weekDays.map((date, dayIndex) => (
+                  <Grid.Col key={dayIndex} span={1}>
+                    {renderDay(date)}
+                  </Grid.Col>
                 ))}
-              </Stack>
+              </Grid>
             </Stack>
           </Card>
         </Grid.Col>
