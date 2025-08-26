@@ -1,6 +1,7 @@
 import { node } from '@elysiajs/node';
 import { cors } from '@elysiajs/cors';
 import { cookie } from '@elysiajs/cookie';
+import { staticPlugin } from '@elysiajs/static';
 import { Elysia, t } from 'elysia';
 import { PrismaClient } from '@prisma/client';
 import {
@@ -30,6 +31,10 @@ const app = new Elysia({ adapter: node() as any })
       exposeHeaders: ['Set-Cookie'],
     })
   )
+  .use(staticPlugin({
+    assets: 'dist/client',
+    prefix: '/'
+  }))
   // Получить все рецепты
   .get('/api/recipes', async ({ cookie }) => {
     await requireAuth({ cookie });

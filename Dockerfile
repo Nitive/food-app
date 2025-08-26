@@ -19,11 +19,11 @@ COPY . .
 # Генерируем Prisma клиент
 RUN npx prisma generate
 
-# Собираем приложение
+# Собираем фронтенд и бэкенд
 RUN pnpm run build
 
 # Продакшн образ
-FROM node:18-alpine AS production
+FROM node:22-alpine AS production
 
 # Устанавливаем pnpm
 RUN npm install -g pnpm
