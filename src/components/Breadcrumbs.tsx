@@ -36,10 +36,7 @@ export function Breadcrumbs() {
           label = 'Рецепты';
           icon = '🏠';
           break;
-        case 'cart':
-          label = 'Корзина';
-          icon = '🛒';
-          break;
+
         case 'shopping-list':
           label = 'Список покупок';
           icon = '📋';

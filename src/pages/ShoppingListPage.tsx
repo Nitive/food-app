@@ -49,9 +49,7 @@ export function ShoppingListPage() {
           {user && (
             <UserMenu
               user={user}
-              cartItems={[]}
               onLogout={handleLogout}
-              onCartClick={() => {}}
             />
           )}
         </Group>
@@ -157,14 +155,7 @@ export function ShoppingListPage() {
                 Всего товаров: {shoppingList.length}
               </Text>
               <Group gap="xs">
-                <Button
-                  variant="light"
-                  color="teal"
-                  component={Link}
-                  to="/cart"
-                >
-                  Перейти к корзине
-                </Button>
+
                 <Button
                   variant="light"
                   color="indigo"

@@ -11,7 +11,6 @@ import {
 import { useStore } from '@nanostores/react';
 import {
   $recipes,
-  $cartItems,
   $shoppingList,
   $calendarItems,
   $ingredients,
@@ -25,7 +24,6 @@ import { QuickActions } from '../components/QuickActions.js';
 
 export function StatsPage() {
   const recipes = useStore($recipes);
-  const cartItems = useStore($cartItems);
   const shoppingList = useStore($shoppingList);
   const calendarItems = useStore($calendarItems);
   const ingredients = useStore($ingredients);
@@ -40,7 +38,6 @@ export function StatsPage() {
   // Общая статистика
   const totalStats = {
     recipes: recipes.length,
-    cartItems: cartItems.length,
     shoppingList: shoppingList.length,
     calendarItems: calendarItems.length,
     ingredients: ingredients.length,
@@ -49,10 +46,6 @@ export function StatsPage() {
 
   // Статистика калорий
   const caloriesStats = {
-    totalCart: cartItems.reduce(
-      (sum: number, item: any) => sum + item.recipe.calories * item.quantity,
-      0
-    ),
     totalCalendar: calendarItems.reduce(
       (sum: number, item: any) => sum + item.recipe.calories,
       0
@@ -84,15 +77,13 @@ export function StatsPage() {
   const popularRecipes = recipes
     .map((recipe: any) => ({
       ...recipe,
-      inCartCount: cartItems.filter((item: any) => item.recipeId === recipe.id)
-        .length,
       inCalendarCount: calendarItems.filter(
         (item: any) => item.recipeId === recipe.id
       ).length,
     }))
     .sort(
       (a: any, b: any) =>
-        b.inCartCount + b.inCalendarCount - (a.inCartCount + a.inCalendarCount)
+        b.inCalendarCount - a.inCalendarCount
     )
     .slice(0, 5);
 
@@ -113,9 +104,7 @@ export function StatsPage() {
           {user && (
             <UserMenu
               user={user}
-              cartItems={cartItems}
               onLogout={handleLogout}
-              onCartClick={() => {}}
             />
           )}
         </Group>
@@ -137,12 +126,7 @@ export function StatsPage() {
         </Grid.Col>
         <Grid.Col span={3}>
           <Card withBorder p="md" style={{ textAlign: 'center' }}>
-            <Text size="xl" fw={700} c="sage">
-              {totalStats.cartItems}
-            </Text>
-            <Text size="sm" c="dimmed">
-              В корзине
-            </Text>
+
           </Card>
         </Grid.Col>
         <Grid.Col span={3}>
@@ -173,16 +157,7 @@ export function StatsPage() {
           📊 Статистика калорий
         </Title>
         <Grid>
-          <Grid.Col span={4}>
-            <Card withBorder p="sm" style={{ textAlign: 'center' }}>
-              <Text size="lg" fw={600} c="teal">
-                {caloriesStats.totalCart.toFixed(0)}
-              </Text>
-              <Text size="sm" c="dimmed">
-                Калорий в корзине
-              </Text>
-            </Card>
-          </Grid.Col>
+
           <Grid.Col span={4}>
             <Card withBorder p="sm" style={{ textAlign: 'center' }}>
               <Text size="lg" fw={600} c="indigo">
@@ -273,14 +248,9 @@ export function StatsPage() {
                     </Text>
                   </div>
                 </Group>
-                <Group gap="xs">
-                  <Text size="sm" c="sage">
-                    🛒 {recipe.inCartCount}
-                  </Text>
-                  <Text size="sm" c="indigo">
-                    📅 {recipe.inCalendarCount}
-                  </Text>
-                </Group>
+                <Text size="sm" c="indigo">
+                  📅 {recipe.inCalendarCount}
+                </Text>
               </Group>
             ))}
           </Stack>
@@ -306,8 +276,7 @@ export function StatsPage() {
             <Text size="sm" c="dimmed">
               • Статистика обновляется в реальном времени
               <br />
-              • Популярность рецептов рассчитывается по использованию в корзине
-              и календаре
+              • Популярность рецептов рассчитывается по использованию в календаре
               <br />
               • Ингредиенты с количеством менее 10 считаются заканчивающимися
               <br />• Уникальные ингредиенты - это все разные ингредиенты во

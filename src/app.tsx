@@ -44,7 +44,6 @@ import { BrowserRouter, Link, Route, Routes, useParams } from 'react-router';
 import { sumBy } from 'remeda';
 import {
   apiClient,
-  type CartItem,
   type Ingredient,
   type Recipe,
   type ShoppingListItem,
@@ -57,7 +56,7 @@ import { UserMenu } from './components/UserMenu.js';
 import { MainNavigation } from './components/MainNavigation.js';
 import { Breadcrumbs } from './components/Breadcrumbs.js';
 import { QuickActions } from './components/QuickActions.js';
-import { CartPage } from './pages/CartPage.js';
+
 import { ShoppingListPage } from './pages/ShoppingListPage.js';
 import { StatsPage } from './pages/StatsPage.js';
 import { FavoritesPage } from './pages/FavoritesPage.js';
@@ -87,8 +86,7 @@ const $loading = atom(false);
 // Состояние рецептов
 const $recipes = atom<Recipe[]>([]);
 
-// Состояние корзины
-const $cartItems = atom<CartItem[]>([]);
+
 
 // Состояние ингредиентов
 const $ingredients = atom<Ingredient[]>([]);
@@ -125,14 +123,12 @@ async function loadData() {
   try {
     const [
       recipes,
-      cartItems,
       ingredients,
       stockItems,
       shoppingList,
       calendarItems,
     ] = await Promise.all([
       apiClient.getRecipes(),
-      apiClient.getCart(),
       apiClient.getIngredients(),
       apiClient.getStock(),
       apiClient.getShoppingList(),
@@ -140,7 +136,6 @@ async function loadData() {
     ]);
 
     $recipes.set(recipes);
-    $cartItems.set(cartItems);
     $ingredients.set(ingredients);
     $stockItems.set(stockItems);
     $shoppingList.set(shoppingList);
@@ -152,43 +147,6 @@ async function loadData() {
     console.error('Ошибка загрузки данных:', error);
   } finally {
     $loading.set(false);
-  }
-}
-
-// Функции для работы с корзиной
-async function addToCart(recipeId: number) {
-  try {
-    const newItem = await apiClient.addToCart(recipeId);
-    await loadData(); // Перезагружаем данные
-  } catch (error) {
-    console.error('Ошибка добавления в корзину:', error);
-  }
-}
-
-async function updateCartQuantity(id: number, quantity: number) {
-  try {
-    await apiClient.updateCartItem(id, quantity);
-    await loadData(); // Перезагружаем данные
-  } catch (error) {
-    console.error('Ошибка обновления корзины:', error);
-  }
-}
-
-async function removeFromCart(id: number) {
-  try {
-    await apiClient.removeFromCart(id);
-    await loadData(); // Перезагружаем данные
-  } catch (error) {
-    console.error('Ошибка удаления из корзины:', error);
-  }
-}
-
-async function clearCart() {
-  try {
-    await apiClient.clearCart();
-    await loadData(); // Перезагружаем данные
-  } catch (error) {
-    console.error('Ошибка очистки корзины:', error);
   }
 }
 
@@ -223,9 +181,8 @@ function handleLogout() {
   $user.set(null);
   $isAuthenticated.set(false);
   // Очищаем все данные
-  $recipes.set([]);
-  $cartItems.set([]);
-  $ingredients.set([]);
+      $recipes.set([]);
+    $ingredients.set([]);
   $stockItems.set([]);
   $shoppingList.set([]);
   $calendarItems.set([]);
@@ -247,7 +204,7 @@ async function updateIngredientStock(ingredientId: number, amount: number) {
 
 async function clearAllData() {
   try {
-    await apiClient.clearCart();
+
     await loadData(); // Перезагружаем данные
   } catch (error) {
     console.error('Ошибка очистки данных:', error);
@@ -314,14 +271,7 @@ async function removeFromCalendar(id: number) {
   }
 }
 
-async function addCalendarToCart() {
-  try {
-    await apiClient.addCalendarToCart();
-    await loadData(); // Перезагружаем данные
-  } catch (error) {
-    console.error('Ошибка добавления календаря в корзину:', error);
-  }
-}
+
 
 // Функции для работы с модальным окном календаря
 function openAddToCalendarModal(recipe: Recipe) {
@@ -449,92 +399,7 @@ function exportShoppingListToPDF(shoppingList: ShoppingListItem[]) {
   }
 }
 
-// Функция экспорта корзины в PDF
-function exportCartToPDF(cartItems: CartItem[]) {
-  try {
-    const doc = new jsPDF();
 
-    // Заголовок
-    doc.setFontSize(20);
-    doc.setFont('helvetica', 'bold');
-    doc.text('Корзина покупок', 20, 30);
-
-    // Дата создания
-    doc.setFontSize(12);
-    doc.setFont('helvetica', 'normal');
-    const currentDate = new Date().toLocaleDateString('ru-RU', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-    });
-    doc.text(`Создан: ${currentDate}`, 20, 45);
-
-    // Список рецептов
-    doc.setFontSize(14);
-    doc.setFont('helvetica', 'bold');
-    doc.text('Рецепты:', 20, 65);
-
-    let yPosition = 80;
-    doc.setFontSize(12);
-    doc.setFont('helvetica', 'normal');
-
-    cartItems.forEach((item, index) => {
-      // Проверяем, нужно ли добавить новую страницу
-      if (yPosition > 250) {
-        doc.addPage();
-        yPosition = 30;
-      }
-
-      const recipeText = `${index + 1}. ${item.recipe.name}`;
-      const quantityText = `Количество: ${item.quantity}`;
-      const caloriesText = `Калории: ${item.recipe.calories} ккал`;
-
-      doc.text(recipeText, 25, yPosition);
-      doc.text(quantityText, 25, yPosition + 8);
-      doc.text(caloriesText, 25, yPosition + 16);
-
-      yPosition += 30;
-    });
-
-    // Итого
-    if (cartItems.length > 0) {
-      const totalCalories = cartItems.reduce(
-        (sum, item) => sum + item.recipe.calories * item.quantity,
-        0
-      );
-      const totalProteins = cartItems.reduce(
-        (sum, item) => sum + item.recipe.proteins * item.quantity,
-        0
-      );
-      const totalFats = cartItems.reduce(
-        (sum, item) => sum + item.recipe.fats * item.quantity,
-        0
-      );
-      const totalCarbs = cartItems.reduce(
-        (sum, item) => sum + item.recipe.carbohydrates * item.quantity,
-        0
-      );
-
-      doc.setFontSize(14);
-      doc.setFont('helvetica', 'bold');
-      doc.text('Итого:', 20, yPosition + 10);
-      doc.setFontSize(12);
-      doc.setFont('helvetica', 'normal');
-      doc.text(`Рецептов: ${cartItems.length}`, 25, yPosition + 25);
-      doc.text(`Калории: ${totalCalories.toFixed(1)} ккал`, 25, yPosition + 35);
-      doc.text(`Белки: ${totalProteins.toFixed(1)}г`, 25, yPosition + 45);
-      doc.text(`Жиры: ${totalFats.toFixed(1)}г`, 25, yPosition + 55);
-      doc.text(`Углеводы: ${totalCarbs.toFixed(1)}г`, 25, yPosition + 65);
-    }
-
-    // Сохраняем файл
-    const fileName = `cart-${new Date().toISOString().split('T')[0]}.pdf`;
-    doc.save(fileName);
-  } catch (error) {
-    console.error('Ошибка экспорта корзины в PDF:', error);
-    alert('Ошибка при создании PDF файла');
-  }
-}
 
 // Функция экспорта календаря в PDF
 function exportCalendarToPDF(calendarItems: CalendarItem[]) {
@@ -647,7 +512,6 @@ function exportCalendarToPDF(calendarItems: CalendarItem[]) {
 
 function RecipesPage() {
   const recipes = useStore($recipes);
-  const cartItems = useStore($cartItems);
   const shoppingList = useStore($shoppingList);
   const favoriteRecipes = useStore($favoriteRecipes);
   const loading = useStore($loading);
@@ -661,24 +525,7 @@ function RecipesPage() {
   );
   const [viewMode, setViewMode] = React.useState<'cards' | 'table'>('cards');
 
-  const stats = {
-    calories: sumBy(
-      cartItems,
-      r => (r?.recipe?.calories || 0) * (r?.quantity || 0)
-    ).toFixed(1),
-    proteins: sumBy(
-      cartItems,
-      r => (r?.recipe?.proteins || 0) * (r?.quantity || 0)
-    ).toFixed(1),
-    fats: sumBy(
-      cartItems,
-      r => (r?.recipe?.fats || 0) * (r?.quantity || 0)
-    ).toFixed(1),
-    carbohydrates: sumBy(
-      cartItems,
-      r => (r?.recipe?.carbohydrates || 0) * (r?.quantity || 0)
-    ).toFixed(1),
-  };
+
 
   // Фильтрация и сортировка рецептов
   const filteredAndSortedRecipes = React.useMemo(() => {
@@ -730,21 +577,15 @@ function RecipesPage() {
         case 'calories':
           return a.calories - b.calories;
         case 'popularity':
-          // Простая логика популярности на основе количества в корзине
-          const aInCart = cartItems.filter(
-            item => item.recipeId === a.id
-          ).length;
-          const bInCart = cartItems.filter(
-            item => item.recipeId === b.id
-          ).length;
-          return bInCart - aInCart;
+          // Простая логика популярности на основе калорий
+          return b.calories - a.calories;
         default:
           return 0;
       }
     });
 
     return filtered;
-  }, [recipes, searchQuery, filterCategory, sortBy, cartItems]);
+  }, [recipes, searchQuery, filterCategory, sortBy]);
 
   // Статистика всех рецептов
   const allRecipesStats = {
@@ -756,7 +597,6 @@ function RecipesPage() {
           ).toFixed(0)
         : '0',
     totalIngredients: recipes.reduce((sum, r) => sum + r.ingredients.length, 0),
-    inCart: cartItems.length,
   };
 
   return (
@@ -775,11 +615,7 @@ function RecipesPage() {
           {user && (
             <UserMenu
               user={user}
-              cartItems={cartItems}
               onLogout={handleLogout}
-              onCartClick={() => {
-                window.location.href = '/cart';
-              }}
             />
           )}
         </Group>
@@ -881,16 +717,7 @@ function RecipesPage() {
             </Text>
           </Card>
         </Grid.Col>
-        <Grid.Col span={3}>
-          <Card withBorder p="md" style={{ textAlign: 'center' }}>
-            <Text size="xl" fw={700} c="indigo">
-              {allRecipesStats.inCart}
-            </Text>
-            <Text size="sm" c="dimmed">
-              В корзине
-            </Text>
-          </Card>
-        </Grid.Col>
+
       </Grid>
 
       {/* Отображение рецептов */}
@@ -947,17 +774,7 @@ function RecipesPage() {
                           <HeartIcon size={16} />
                         )}
                       </ActionIcon>
-                      <ActionIcon
-                        variant="light"
-                        color="teal"
-                        onClick={e => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          addToCart(recipe.id);
-                        }}
-                      >
-                        <PlusIcon size={16} />
-                      </ActionIcon>
+
                     </Group>
                   </Group>
 
@@ -1072,7 +889,6 @@ function RecipesPage() {
 function IngredientsPage() {
   const ingredients = useStore($ingredients);
   const stockItems = useStore($stockItems);
-  const cartItems = useStore($cartItems);
   const loading = useStore($loading);
   const user = useStore($user);
   const [searchQuery, setSearchQuery] = React.useState('');
@@ -1243,17 +1059,13 @@ function IngredientsPage() {
           <QuickActions
             showCreateIngredient={true}
             showClear={true}
-            onClearData={clearCart}
+
             clearLabel="Очистить все данные"
           />
           {user && (
             <UserMenu
               user={user}
-              cartItems={cartItems}
               onLogout={handleLogout}
-              onCartClick={() => {
-                window.location.href = '/cart';
-              }}
             />
           )}
         </Group>
@@ -2122,7 +1934,6 @@ function CreateIngredientForm() {
 function CalendarPage() {
   const recipes = useStore($recipes);
   const calendarItems = useStore($calendarItems);
-  const cartItems = useStore($cartItems);
   const loading = useStore($loading);
   const user = useStore($user);
   const [selectedDate, setSelectedDate] = React.useState<Date | null>(null);
@@ -2388,22 +2199,11 @@ function CalendarPage() {
             onExportPDF={() => exportCalendarToPDF(calendarItems)}
             exportLabel="Экспорт календаря"
           />
-          <Button
-            variant="light"
-            color="teal"
-            onClick={addCalendarToCart}
-            disabled={calendarItems.length === 0}
-          >
-            Добавить все в корзину
-          </Button>
+
           {user && (
             <UserMenu
               user={user}
-              cartItems={cartItems}
               onLogout={handleLogout}
-              onCartClick={() => {
-                window.location.href = '/cart';
-              }}
             />
           )}
         </Group>
@@ -2785,13 +2585,7 @@ function Recipe() {
           >
             ❤️
           </ActionIcon>
-          <Button
-            variant="light"
-            color="blue"
-            onClick={() => addToCart(recipe.id)}
-          >
-            Добавить в корзину
-          </Button>
+
         </Group>
       </Group>
 
@@ -3025,15 +2819,7 @@ function Recipe() {
               Действия
             </Title>
             <Group gap="md">
-              <Button
-                variant="filled"
-                color="blue"
-                leftSection="🛒"
-                onClick={() => addToCart(recipe.id)}
-                size="lg"
-              >
-                Добавить в корзину
-              </Button>
+
               <Button
                 variant="light"
                 color="green"
@@ -3184,7 +2970,7 @@ function App() {
                 <Route index element={<RecipesPage />} />
                 <Route path="recipes" element={<RecipesPage />} />
                 <Route path="favorites" element={<FavoritesPage />} />
-                <Route path="cart" element={<CartPage />} />
+
                 <Route path="shopping-list" element={<ShoppingListPage />} />
                 <Route path="ingredients" element={<IngredientsPage />} />
                 <Route path="calendar" element={<CalendarPage />} />
@@ -3211,7 +2997,6 @@ function App() {
 export {
   $loading,
   $recipes,
-  $cartItems,
   $ingredients,
   $stockItems,
   $shoppingList,
@@ -3224,14 +3009,12 @@ export {
   $user,
   $isAuthenticated,
   exportShoppingListToPDF,
-  exportCartToPDF,
   exportCalendarToPDF,
   toggleFavoriteRecipe,
   isRecipeFavorite,
   openAddToCalendarModal,
   closeAddToCalendarModal,
   handleAddToCalendarConfirm,
-  addToCart,
   getIngredientStock,
 };
 

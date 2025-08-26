@@ -12,7 +12,6 @@ import { Link, useLocation } from 'react-router-dom';
 import { useStore } from '@nanostores/react';
 import {
   $recipes,
-  $cartItems,
   $shoppingList,
   $calendarItems,
   $ingredients,
@@ -31,7 +30,6 @@ interface NavigationItem {
 export function MainNavigation() {
   const location = useLocation();
   const recipes = useStore($recipes);
-  const cartItems = useStore($cartItems);
   const shoppingList = useStore($shoppingList);
   const calendarItems = useStore($calendarItems);
   const ingredients = useStore($ingredients);
@@ -53,13 +51,7 @@ export function MainNavigation() {
       badge: favoriteRecipes.length,
       color: 'pink',
     },
-    {
-      path: '/cart',
-      icon: '🛒',
-      label: 'Корзина',
-      badge: cartItems.length,
-      color: 'sage',
-    },
+
     {
       path: '/shopping-list',
       icon: '📋',

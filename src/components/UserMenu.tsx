@@ -1,20 +1,16 @@
 import React from 'react';
 import { Menu, Avatar, Text, Group, ActionIcon, Badge } from '@mantine/core';
 import { SignOutIcon } from '@primer/octicons-react';
-import { apiClient, type User, type CartItem } from '../api-client.js';
+import { apiClient, type User } from '../api-client.js';
 
 interface UserMenuProps {
   user: User;
-  cartItems: CartItem[];
   onLogout: () => void;
-  onCartClick: () => void;
 }
 
 export function UserMenu({
   user,
-  cartItems,
   onLogout,
-  onCartClick,
 }: UserMenuProps) {
   const handleLogout = async () => {
     try {
@@ -27,15 +23,6 @@ export function UserMenu({
     }
   };
 
-  // Вычисляем статистику корзины
-  const cartStats = {
-    totalItems: cartItems.length,
-    totalCalories: cartItems.reduce(
-      (sum, item) => sum + item.recipe.calories * item.quantity,
-      0
-    ),
-  };
-
   return (
     <Menu shadow="md" width={200}>
       <Menu.Target>
@@ -46,24 +33,6 @@ export function UserMenu({
             size="sm"
             radius="xl"
           />
-          {cartItems.length > 0 && (
-            <Badge
-              size="xs"
-              color="teal"
-              variant="filled"
-              style={{
-                position: 'absolute',
-                top: -5,
-                right: -5,
-                minWidth: '18px',
-                height: '18px',
-                fontSize: '10px',
-                padding: '0 4px',
-              }}
-            >
-              {cartItems.length}
-            </Badge>
-          )}
         </ActionIcon>
       </Menu.Target>
 
@@ -87,25 +56,7 @@ export function UserMenu({
           </Group>
         </Menu.Item>
 
-        <Menu.Divider />
 
-        {/* Информация о корзине */}
-        <Menu.Item
-          leftSection={<span style={{ fontSize: '14px' }}>🛒</span>}
-          onClick={onCartClick}
-          style={{ cursor: 'pointer' }}
-        >
-          <Group justify="space-between" w="100%">
-            <Text size="sm">Корзина</Text>
-            {cartItems.length > 0 && (
-              <Badge size="xs" color="teal" variant="light">
-                {cartItems.length} ({cartStats.totalCalories.toFixed(0)} ккал)
-              </Badge>
-            )}
-          </Group>
-        </Menu.Item>
-
-        <Menu.Divider />
 
         <Menu.Item
           color="rose"

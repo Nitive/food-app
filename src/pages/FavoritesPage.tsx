@@ -28,7 +28,6 @@ import {
 import { useStore } from '@nanostores/react';
 import {
   $favoriteRecipes,
-  $cartItems,
   $user,
   toggleFavoriteRecipe,
   openAddToCalendarModal,
@@ -42,17 +41,13 @@ import type { Recipe } from '../api-client.js';
 
 export function FavoritesPage() {
   const favoriteRecipes = useStore($favoriteRecipes);
-  const cartItems = useStore($cartItems);
   const user = useStore($user);
   const [searchQuery, setSearchQuery] = React.useState('');
   const [sortBy, setSortBy] = React.useState<'name' | 'calories' | 'proteins'>(
     'name'
   );
 
-  const onCartClick = () => {
-    // Перенаправляем на страницу корзины
-    window.location.href = '/cart';
-  };
+
 
   // Фильтрация и сортировка любимых рецептов
   const filteredAndSortedRecipes = React.useMemo(() => {
@@ -102,8 +97,6 @@ export function FavoritesPage() {
           <UserMenu
             user={user}
             onLogout={() => {}}
-            cartItems={cartItems}
-            onCartClick={onCartClick}
           />
         )}
         <Breadcrumbs />
@@ -144,8 +137,6 @@ export function FavoritesPage() {
         <UserMenu
           user={user}
           onLogout={() => {}}
-          cartItems={cartItems}
-          onCartClick={onCartClick}
         />
       )}
       <Breadcrumbs />
