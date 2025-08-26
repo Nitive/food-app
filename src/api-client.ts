@@ -50,6 +50,16 @@ export interface ShoppingListItem {
   amountType: string;
 }
 
+export interface ShoppingListResponse {
+  items: ShoppingListItem[];
+  date: string;
+  recipes: {
+    id: number;
+    name: string;
+    mealType: string;
+  }[];
+}
+
 export interface CalendarItem {
   id: number;
   date: Date;
@@ -175,9 +185,11 @@ export const apiClient = {
     return data as unknown as StockItem | { deleted: boolean };
   },
 
-  async getShoppingList(): Promise<ShoppingListItem[]> {
-    const { data } = await client.api['shopping-list'].get();
-    return data || [];
+  async getShoppingList(date?: string): Promise<ShoppingListResponse> {
+    const params = date ? { query: { date } } : {};
+    const { data } = await client.api['shopping-list'].get(params);
+    const defaultDate = date || new Date().toISOString().split('T')[0];
+    return (data as ShoppingListResponse) || { items: [], date: defaultDate, recipes: [] };
   },
 
   async getCalendar(): Promise<CalendarItem[]> {

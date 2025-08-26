@@ -47,6 +47,7 @@ import {
   type Ingredient,
   type Recipe,
   type ShoppingListItem,
+  type ShoppingListResponse,
   type StockItem,
   type CalendarItem,
   type User,
@@ -95,7 +96,7 @@ const $ingredients = atom<Ingredient[]>([]);
 const $stockItems = atom<StockItem[]>([]);
 
 // Состояние списка покупок
-const $shoppingList = atom<ShoppingListItem[]>([]);
+const $shoppingList = atom<ShoppingListResponse>({ items: [], date: '', recipes: [] });
 
 // Состояние календаря
 const $calendarItems = atom<CalendarItem[]>([]);
@@ -131,7 +132,7 @@ async function loadData() {
       apiClient.getRecipes(),
       apiClient.getIngredients(),
       apiClient.getStock(),
-      apiClient.getShoppingList(),
+      apiClient.getShoppingList(), // По умолчанию для сегодняшней даты
       apiClient.getCalendar(),
     ]);
 
@@ -184,7 +185,7 @@ function handleLogout() {
       $recipes.set([]);
     $ingredients.set([]);
   $stockItems.set([]);
-  $shoppingList.set([]);
+      $shoppingList.set({ items: [], date: '', recipes: [] });
   $calendarItems.set([]);
   $favoriteRecipes.set([]);
   // Очищаем localStorage

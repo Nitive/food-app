@@ -38,7 +38,7 @@ export function StatsPage() {
   // Общая статистика
   const totalStats = {
     recipes: recipes.length,
-    shoppingList: shoppingList.length,
+    shoppingList: shoppingList.items.length,
     calendarItems: calendarItems.length,
     ingredients: ingredients.length,
     stockItems: stockItems.length,

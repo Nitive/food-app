@@ -56,7 +56,7 @@ export function MainNavigation() {
       path: '/shopping-list',
       icon: '📋',
       label: 'Список покупок',
-      badge: shoppingList.length,
+      badge: shoppingList.items.length,
       color: 'amber',
     },
     {

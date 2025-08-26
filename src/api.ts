@@ -471,10 +471,23 @@ const app = new Elysia({ adapter: node() as any })
     }
   )
 
-  // Получить список покупок
-  .get('/api/shopping-list', async ({ cookie }) => {
+  // Получить список покупок для конкретной даты
+  .get('/api/shopping-list', async ({ query, cookie }) => {
     await requireAuth({ cookie });
-    const cartItems = await prisma.cartItem.findMany({
+    
+    // Получаем дату из query параметров, по умолчанию сегодня
+    const dateParam = query.date;
+    const targetDate = dateParam ? new Date(dateParam) : new Date();
+    const dateString = targetDate.toISOString().split('T')[0];
+
+    // Получаем рецепты из календаря на указанную дату
+    const calendarItems = await prisma.calendarItem.findMany({
+      where: {
+        date: {
+          gte: new Date(dateString + 'T00:00:00Z'),
+          lt: new Date(dateString + 'T23:59:59Z'),
+        },
+      },
       include: {
         recipe: {
           include: {
@@ -500,7 +513,7 @@ const app = new Elysia({ adapter: node() as any })
       { amount: number; amountType: string }
     >();
 
-    cartItems.forEach(item => {
+    calendarItems.forEach(item => {
       item.recipe.ingredients.forEach(ri => {
         const key = ri.ingredient.name;
         const current = neededIngredients.get(key) || {
@@ -508,7 +521,7 @@ const app = new Elysia({ adapter: node() as any })
           amountType: ri.ingredient.amountType,
         };
         neededIngredients.set(key, {
-          amount: current.amount + ri.amount * item.quantity,
+          amount: current.amount + ri.amount,
           amountType: ri.ingredient.amountType,
         });
       });
@@ -531,11 +544,19 @@ const app = new Elysia({ adapter: node() as any })
       }
     });
 
-    return Array.from(neededIngredients.entries()).map(([name, data]) => ({
-      name,
-      amount: data.amount,
-      amountType: data.amountType,
-    }));
+    return {
+      items: Array.from(neededIngredients.entries()).map(([name, data]) => ({
+        name,
+        amount: data.amount,
+        amountType: data.amountType,
+      })),
+      date: dateString,
+      recipes: calendarItems.map(item => ({
+        id: item.recipe.id,
+        name: item.recipe.name,
+        mealType: item.mealType,
+      })),
+    };
   })
 
   // Получить календарь планирования
