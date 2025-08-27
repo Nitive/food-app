@@ -2,7 +2,7 @@
   email wild.pin7224@nitive.me
   servers :8080,:8443 {
     protocols h1 h2c
-    trusted_proxies static {$TRUSTED_PROXIES} 127.0.0.1/32
+    trusted_proxies static {$TRUSTED_PROXIES}
     trusted_proxies_strict
   }
 
@@ -39,9 +39,7 @@
 
 (protect_ip) {
     @protect_ip {
-        path /internal/*
-        # Trusted
-        not client_ip {$TRUSTED_PROXIES} 127.0.0.1/32
+        not remote_ip {$TRUSTED_PROXIES}
     }
 
     respond @protect_ip "IP is not allowed" 401
