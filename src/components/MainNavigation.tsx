@@ -40,7 +40,7 @@ export function MainNavigation() {
     {
       path: '/public-recipes',
       icon: '🌍',
-      label: 'Общедоступные рецепты',
+      label: 'Все рецепты',
       color: 'blue',
     },
     {

@@ -62,13 +62,16 @@ const app = new Elysia({ adapter: node() as any })
       exposeHeaders: ['Set-Cookie'],
     })
   )
-  // Получить все рецепты
+  // Получить все рецепты (личные + публичные)
   .get('/api/recipes', async ({ cookie }) => {
     const user = await requireAuth({ cookie })
 
     const recipes = await prisma.recipe.findMany({
       where: {
-        authorId: user.user.id, // Только рецепты текущего пользователя
+        OR: [
+          { authorId: user.user.id }, // Личные рецепты пользователя
+          { authorId: null }, // Публичные рецепты
+        ],
       },
       include: {
         ingredients: {
@@ -112,12 +115,22 @@ const app = new Elysia({ adapter: node() as any })
     const recipe = await prisma.recipe.findUnique({
       where: { 
         id: parseInt(params.id),
-        authorId: user.user.id, // Только рецепты пользователя
+        OR: [
+          { authorId: user.user.id }, // Личные рецепты пользователя
+          { authorId: null }, // Публичные рецепты
+        ],
       },
       include: {
         ingredients: {
           include: {
             ingredient: true,
+          },
+        },
+        author: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
           },
         },
       },
@@ -137,6 +150,8 @@ const app = new Elysia({ adapter: node() as any })
       instructions: recipe.instructions,
       cookingTime: recipe.cookingTime,
       difficulty: recipe.difficulty,
+      authorId: recipe.authorId,
+      author: recipe.author,
       ingredients: recipe.ingredients.map((ri) => ({
         name: ri.ingredient.name,
         amount: ri.amount,
@@ -1385,7 +1400,10 @@ const app = new Elysia({ adapter: node() as any })
 
     // Построение условий фильтрации
     const where: any = {
-      authorId: null, // Только общедоступные рецепты
+      OR: [
+        { authorId: null }, // Публичные рецепты
+        { authorId: 1 }, // Рецепты Elizaveta Smirnova (ID: 1)
+      ],
     }
 
     // Поиск по названию
@@ -1431,6 +1449,13 @@ const app = new Elysia({ adapter: node() as any })
             ingredient: true,
           },
         },
+        author: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
       },
     })
 
@@ -1463,6 +1488,7 @@ const app = new Elysia({ adapter: node() as any })
       cookingTime: recipe.cookingTime,
       difficulty: recipe.difficulty,
       authorId: recipe.authorId,
+      author: recipe.author,
       ingredients: recipe.ingredients.map((ri) => ({
         name: ri.ingredient.name,
         amount: ri.amount,
@@ -1487,8 +1513,9 @@ const app = new Elysia({ adapter: node() as any })
         throw new Error('Рецепт не найден')
       }
 
-      if (existingRecipe.authorId !== null) {
-        throw new Error('Можно редактировать только общедоступные рецепты')
+      // Разрешаем редактирование общедоступных рецептов и рецептов Elizaveta Smirnova
+      if (existingRecipe.authorId !== null && existingRecipe.authorId !== 1) {
+        throw new Error('Можно редактировать только общедоступные рецепты и рецепты Elizaveta Smirnova')
       }
 
       const { name, calories, proteins, fats, carbohydrates, instructions, cookingTime, difficulty } = body
@@ -1563,8 +1590,9 @@ const app = new Elysia({ adapter: node() as any })
       throw new Error('Рецепт не найден')
     }
 
-    if (existingRecipe.authorId !== null) {
-      throw new Error('Можно удалять только общедоступные рецепты')
+    // Разрешаем удаление общедоступных рецептов и рецептов Elizaveta Smirnova
+    if (existingRecipe.authorId !== null && existingRecipe.authorId !== 1) {
+      throw new Error('Можно удалять только общедоступные рецепты и рецепты Elizaveta Smirnova')
     }
 
     // Удаляем рецепт (каскадное удаление ингредиентов произойдет автоматически)

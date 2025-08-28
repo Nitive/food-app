@@ -225,7 +225,7 @@ export function PublicRecipesPage() {
   return (
     <Container size="xl" py="md">
       <Title order={1} mb="lg">
-        🍽️ Общедоступные рецепты
+        🍽️ Все рецепты
       </Title>
 
       {/* Фильтры */}
@@ -410,7 +410,7 @@ export function PublicRecipesPage() {
                     <Badge color={getCategoryColor(recipe.calories)}>
                       {recipe.calories} ккал
                     </Badge>
-                                         <Badge color={getDifficultyColor(recipe.difficulty || null)}>
+                    <Badge color={getDifficultyColor(recipe.difficulty || null)}>
                       {recipe.difficulty || 'Не указано'}
                     </Badge>
                     {recipe.cookingTime && (
@@ -419,6 +419,13 @@ export function PublicRecipesPage() {
                       </Badge>
                     )}
                   </Group>
+
+                  {/* Информация об авторе */}
+                  {recipe.author && (
+                    <Text size="xs" c="dimmed">
+                      👤 Автор: {recipe.author.name || recipe.author.email}
+                    </Text>
+                  )}
 
                   <Group gap="xs">
                     <Text size="sm" c="dimmed">
@@ -491,6 +498,16 @@ export function PublicRecipesPage() {
                 ))}
               </List>
             </Box>
+
+            {/* Информация об авторе */}
+            {selectedRecipe.author && (
+              <Box>
+                <Title order={5} mb="sm">Автор:</Title>
+                <Text>
+                  {selectedRecipe.author.name || selectedRecipe.author.email}
+                </Text>
+              </Box>
+            )}
 
             <Divider />
 
