@@ -253,6 +253,16 @@ async function deleteIngredient(id: number) {
   }
 }
 
+// Функция для обновления списка покупок
+async function updateShoppingList(date: string) {
+  try {
+    const shoppingList = await apiClient.getShoppingList(date)
+    $shoppingList.set(shoppingList)
+  } catch (error) {
+    console.error('Ошибка обновления списка покупок:', error)
+  }
+}
+
 // Функции для работы с календарем
 async function addToCalendar(date: string, recipeId: number, mealType: string) {
   try {
@@ -261,6 +271,9 @@ async function addToCalendar(date: string, recipeId: number, mealType: string) {
     // Добавляем новый элемент в локальное состояние
     const currentCalendarItems = $calendarItems.get()
     $calendarItems.set([...currentCalendarItems, newCalendarItem])
+
+    // Обновляем список покупок для новой даты
+    await updateShoppingList(date)
   } catch (error) {
     console.error('Ошибка добавления в календарь:', error)
   }
@@ -273,6 +286,12 @@ async function removeFromCalendar(id: number) {
     // Удаляем элемент из локального состояния
     const currentCalendarItems = $calendarItems.get()
     $calendarItems.set(currentCalendarItems.filter((item) => item.id !== id))
+
+    // Обновляем список покупок для текущей даты
+    const currentDate = new Date().toISOString().split('T')[0]
+    if (currentDate) {
+      await updateShoppingList(currentDate)
+    }
   } catch (error) {
     console.error('Ошибка удаления из календаря:', error)
   }
@@ -2249,11 +2268,19 @@ function CalendarPage() {
       }
 
       try {
-        // Удаляем рецепт с исходной даты
-        await removeFromCalendar(draggedItem.id)
+        // Обновляем элемент календаря на новую дату
+        const updatedItem = await apiClient.updateCalendarItem(draggedItem.id, targetDateString, draggedItem.mealType)
 
-        // Добавляем рецепт на новую дату
-        await addToCalendar(targetDateString, draggedItem.recipeId, draggedItem.mealType)
+        // Обновляем локальное состояние
+        const currentCalendarItems = $calendarItems.get()
+        const updatedCalendarItems = currentCalendarItems.map((item) =>
+          item.id === draggedItem.id ? updatedItem : item
+        )
+        $calendarItems.set(updatedCalendarItems)
+
+        // Обновляем список покупок для обеих дат
+        await updateShoppingList(targetDateString)
+        await updateShoppingList(originalDateString)
 
         setDraggedItem(null)
       } catch (error) {
@@ -3307,6 +3334,7 @@ export {
   openProfileModal,
   openProfileReminderModal,
   toggleFavoriteRecipe,
+  updateShoppingList,
 }
 
 export default App

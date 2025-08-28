@@ -272,6 +272,12 @@ export const apiClient = {
     return data as unknown as { deleted: boolean }
   },
 
+  async updateCalendarItem(id: number, date: string, mealType?: string): Promise<CalendarItem> {
+    const { data } = await client.api.calendar({ id }).put({ date, mealType })
+    if (!data) throw new Error('Failed to update calendar item')
+    return data as unknown as CalendarItem
+  },
+
   async addCalendarToCart(): Promise<CartItem[]> {
     const { data } = await client.api.calendar['add-to-cart'].post()
     if (!data) throw new Error('Failed to add calendar to cart')

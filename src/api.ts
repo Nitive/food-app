@@ -43,7 +43,7 @@ const app = new Elysia({ adapter: node() as any })
   .use(cookie())
   .use(
     cors({
-      origin: ['http://localhost:3000', 'http://127.0.0.1:3000'],
+      origin: ['http://localhost:5173', 'http://127.0.0.1:5173'],
       credentials: true,
       methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
       allowedHeaders: ['Content-Type', 'Authorization', 'Cookie'],
@@ -639,16 +639,17 @@ const app = new Elysia({ adapter: node() as any })
 
   // Получить список покупок для конкретной даты
   .get('/api/shopping-list', async ({ query, cookie }) => {
-    await requireAuth({ cookie })
+    const user = await requireAuth({ cookie })
 
     // Получаем дату из query параметров, по умолчанию сегодня
     const dateParam = query.date
     const targetDate = dateParam ? new Date(dateParam) : new Date()
     const dateString = targetDate.toISOString().split('T')[0]
 
-    // Получаем рецепты из календаря на указанную дату
+    // Получаем рецепты из календаря на указанную дату для конкретного пользователя
     const calendarItems = await prisma.calendarItem.findMany({
       where: {
+        userId: user.user.id,
         date: {
           gte: new Date(dateString + 'T00:00:00Z'),
           lt: new Date(dateString + 'T23:59:59Z'),
@@ -823,6 +824,77 @@ const app = new Elysia({ adapter: node() as any })
     })
     return { deleted: true }
   })
+
+  // Обновить элемент календаря (переместить на другую дату)
+  .put(
+    '/api/calendar/:id',
+    async ({ params, body, cookie }) => {
+      const user = await requireAuth({ cookie })
+      const { date, mealType } = body
+      const id = parseInt(params.id)
+
+      // Проверяем, существует ли элемент календаря
+      const existingItem = await prisma.calendarItem.findFirst({
+        where: {
+          id,
+          userId: user.user.id,
+        },
+      })
+
+      if (!existingItem) {
+        throw new Error('Calendar item not found')
+      }
+
+      // Проверяем, есть ли уже рецепт на новую дату для этого приема пищи
+      const conflictingItem = await prisma.calendarItem.findFirst({
+        where: {
+          date: new Date(date),
+          recipeId: existingItem.recipeId,
+          mealType: mealType || existingItem.mealType,
+          userId: user.user.id,
+          id: { not: id }, // Исключаем текущий элемент
+        },
+      })
+
+      if (conflictingItem) {
+        throw new Error('Этот рецепт уже добавлен на эту дату для этого приема пищи')
+      }
+
+      // Обновляем элемент календаря
+      const updatedItem = await prisma.calendarItem.update({
+        where: { id },
+        data: {
+          date: new Date(date),
+          mealType: mealType || existingItem.mealType,
+        },
+        include: {
+          recipe: true,
+        },
+      })
+
+      return {
+        id: updatedItem.id,
+        date: updatedItem.date,
+        mealType: updatedItem.mealType,
+        recipeId: updatedItem.recipeId,
+        userId: updatedItem.userId,
+        recipe: {
+          id: updatedItem.recipe.id,
+          name: updatedItem.recipe.name,
+          calories: updatedItem.recipe.calories,
+          proteins: updatedItem.recipe.proteins,
+          fats: updatedItem.recipe.fats,
+          carbohydrates: updatedItem.recipe.carbohydrates,
+        },
+      }
+    },
+    {
+      body: t.Object({
+        date: t.String(),
+        mealType: t.Optional(t.String()),
+      }),
+    }
+  )
 
   // Добавить все рецепты из календаря в корзину
   .post('/api/calendar/add-to-cart', async ({ cookie }) => {

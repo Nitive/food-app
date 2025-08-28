@@ -5,7 +5,7 @@ import { CheckCircleFillIcon } from '@primer/octicons-react'
 import React from 'react'
 import { Link } from 'react-router-dom'
 import { apiClient } from '../api-client.js'
-import { $loading, $shoppingList, $user, exportShoppingListToPDF, openProfileModal } from '../app.js'
+import { $loading, $shoppingList, $user, exportShoppingListToPDF, openProfileModal, updateShoppingList } from '../app.js'
 import { Breadcrumbs } from '../components/Breadcrumbs.js'
 import { QuickActions } from '../components/QuickActions.js'
 import { UserMenu } from '../components/UserMenu.js'
@@ -25,8 +25,7 @@ export function ShoppingListPage() {
       const date = new Date(dateString)
       setSelectedDate(date)
       try {
-        const newShoppingList = await apiClient.getShoppingList(dateString)
-        $shoppingList.set(newShoppingList)
+        await updateShoppingList(dateString)
       } catch (error) {
         console.error('Ошибка загрузки списка покупок:', error)
       }
