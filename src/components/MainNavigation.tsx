@@ -38,6 +38,12 @@ export function MainNavigation() {
       color: 'teal',
     },
     {
+      path: '/public-recipes',
+      icon: '🌍',
+      label: 'Общедоступные рецепты',
+      color: 'blue',
+    },
+    {
       path: '/favorites',
       icon: '❤️',
       label: 'Сохраненные рецепты',

@@ -273,7 +273,11 @@ export const apiClient = {
   },
 
   async updateCalendarItem(id: number, date: string, mealType?: string): Promise<CalendarItem> {
-    const { data } = await client.api.calendar({ id }).put({ date, mealType })
+    const payload: { date: string; mealType?: string } = { date }
+    if (mealType) {
+      payload.mealType = mealType
+    }
+    const { data } = await client.api.calendar({ id }).put(payload)
     if (!data) throw new Error('Failed to update calendar item')
     return data as unknown as CalendarItem
   },
@@ -351,5 +355,21 @@ export const apiClient = {
     const { data } = await client.api.profile.put(profileData)
     if (!data) throw new Error('Failed to update user profile')
     return data as unknown as User
+  },
+
+  // Public Recipes functions
+  async getPublicRecipes(params?: {
+    search?: string
+    category?: 'low' | 'medium' | 'high'
+    maxCalories?: number
+    minCalories?: number
+    difficulty?: string
+    maxCookingTime?: number
+    sortBy?: 'name' | 'calories' | 'cookingTime' | 'difficulty'
+    sortOrder?: 'asc' | 'desc'
+  }): Promise<Recipe[]> {
+    const queryParams = params ? { query: params } : {}
+    const { data } = await client.api.public.recipes.get(queryParams)
+    return data || []
   },
 }

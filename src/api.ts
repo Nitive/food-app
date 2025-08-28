@@ -52,9 +52,12 @@ const app = new Elysia({ adapter: node() as any })
   )
   // Получить все рецепты
   .get('/api/recipes', async ({ cookie }) => {
-    await requireAuth({ cookie })
+    const user = await requireAuth({ cookie })
 
     const recipes = await prisma.recipe.findMany({
+      where: {
+        authorId: user.user.id, // Только рецепты текущего пользователя
+      },
       include: {
         ingredients: {
           include: {
@@ -93,9 +96,12 @@ const app = new Elysia({ adapter: node() as any })
 
   // Получить рецепт по ID
   .get('/api/recipes/:id', async ({ params, cookie }) => {
-    await requireAuth({ cookie })
+    const user = await requireAuth({ cookie })
     const recipe = await prisma.recipe.findUnique({
-      where: { id: parseInt(params.id) },
+      where: { 
+        id: parseInt(params.id),
+        authorId: user.user.id, // Только рецепты пользователя
+      },
       include: {
         ingredients: {
           include: {
@@ -225,13 +231,16 @@ const app = new Elysia({ adapter: node() as any })
   .put(
     '/api/recipes/:id',
     async ({ params, body, cookie }) => {
-      await requireAuth({ cookie })
+      const user = await requireAuth({ cookie })
       const id = parseInt(params.id)
       const { name, calories, proteins, fats, carbohydrates, instructions, cookingTime, difficulty, ingredients } = body
 
-      // Проверяем, существует ли рецепт
+      // Проверяем, существует ли рецепт и принадлежит ли он пользователю
       const existingRecipe = await prisma.recipe.findUnique({
-        where: { id },
+        where: { 
+          id,
+          authorId: user.user.id, // Только рецепты пользователя
+        },
       })
 
       if (!existingRecipe) {
@@ -362,12 +371,15 @@ const app = new Elysia({ adapter: node() as any })
 
   // Удалить рецепт
   .delete('/api/recipes/:id', async ({ params, cookie }) => {
-    await requireAuth({ cookie })
+    const user = await requireAuth({ cookie })
     const id = parseInt(params.id)
 
-    // Проверяем, существует ли рецепт
+    // Проверяем, существует ли рецепт и принадлежит ли он пользователю
     const existingRecipe = await prisma.recipe.findUnique({
-      where: { id },
+      where: { 
+        id,
+        authorId: user.user.id, // Только рецепты пользователя
+      },
     })
 
     if (!existingRecipe) {
@@ -394,17 +406,32 @@ const app = new Elysia({ adapter: node() as any })
 
   // Получить все ингредиенты
   .get('/api/ingredients', async ({ cookie }) => {
-    await requireAuth({ cookie })
-    return await prisma.ingredient.findMany()
+    const user = await requireAuth({ cookie })
+    
+    // Получаем только ингредиенты, которые используются в рецептах пользователя
+    const userRecipeIngredients = await prisma.recipeIngredient.findMany({
+      where: {
+        recipe: {
+          authorId: user.user.id, // Только из рецептов пользователя
+        },
+      },
+      include: {
+        ingredient: true,
+      },
+      distinct: ['ingredientId'], // Убираем дубликаты
+    })
+
+    return userRecipeIngredients.map(ri => ri.ingredient)
   })
 
   // Создать новый ингредиент
   .post(
     '/api/ingredients',
     async ({ body, cookie }) => {
-      await requireAuth({ cookie })
+      const user = await requireAuth({ cookie })
       const { name, amountType } = body
 
+      // Создаем ингредиент (ингредиенты общие, но создаются пользователем)
       const ingredient = await prisma.ingredient.create({
         data: {
           name,
@@ -424,16 +451,21 @@ const app = new Elysia({ adapter: node() as any })
 
   // Удалить ингредиент
   .delete('/api/ingredients/:id', async ({ params, cookie }) => {
-    await requireAuth({ cookie })
+    const user = await requireAuth({ cookie })
     const id = parseInt(params.id)
 
-    // Проверяем, используется ли ингредиент в рецептах
-    const recipeIngredients = await prisma.recipeIngredient.findMany({
-      where: { ingredientId: id },
+    // Проверяем, используется ли ингредиент в рецептах пользователя
+    const userRecipeIngredients = await prisma.recipeIngredient.findMany({
+      where: { 
+        ingredientId: id,
+        recipe: {
+          authorId: user.user.id,
+        },
+      },
     })
 
-    if (recipeIngredients.length > 0) {
-      throw new Error('Нельзя удалить ингредиент, который используется в рецептах')
+    if (userRecipeIngredients.length > 0) {
+      throw new Error('Нельзя удалить ингредиент, который используется в ваших рецептах')
     }
 
     // Удаляем ингредиент и связанные записи о наличии
@@ -596,8 +628,30 @@ const app = new Elysia({ adapter: node() as any })
 
   // Получить наличие ингредиентов
   .get('/api/stock', async ({ cookie }) => {
-    await requireAuth({ cookie })
+    const user = await requireAuth({ cookie })
+    
+    // Получаем только ингредиенты, которые используются в рецептах пользователя
+    const userRecipeIngredients = await prisma.recipeIngredient.findMany({
+      where: {
+        recipe: {
+          authorId: user.user.id, // Только из рецептов пользователя
+        },
+      },
+      select: {
+        ingredientId: true,
+      },
+      distinct: ['ingredientId'], // Убираем дубликаты
+    })
+
+    const userIngredientIds = userRecipeIngredients.map(ri => ri.ingredientId)
+
+    // Получаем наличие только для этих ингредиентов
     return await prisma.stockItem.findMany({
+      where: {
+        ingredientId: {
+          in: userIngredientIds,
+        },
+      },
       include: {
         ingredient: true,
       },
@@ -608,9 +662,23 @@ const app = new Elysia({ adapter: node() as any })
   .put(
     '/api/stock/:ingredientId',
     async ({ params, body, cookie }) => {
-      await requireAuth({ cookie })
+      const user = await requireAuth({ cookie })
       const { amount } = body
       const ingredientId = parseInt(params.ingredientId)
+
+      // Проверяем, что ингредиент используется в рецептах пользователя
+      const userRecipeIngredient = await prisma.recipeIngredient.findFirst({
+        where: {
+          ingredientId,
+          recipe: {
+            authorId: user.user.id,
+          },
+        },
+      })
+
+      if (!userRecipeIngredient) {
+        throw new Error('Ингредиент не найден в ваших рецептах')
+      }
 
       if (amount <= 0) {
         // Удаляем запись о наличии
@@ -1289,6 +1357,108 @@ const app = new Elysia({ adapter: node() as any })
       }),
     }
   )
+
+  // Получить общедоступные рецепты (без авторизации)
+  .get('/api/public/recipes', async ({ query }) => {
+    const { 
+      search, 
+      category, 
+      maxCalories, 
+      minCalories, 
+      difficulty, 
+      maxCookingTime,
+      sortBy = 'name',
+      sortOrder = 'asc'
+    } = query
+
+    // Построение условий фильтрации
+    const where: any = {
+      authorId: null, // Только общедоступные рецепты
+    }
+
+    // Поиск по названию
+    if (search) {
+      where.name = {
+        contains: search,
+        mode: 'insensitive'
+      }
+    }
+
+    // Фильтр по калориям
+    if (minCalories || maxCalories) {
+      where.calories = {}
+      if (minCalories) where.calories.gte = parseFloat(minCalories)
+      if (maxCalories) where.calories.lte = parseFloat(maxCalories)
+    }
+
+    // Фильтр по сложности
+    if (difficulty) {
+      where.difficulty = difficulty
+    }
+
+    // Фильтр по времени приготовления
+    if (maxCookingTime) {
+      where.cookingTime = {
+        lte: parseInt(maxCookingTime)
+      }
+    }
+
+    // Определение сортировки
+    const orderBy: any = {}
+    if (sortBy === 'name') orderBy.name = sortOrder
+    if (sortBy === 'calories') orderBy.calories = sortOrder
+    if (sortBy === 'cookingTime') orderBy.cookingTime = sortOrder
+    if (sortBy === 'difficulty') orderBy.difficulty = sortOrder
+
+    const recipes = await prisma.recipe.findMany({
+      where,
+      orderBy,
+      include: {
+        ingredients: {
+          include: {
+            ingredient: true,
+          },
+        },
+      },
+    })
+
+    // Фильтрация по категории (на основе калорий)
+    let filteredRecipes = recipes
+    if (category) {
+      filteredRecipes = recipes.filter(recipe => {
+        const calories = recipe.calories
+        switch (category) {
+          case 'low':
+            return calories < 300
+          case 'medium':
+            return calories >= 300 && calories <= 600
+          case 'high':
+            return calories > 600
+          default:
+            return true
+        }
+      })
+    }
+
+    return filteredRecipes.map((recipe) => ({
+      id: recipe.id,
+      name: recipe.name,
+      calories: recipe.calories,
+      proteins: recipe.proteins,
+      fats: recipe.fats,
+      carbohydrates: recipe.carbohydrates,
+      instructions: recipe.instructions,
+      cookingTime: recipe.cookingTime,
+      difficulty: recipe.difficulty,
+      authorId: recipe.authorId,
+      ingredients: recipe.ingredients.map((ri) => ({
+        name: ri.ingredient.name,
+        amount: ri.amount,
+        amountType: ri.ingredient.amountType,
+      })),
+    }))
+  })
+
   .listen(3000, ({ hostname, port }) => {
     console.log(`🦊 API сервер запущен на ${hostname}:${port}`)
 

@@ -75,6 +75,7 @@ import { AddToCalendarModal } from './components/AddToCalendarModal.js'
 import { EditRecipeForm } from './components/EditRecipeForm.js'
 import { FavoritesPage } from './pages/FavoritesPage.js'
 import { FoodDiaryPage } from './pages/FoodDiaryPage.js'
+import { PublicRecipesPage } from './pages/PublicRecipesPage.js'
 import { ShoppingListPage } from './pages/ShoppingListPage.js'
 import { StatsPage } from './pages/StatsPage.js'
 
@@ -3299,6 +3300,7 @@ function App() {
               <Routes>
                 <Route path="/" element={<CalendarPage />} />
                 <Route path="/recipes" element={<RecipesPage />} />
+                <Route path="/public-recipes" element={<PublicRecipesPage />} />
                 <Route path="/favorites" element={<FavoritesPage />} />
 
                 <Route path="/shopping-list" element={<ShoppingListPage />} />
@@ -3351,6 +3353,7 @@ export {
   $shoppingList,
   $stockItems,
   $user,
+  addToCalendar,
   closeAddToCalendarModal,
   closeEditRecipeModal,
   closeProfileModal,
