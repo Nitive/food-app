@@ -4,8 +4,14 @@ import { useStore } from '@nanostores/react'
 import { CheckCircleFillIcon } from '@primer/octicons-react'
 import React from 'react'
 import { Link } from 'react-router-dom'
-import { apiClient } from '../api-client.js'
-import { $loading, $shoppingList, $user, exportShoppingListToPDF, openProfileModal, updateShoppingList } from '../app.js'
+import {
+  $loading,
+  $shoppingList,
+  $user,
+  exportShoppingListToPDF,
+  openProfileModal,
+  updateShoppingList,
+} from '../app.js'
 import { Breadcrumbs } from '../components/Breadcrumbs.js'
 import { QuickActions } from '../components/QuickActions.js'
 import { UserMenu } from '../components/UserMenu.js'

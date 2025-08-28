@@ -28,14 +28,14 @@ import { useStore } from '@nanostores/react'
 import {
   CalendarIcon,
   CheckCircleFillIcon,
+  GlobeIcon,
   HeartFillIcon,
   HeartIcon,
+  LockIcon,
   PencilIcon,
   PlusIcon,
   TrashIcon,
   XCircleFillIcon,
-  GlobeIcon,
-  LockIcon,
 } from '@primer/octicons-react'
 import jsPDF from 'jspdf'
 import { atom } from 'nanostores'
@@ -1057,13 +1057,13 @@ function RecipesPage() {
                       {recipe.authorId === user?.id && (
                         <ActionIcon
                           variant="subtle"
-                          color={recipe.authorId === null ? "orange" : "green"}
+                          color={recipe.authorId === null ? 'orange' : 'green'}
                           onClick={(e) => {
                             e.preventDefault()
                             e.stopPropagation()
                             changeRecipeVisibility(recipe.id, recipe.authorId !== null)
                           }}
-                          title={recipe.authorId === null ? "Сделать личным" : "Сделать публичным"}
+                          title={recipe.authorId === null ? 'Сделать личным' : 'Сделать публичным'}
                         >
                           {recipe.authorId === null ? <LockIcon size={16} /> : <GlobeIcon size={16} />}
                         </ActionIcon>
@@ -1179,9 +1179,9 @@ function RecipesPage() {
                     {recipe.authorId === user?.id && (
                       <ActionIcon
                         variant="subtle"
-                        color={recipe.authorId === null ? "orange" : "green"}
+                        color={recipe.authorId === null ? 'orange' : 'green'}
                         onClick={() => changeRecipeVisibility(recipe.id, recipe.authorId !== null)}
-                        title={recipe.authorId === null ? "Сделать личным" : "Сделать публичным"}
+                        title={recipe.authorId === null ? 'Сделать личным' : 'Сделать публичным'}
                       >
                         {recipe.authorId === null ? <LockIcon size={16} /> : <GlobeIcon size={16} />}
                       </ActionIcon>
@@ -1452,11 +1452,11 @@ function IngredientsPage() {
             </Button.Group>
           </Group>
 
-          {(searchQuery || filterCategory || showLowStockOnly) ? (
+          {searchQuery || filterCategory || showLowStockOnly ? (
             <Group justify="space-between" align="center">
               <Text size="sm" c="dimmed">
                 Найдено ингредиентов: {filteredAndSortedIngredients.length}
-                {showLowStockOnly && " (только с низкими запасами)"}
+                {showLowStockOnly && ' (только с низкими запасами)'}
               </Text>
               <Button
                 variant="light"
@@ -1694,7 +1694,7 @@ function IngredientsPage() {
             🗑️ Очистить низкие запасы
           </Button>
           <Button
-            variant={showLowStockOnly ? "filled" : "light"}
+            variant={showLowStockOnly ? 'filled' : 'light'}
             color="blue"
             onClick={() => {
               if (showLowStockOnly) {
@@ -1709,7 +1709,7 @@ function IngredientsPage() {
             }}
             size="sm"
           >
-            {showLowStockOnly ? "❌ Сбросить фильтр" : "🔍 Показать низкие запасы"}
+            {showLowStockOnly ? '❌ Сбросить фильтр' : '🔍 Показать низкие запасы'}
           </Button>
         </Group>
       </Card>

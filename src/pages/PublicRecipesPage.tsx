@@ -1,32 +1,29 @@
-import React from 'react'
 import {
-  Container,
-  Title,
-  Card,
-  Text,
-  Badge,
-  Group,
-  Stack,
-  Button,
-  TextInput,
-  Select,
-  NumberInput,
-  Grid,
   ActionIcon,
-  Tooltip,
+  Badge,
   Box,
+  Button,
+  Card,
+  Container,
   Divider,
-  Flex,
-  Modal,
-  Textarea,
+  Grid,
+  Group,
   List,
-  ThemeIcon,
+  Modal,
+  NumberInput,
+  Select,
+  Stack,
+  Text,
+  TextInput,
+  Title,
+  Tooltip,
 } from '@mantine/core'
-import { IconSearch, IconFilter, IconSortAZ, IconSortZA, IconEye, IconPlus, IconEdit, IconTrash } from '@tabler/icons-react'
-import { apiClient, type Recipe } from '../api-client.js'
-import { atom } from 'nanostores'
 import { useStore } from '@nanostores/react'
-import { $calendarItems, addToCalendar, $user } from '../app.js'
+import { IconEdit, IconEye, IconFilter, IconPlus, IconSearch, IconTrash } from '@tabler/icons-react'
+import { atom } from 'nanostores'
+import React from 'react'
+import { apiClient, type Recipe } from '../api-client.js'
+import { $user, addToCalendar } from '../app.js'
 import { EditRecipeForm } from '../components/EditRecipeForm.js'
 
 // Атомы для состояния
@@ -73,7 +70,7 @@ export function PublicRecipesPage() {
     $loading.set(true)
     try {
       const params: any = {}
-      
+
       if (searchQuery) params.search = searchQuery
       if (selectedCategory) params.category = selectedCategory
       if (minCalories) params.minCalories = minCalories
@@ -197,8 +194,6 @@ export function PublicRecipesPage() {
     }
   }
 
-
-
   const getDifficultyColor = (difficulty: string | null) => {
     switch (difficulty?.toLowerCase()) {
       case 'легко':
@@ -236,7 +231,7 @@ export function PublicRecipesPage() {
           <IconFilter size={20} style={{ marginRight: 8 }} />
           Фильтры и поиск
         </Title>
-        
+
         <Grid>
           <Grid.Col span={{ base: 12, md: 6 }}>
             <TextInput
@@ -247,7 +242,7 @@ export function PublicRecipesPage() {
               mb="sm"
             />
           </Grid.Col>
-          
+
           <Grid.Col span={{ base: 12, md: 6 }}>
             <Select
               placeholder="Категория по калорийности"
@@ -261,7 +256,7 @@ export function PublicRecipesPage() {
               mb="sm"
             />
           </Grid.Col>
-          
+
           <Grid.Col span={{ base: 12, md: 3 }}>
             <NumberInput
               placeholder="Мин. калории"
@@ -271,7 +266,7 @@ export function PublicRecipesPage() {
               mb="sm"
             />
           </Grid.Col>
-          
+
           <Grid.Col span={{ base: 12, md: 3 }}>
             <NumberInput
               placeholder="Макс. калории"
@@ -281,7 +276,7 @@ export function PublicRecipesPage() {
               mb="sm"
             />
           </Grid.Col>
-          
+
           <Grid.Col span={{ base: 12, md: 3 }}>
             <Select
               placeholder="Сложность"
@@ -295,7 +290,7 @@ export function PublicRecipesPage() {
               mb="sm"
             />
           </Grid.Col>
-          
+
           <Grid.Col span={{ base: 12, md: 3 }}>
             <NumberInput
               placeholder="Макс. время (мин)"
@@ -305,7 +300,7 @@ export function PublicRecipesPage() {
               mb="sm"
             />
           </Grid.Col>
-          
+
           <Grid.Col span={{ base: 12, md: 6 }}>
             <Select
               placeholder="Сортировка"
@@ -323,14 +318,9 @@ export function PublicRecipesPage() {
               mb="sm"
             />
           </Grid.Col>
-          
+
           <Grid.Col span={{ base: 12, md: 6 }}>
-            <Button
-              variant="outline"
-              onClick={clearFilters}
-              fullWidth
-              mb="sm"
-            >
+            <Button variant="outline" onClick={clearFilters} fullWidth mb="sm">
               Очистить фильтры
             </Button>
           </Grid.Col>
@@ -342,11 +332,7 @@ export function PublicRecipesPage() {
         <Text size="lg" fw={500}>
           Найдено рецептов: {filteredRecipes.length}
         </Text>
-        <Button
-          variant="light"
-          onClick={loadPublicRecipes}
-          loading={loading}
-        >
+        <Button variant="light" onClick={loadPublicRecipes} loading={loading}>
           Обновить
         </Button>
       </Group>
@@ -363,19 +349,12 @@ export function PublicRecipesPage() {
                   </Title>
                   <Group gap="xs">
                     <Tooltip label="Просмотреть рецепт">
-                      <ActionIcon
-                        variant="light"
-                        onClick={() => openRecipeModal(recipe)}
-                      >
+                      <ActionIcon variant="light" onClick={() => openRecipeModal(recipe)}>
                         <IconEye size={16} />
                       </ActionIcon>
                     </Tooltip>
                     <Tooltip label="Добавить в календарь">
-                      <ActionIcon
-                        variant="light"
-                        color="blue"
-                        onClick={() => addToCalendarHandler(recipe)}
-                      >
+                      <ActionIcon variant="light" color="blue" onClick={() => addToCalendarHandler(recipe)}>
                         <IconPlus size={16} />
                       </ActionIcon>
                     </Tooltip>
@@ -383,11 +362,7 @@ export function PublicRecipesPage() {
                     {canEditPublicRecipes && (
                       <>
                         <Tooltip label="Редактировать рецепт">
-                          <ActionIcon
-                            variant="light"
-                            color="yellow"
-                            onClick={() => openEditModal(recipe)}
-                          >
+                          <ActionIcon variant="light" color="yellow" onClick={() => openEditModal(recipe)}>
                             <IconEdit size={16} />
                           </ActionIcon>
                         </Tooltip>
@@ -410,17 +385,11 @@ export function PublicRecipesPage() {
               <Card.Section p="md" pt={0}>
                 <Stack gap="xs">
                   <Group gap="xs">
-                    <Badge color={getCategoryColor(recipe.calories)}>
-                      {recipe.calories} ккал
-                    </Badge>
+                    <Badge color={getCategoryColor(recipe.calories)}>{recipe.calories} ккал</Badge>
                     <Badge color={getDifficultyColor(recipe.difficulty || null)}>
                       {recipe.difficulty || 'Не указано'}
                     </Badge>
-                    {recipe.cookingTime && (
-                      <Badge color="blue">
-                        {recipe.cookingTime} мин
-                      </Badge>
-                    )}
+                    {recipe.cookingTime && <Badge color="blue">{recipe.cookingTime} мин</Badge>}
                   </Group>
 
                   {/* Информация об авторе */}
@@ -453,30 +422,21 @@ export function PublicRecipesPage() {
       </Grid>
 
       {/* Модальное окно с деталями рецепта */}
-      <Modal
-        opened={showRecipeModal}
-        onClose={closeRecipeModal}
-        title={selectedRecipe?.name}
-        size="lg"
-      >
+      <Modal opened={showRecipeModal} onClose={closeRecipeModal} title={selectedRecipe?.name} size="lg">
         {selectedRecipe && (
           <Stack gap="md">
             <Group>
-              <Badge color={getCategoryColor(selectedRecipe.calories)}>
-                {selectedRecipe.calories} ккал
-              </Badge>
-                             <Badge color={getDifficultyColor(selectedRecipe.difficulty || null)}>
+              <Badge color={getCategoryColor(selectedRecipe.calories)}>{selectedRecipe.calories} ккал</Badge>
+              <Badge color={getDifficultyColor(selectedRecipe.difficulty || null)}>
                 {selectedRecipe.difficulty || 'Не указано'}
               </Badge>
-              {selectedRecipe.cookingTime && (
-                <Badge color="blue">
-                  {selectedRecipe.cookingTime} мин
-                </Badge>
-              )}
+              {selectedRecipe.cookingTime && <Badge color="blue">{selectedRecipe.cookingTime} мин</Badge>}
             </Group>
 
             <Box>
-              <Title order={5} mb="sm">Пищевая ценность:</Title>
+              <Title order={5} mb="sm">
+                Пищевая ценность:
+              </Title>
               <Group>
                 <Text>Белки: {selectedRecipe.proteins}g</Text>
                 <Text>Жиры: {selectedRecipe.fats}g</Text>
@@ -486,13 +446,17 @@ export function PublicRecipesPage() {
 
             {selectedRecipe.instructions && (
               <Box>
-                <Title order={5} mb="sm">Инструкция:</Title>
+                <Title order={5} mb="sm">
+                  Инструкция:
+                </Title>
                 <Text>{selectedRecipe.instructions}</Text>
               </Box>
             )}
 
             <Box>
-              <Title order={5} mb="sm">Ингредиенты:</Title>
+              <Title order={5} mb="sm">
+                Ингредиенты:
+              </Title>
               <List>
                 {selectedRecipe.ingredients.map((ingredient: any, index: number) => (
                   <List.Item key={index}>
@@ -505,20 +469,17 @@ export function PublicRecipesPage() {
             {/* Информация об авторе */}
             {selectedRecipe.author && (
               <Box>
-                <Title order={5} mb="sm">Автор:</Title>
-                <Text>
-                  {selectedRecipe.author.name || selectedRecipe.author.email}
-                </Text>
+                <Title order={5} mb="sm">
+                  Автор:
+                </Title>
+                <Text>{selectedRecipe.author.name || selectedRecipe.author.email}</Text>
               </Box>
             )}
 
             <Divider />
 
             <Group justify="center">
-              <Button
-                leftSection={<IconPlus size={16} />}
-                onClick={() => addToCalendarHandler(selectedRecipe)}
-              >
+              <Button leftSection={<IconPlus size={16} />} onClick={() => addToCalendarHandler(selectedRecipe)}>
                 Добавить в календарь
               </Button>
             </Group>

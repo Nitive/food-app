@@ -1,19 +1,16 @@
-import { 
-  Badge, 
-  Card, 
-  Grid, 
-  Group, 
-  LoadingOverlay, 
-  Progress, 
-  Stack, 
-  Text, 
-  Title,
-  Button,
-  Divider,
+import {
+  Badge,
+  Card,
+  Grid,
+  Group,
   List,
+  LoadingOverlay,
+  Progress,
   RingProgress,
-  Box,
-  Select
+  Select,
+  Stack,
+  Text,
+  Title,
 } from '@mantine/core'
 import { DateInput } from '@mantine/dates'
 import { useStore } from '@nanostores/react'
@@ -78,22 +75,22 @@ const getRecipeCategory = (recipe: any): string => {
   return 'high_calorie'
 }
 
-  // Функция для получения статистики по дням недели
-  const getWeeklyStats = (calendarItems: any[]) => {
-    const daysOfWeek = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс']
-    const stats = daysOfWeek.map(() => ({ count: 0, calories: 0 }))
+// Функция для получения статистики по дням недели
+const getWeeklyStats = (calendarItems: any[]) => {
+  const daysOfWeek = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс']
+  const stats = daysOfWeek.map(() => ({ count: 0, calories: 0 }))
 
-    calendarItems.forEach(item => {
-      const date = new Date(item.date)
-      const dayIndex = (date.getDay() + 6) % 7 // Понедельник = 0
-      if (stats[dayIndex]) {
-        stats[dayIndex].count++
-        stats[dayIndex].calories += item.recipe.calories
-      }
-    })
+  calendarItems.forEach((item) => {
+    const date = new Date(item.date)
+    const dayIndex = (date.getDay() + 6) % 7 // Понедельник = 0
+    if (stats[dayIndex]) {
+      stats[dayIndex].count++
+      stats[dayIndex].calories += item.recipe.calories
+    }
+  })
 
-    return { days: daysOfWeek, stats }
-  }
+  return { days: daysOfWeek, stats }
+}
 
 export function StatsPage() {
   const recipes = useStore($recipes)
@@ -151,14 +148,18 @@ export function StatsPage() {
     currentCalories: caloriesStats.totalCalendar,
     progress: recommendedCalories ? (caloriesStats.totalCalendar / recommendedCalories) * 100 : 0,
     bmi: user?.weight && user?.height ? (user.weight / Math.pow(user.height / 100, 2)).toFixed(1) : null,
-    weightStatus: user?.weight && user?.targetWeight ? {
-      current: user.weight,
-      target: user.targetWeight,
-      difference: user.weight - user.targetWeight,
-      progress: user.targetWeight > user.weight ? 
-        ((user.weight - 50) / (user.targetWeight - 50)) * 100 : 
-        ((100 - user.weight) / (100 - user.targetWeight)) * 100
-    } : null
+    weightStatus:
+      user?.weight && user?.targetWeight
+        ? {
+            current: user.weight,
+            target: user.targetWeight,
+            difference: user.weight - user.targetWeight,
+            progress:
+              user.targetWeight > user.weight
+                ? ((user.weight - 50) / (user.targetWeight - 50)) * 100
+                : ((100 - user.weight) / (100 - user.targetWeight)) * 100,
+          }
+        : null,
   }
 
   // Статистика по категориям
@@ -189,7 +190,7 @@ export function StatsPage() {
   // Рекомендации
   const getRecommendations = () => {
     const recommendations = []
-    
+
     if (personalStats.progress > 120) {
       recommendations.push('⚠️ Вы превышаете рекомендуемую норму калорий. Рассмотрите более легкие рецепты.')
     } else if (personalStats.progress < 80) {
@@ -201,7 +202,9 @@ export function StatsPage() {
     }
 
     if (popularRecipes.length > 0 && popularRecipes[0].inCalendarCount > 10) {
-      recommendations.push('🍽️ Попробуйте разнообразить рацион - у вас есть любимые рецепты, которые используются очень часто.')
+      recommendations.push(
+        '🍽️ Попробуйте разнообразить рацион - у вас есть любимые рецепты, которые используются очень часто.'
+      )
     }
 
     if (recipes.length < 10) {
@@ -274,8 +277,8 @@ export function StatsPage() {
                   <Text size="sm" c="dimmed" mb="xs">
                     Калории (текущие / рекомендуемые)
                   </Text>
-                  <Progress 
-                    value={Math.min(personalStats.progress, 100)} 
+                  <Progress
+                    value={Math.min(personalStats.progress, 100)}
                     color={personalStats.progress > 100 ? 'red' : 'green'}
                     size="sm"
                   />
@@ -365,9 +368,7 @@ export function StatsPage() {
               <RingProgress
                 size={80}
                 thickness={8}
-                sections={[
-                  { value: (categoryStats.low_calorie?.count || 0) / recipes.length * 100, color: 'green' }
-                ]}
+                sections={[{ value: ((categoryStats.low_calorie?.count || 0) / recipes.length) * 100, color: 'green' }]}
                 label={
                   <Text size="xs" ta="center">
                     {categoryStats.low_calorie?.count || 0}
@@ -388,7 +389,7 @@ export function StatsPage() {
                 size={80}
                 thickness={8}
                 sections={[
-                  { value: (categoryStats.medium_calorie?.count || 0) / recipes.length * 100, color: 'yellow' }
+                  { value: ((categoryStats.medium_calorie?.count || 0) / recipes.length) * 100, color: 'yellow' },
                 ]}
                 label={
                   <Text size="xs" ta="center">
@@ -409,9 +410,7 @@ export function StatsPage() {
               <RingProgress
                 size={80}
                 thickness={8}
-                sections={[
-                  { value: (categoryStats.high_calorie?.count || 0) / recipes.length * 100, color: 'red' }
-                ]}
+                sections={[{ value: ((categoryStats.high_calorie?.count || 0) / recipes.length) * 100, color: 'red' }]}
                 label={
                   <Text size="xs" ta="center">
                     {categoryStats.high_calorie?.count || 0}
@@ -442,9 +441,13 @@ export function StatsPage() {
                   {stats.count}
                 </Text>
                 <Text size="sm" c="dimmed">
-                  {mealType === 'breakfast' ? 'Завтраки' :
-                   mealType === 'lunch' ? 'Обеды' :
-                   mealType === 'dinner' ? 'Ужины' : 'Перекусы'}
+                  {mealType === 'breakfast'
+                    ? 'Завтраки'
+                    : mealType === 'lunch'
+                      ? 'Обеды'
+                      : mealType === 'dinner'
+                        ? 'Ужины'
+                        : 'Перекусы'}
                 </Text>
                 <Text size="xs" c="dimmed">
                   {stats.totalCalories.toFixed(0)} ккал
@@ -635,8 +638,7 @@ export function StatsPage() {
               • Ингредиенты с количеством менее 10 считаются заканчивающимися
               <br />
               • Уникальные ингредиенты - это все разные ингредиенты во всех рецептах
-              <br />
-              • Персональная статистика доступна при заполненном профиле
+              <br />• Персональная статистика доступна при заполненном профиле
             </Text>
           </div>
         </Group>
