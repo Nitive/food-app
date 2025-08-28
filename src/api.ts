@@ -18,7 +18,7 @@ function getRedirectUri(request: Request) {
   if (request.headers.get('x-forwarded-proto') === 'https') {
     redirectUri.protocol = 'https:'
   }
-  return redirectUri.toString()
+  return redirectUri
 }
 
 const app = new Elysia({ adapter: node() as any })
@@ -1101,7 +1101,7 @@ const app = new Elysia({ adapter: node() as any })
 
     const authUrl = new URL('https://accounts.google.com/o/oauth2/v2/auth')
     authUrl.searchParams.set('client_id', clientId)
-    authUrl.searchParams.set('redirect_uri', redirectUri)
+    authUrl.searchParams.set('redirect_uri', redirectUri.toString())
     authUrl.searchParams.set('response_type', 'code')
     authUrl.searchParams.set('scope', scope)
     authUrl.searchParams.set('access_type', 'offline')
@@ -1129,7 +1129,7 @@ const app = new Elysia({ adapter: node() as any })
           client_secret: process.env.GOOGLE_CLIENT_SECRET!,
           code,
           grant_type: 'authorization_code',
-          redirect_uri: redirectUri,
+          redirect_uri: redirectUri.toString(),
         }),
       })
 
@@ -1152,10 +1152,16 @@ const app = new Elysia({ adapter: node() as any })
       // Делаем редирект на фронтенд с куками
       const cookieValue = `authToken=${jwtToken}; HttpOnly; SameSite=Lax; Path=/; Max-Age=${7 * 24 * 60 * 60}`
 
+      const mainPageUrl = getRedirectUri(request)
+      mainPageUrl.pathname = '/'
+      if (mainPageUrl.hostname === 'localhost') {
+        mainPageUrl.port = '5173'
+      }
+
       return new Response(null, {
         status: 302,
         headers: {
-          Location: new URL('/', getRedirectUri(request)).toString(),
+          Location: mainPageUrl.toString(),
           'Set-Cookie': cookieValue,
         },
       })
