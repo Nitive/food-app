@@ -135,8 +135,8 @@ export interface FoodDiaryEntry {
 }
 
 export const apiClient = {
-  async getRecipes(): Promise<Recipe[]> {
-    const { data } = await client.api.recipes.get()
+  async getRecipes(opts: { includePublic?: boolean } = {}): Promise<Recipe[]> {
+    const { data } = await client.api.recipes.get({ query: opts })
     return data || []
   },
 

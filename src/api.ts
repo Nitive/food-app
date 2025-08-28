@@ -8,6 +8,7 @@ import { Elysia, t } from 'elysia'
 import * as mime from 'mime-types'
 import fsp from 'node:fs/promises'
 import { URL } from 'node:url'
+import { isTruthy } from 'remeda'
 import { createJWT, findOrCreateUser, getGoogleUserInfo, getUserFromToken } from './auth.js'
 import { requireAuth } from './middleware.js'
 
@@ -63,51 +64,59 @@ const app = new Elysia({ adapter: node() as any })
     })
   )
   // Получить все рецепты (личные + публичные)
-  .get('/api/recipes', async ({ cookie }) => {
-    const user = await requireAuth({ cookie })
+  .get(
+    '/api/recipes',
+    async ({ cookie, query }) => {
+      const user = await requireAuth({ cookie })
 
-    const recipes = await prisma.recipe.findMany({
-      where: {
-        OR: [
-          { authorId: user.user.id }, // Личные рецепты пользователя
-          { authorId: null }, // Публичные рецепты
-        ],
-      },
-      include: {
-        ingredients: {
-          include: {
-            ingredient: true,
+      const recipes = await prisma.recipe.findMany({
+        where: {
+          OR: [
+            { authorId: user.user.id }, // Личные рецепты пользователя
+            query.includePublic && { authorId: null }, // Публичные рецепты
+          ].filter(isTruthy),
+        },
+        include: {
+          ingredients: {
+            include: {
+              ingredient: true,
+            },
+          },
+          author: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+            },
           },
         },
-        author: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-          },
-        },
-      },
-    })
+      })
 
-    return recipes.map((recipe) => ({
-      id: recipe.id,
-      name: recipe.name,
-      calories: recipe.calories,
-      proteins: recipe.proteins,
-      fats: recipe.fats,
-      carbohydrates: recipe.carbohydrates,
-      instructions: recipe.instructions,
-      cookingTime: recipe.cookingTime,
-      difficulty: recipe.difficulty,
-      authorId: recipe.authorId,
-      author: recipe.author,
-      ingredients: recipe.ingredients.map((ri) => ({
-        name: ri.ingredient.name,
-        amount: ri.amount,
-        amountType: ri.ingredient.amountType,
-      })),
-    }))
-  })
+      return recipes.map((recipe) => ({
+        id: recipe.id,
+        name: recipe.name,
+        calories: recipe.calories,
+        proteins: recipe.proteins,
+        fats: recipe.fats,
+        carbohydrates: recipe.carbohydrates,
+        instructions: recipe.instructions,
+        cookingTime: recipe.cookingTime,
+        difficulty: recipe.difficulty,
+        authorId: recipe.authorId,
+        author: recipe.author,
+        ingredients: recipe.ingredients.map((ri) => ({
+          name: ri.ingredient.name,
+          amount: ri.amount,
+          amountType: ri.ingredient.amountType,
+        })),
+      }))
+    },
+    {
+      query: t.Object({
+        includePublic: t.Optional(t.Boolean()),
+      }),
+    }
+  )
 
   // Получить рецепт по ID
   .get('/api/recipes/:id', async ({ params, cookie }) => {
