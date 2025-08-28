@@ -165,7 +165,7 @@ const app = new Elysia({ adapter: node() as any })
     '/api/recipes',
     async ({ body, cookie }) => {
       const user = await requireAuth({ cookie })
-      const { name, calories, proteins, fats, carbohydrates, instructions, cookingTime, difficulty, ingredients } = body
+      const { name, calories, proteins, fats, carbohydrates, instructions, cookingTime, difficulty, ingredients, isPublic } = body
 
       // Создаем рецепт с автором
       const recipe = await prisma.recipe.create({
@@ -178,7 +178,7 @@ const app = new Elysia({ adapter: node() as any })
           instructions: instructions || null,
           cookingTime: cookingTime || null,
           difficulty: difficulty || null,
-          authorId: user.user.id,
+          authorId: isPublic ? null : user.user.id, // Если публичный, то authorId = null
         },
       })
 
@@ -226,6 +226,7 @@ const app = new Elysia({ adapter: node() as any })
         instructions: createdRecipe!.instructions,
         cookingTime: createdRecipe!.cookingTime,
         difficulty: createdRecipe!.difficulty,
+        authorId: createdRecipe!.authorId,
         ingredients: createdRecipe!.ingredients.map((ri) => ({
           name: ri.ingredient.name,
           amount: ri.amount,
@@ -243,6 +244,7 @@ const app = new Elysia({ adapter: node() as any })
         instructions: t.Optional(t.String()),
         cookingTime: t.Optional(t.Number()),
         difficulty: t.Optional(t.String()),
+        isPublic: t.Optional(t.Boolean()),
         ingredients: t.Array(
           t.Object({
             name: t.String(),
@@ -1602,6 +1604,72 @@ const app = new Elysia({ adapter: node() as any })
 
     return { deleted: true }
   })
+
+  // Изменить статус рецепта (личный/публичный)
+  .patch('/api/recipes/:id/visibility', async ({ params, body, cookie }) => {
+    const user = await requireAuth({ cookie })
+    const id = parseInt(params.id)
+    const { isPublic } = body
+
+    // Проверяем, существует ли рецепт и принадлежит ли он пользователю
+    const existingRecipe = await prisma.recipe.findUnique({
+      where: { 
+        id,
+        authorId: user.user.id, // Только рецепты пользователя
+      },
+    })
+
+    if (!existingRecipe) {
+      throw new Error('Recipe not found or access denied')
+    }
+
+    // Обновляем статус рецепта
+    const updatedRecipe = await prisma.recipe.update({
+      where: { id },
+      data: {
+        authorId: isPublic ? null : user.user.id, // Если публичный, то authorId = null
+      },
+      include: {
+        ingredients: {
+          include: {
+            ingredient: true,
+          },
+        },
+        author: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+      },
+    })
+
+    return {
+      id: updatedRecipe.id,
+      name: updatedRecipe.name,
+      calories: updatedRecipe.calories,
+      proteins: updatedRecipe.proteins,
+      fats: updatedRecipe.fats,
+      carbohydrates: updatedRecipe.carbohydrates,
+      instructions: updatedRecipe.instructions,
+      cookingTime: updatedRecipe.cookingTime,
+      difficulty: updatedRecipe.difficulty,
+      authorId: updatedRecipe.authorId,
+      author: updatedRecipe.author,
+      ingredients: updatedRecipe.ingredients.map((ri) => ({
+        name: ri.ingredient.name,
+        amount: ri.amount,
+        amountType: ri.ingredient.amountType,
+      })),
+    }
+  },
+  {
+    body: t.Object({
+      isPublic: t.Boolean(),
+    }),
+  }
+  )
 
   .listen(3000, ({ hostname, port }) => {
     console.log(`🦊 API сервер запущен на ${hostname}:${port}`)

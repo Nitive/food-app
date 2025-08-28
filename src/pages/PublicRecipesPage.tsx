@@ -197,6 +197,8 @@ export function PublicRecipesPage() {
     }
   }
 
+
+
   const getDifficultyColor = (difficulty: string | null) => {
     switch (difficulty?.toLowerCase()) {
       case 'легко':
@@ -377,6 +379,7 @@ export function PublicRecipesPage() {
                         <IconPlus size={16} />
                       </ActionIcon>
                     </Tooltip>
+
                     {canEditPublicRecipes && (
                       <>
                         <Tooltip label="Редактировать рецепт">

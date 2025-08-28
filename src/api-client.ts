@@ -152,6 +152,10 @@ export const apiClient = {
     proteins: number
     fats: number
     carbohydrates: number
+    instructions?: string
+    cookingTime?: number
+    difficulty?: string
+    isPublic?: boolean
     ingredients: { name: string; amount: number; amountType: string }[]
   }): Promise<Recipe> {
     const { data } = await client.api.recipes.post(recipeData)
@@ -179,6 +183,12 @@ export const apiClient = {
     const { data } = await client.api.recipes({ id }).delete()
     if (!data) throw new Error('Failed to delete recipe')
     return data as unknown as { deleted: boolean }
+  },
+
+  async changeRecipeVisibility(id: number, isPublic: boolean): Promise<Recipe> {
+    const { data } = await client.api.recipes({ id }).visibility.patch({ isPublic })
+    if (!data) throw new Error('Failed to change recipe visibility')
+    return data as unknown as Recipe
   },
 
   async getIngredients(): Promise<Ingredient[]> {

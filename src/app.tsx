@@ -7,6 +7,7 @@ import {
   Box,
   Button,
   Card,
+  Checkbox,
   Divider,
   Grid,
   Group,
@@ -33,6 +34,8 @@ import {
   PlusIcon,
   TrashIcon,
   XCircleFillIcon,
+  GlobeIcon,
+  LockIcon,
 } from '@primer/octicons-react'
 import jsPDF from 'jspdf'
 import { atom } from 'nanostores'
@@ -223,6 +226,10 @@ async function createRecipe(recipeData: {
   proteins: number
   fats: number
   carbohydrates: number
+  instructions?: string
+  cookingTime?: number
+  difficulty?: string
+  isPublic?: boolean
   ingredients: { name: string; amount: number; amountType: string }[]
 }) {
   try {
@@ -330,6 +337,16 @@ async function handleAddToCalendarConfirm(date: string, mealType: string) {
   if (recipe) {
     await addToCalendar(date, recipe.id, mealType)
     closeAddToCalendarModal()
+  }
+}
+
+// Функция для изменения видимости рецепта
+async function changeRecipeVisibility(recipeId: number, isPublic: boolean) {
+  try {
+    await apiClient.changeRecipeVisibility(recipeId, isPublic)
+    await loadData() // Перезагружаем данные
+  } catch (error) {
+    console.error('Ошибка изменения видимости рецепта:', error)
   }
 }
 
@@ -1036,6 +1053,21 @@ function RecipesPage() {
                       >
                         <PencilIcon size={16} />
                       </ActionIcon>
+                      {/* Кнопка изменения видимости - только для личных рецептов */}
+                      {recipe.authorId === user?.id && (
+                        <ActionIcon
+                          variant="subtle"
+                          color={recipe.authorId === null ? "orange" : "green"}
+                          onClick={(e) => {
+                            e.preventDefault()
+                            e.stopPropagation()
+                            changeRecipeVisibility(recipe.id, recipe.authorId !== null)
+                          }}
+                          title={recipe.authorId === null ? "Сделать личным" : "Сделать публичным"}
+                        >
+                          {recipe.authorId === null ? <LockIcon size={16} /> : <GlobeIcon size={16} />}
+                        </ActionIcon>
+                      )}
                       <ActionIcon
                         variant="subtle"
                         color="red"
@@ -1143,6 +1175,17 @@ function RecipesPage() {
                     <ActionIcon variant="subtle" color="blue" onClick={() => openEditRecipeModal(recipe)}>
                       <PencilIcon size={16} />
                     </ActionIcon>
+                    {/* Кнопка изменения видимости - только для личных рецептов */}
+                    {recipe.authorId === user?.id && (
+                      <ActionIcon
+                        variant="subtle"
+                        color={recipe.authorId === null ? "orange" : "green"}
+                        onClick={() => changeRecipeVisibility(recipe.id, recipe.authorId !== null)}
+                        title={recipe.authorId === null ? "Сделать личным" : "Сделать публичным"}
+                      >
+                        {recipe.authorId === null ? <LockIcon size={16} /> : <GlobeIcon size={16} />}
+                      </ActionIcon>
+                    )}
                     <ActionIcon variant="subtle" color="red" onClick={() => handleDeleteRecipe(recipe.id)}>
                       <TrashIcon size={16} />
                     </ActionIcon>
@@ -1730,6 +1773,7 @@ function CreateRecipeForm() {
     instructions: '',
     cookingTime: 0,
     difficulty: '',
+    isPublic: false,
     ingredients: [{ name: '', amount: 0, amountType: 'гр' }],
   })
 
@@ -1754,6 +1798,7 @@ function CreateRecipeForm() {
         instructions: '',
         cookingTime: 0,
         difficulty: '',
+        isPublic: false,
         ingredients: [{ name: '', amount: 0, amountType: 'гр' }],
       })
       setIngredientSearch([''])
@@ -1925,6 +1970,13 @@ function CreateRecipeForm() {
             }
             minRows={4}
             maxRows={8}
+          />
+
+          <Checkbox
+            label="Сделать рецепт общедоступным"
+            description="Публичные рецепты будут видны всем пользователям"
+            checked={formData.isPublic}
+            onChange={(e) => setFormData((prev) => ({ ...prev, isPublic: e.target.checked }))}
           />
 
           <Divider />
