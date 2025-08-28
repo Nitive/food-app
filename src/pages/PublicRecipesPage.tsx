@@ -46,7 +46,6 @@ const $editLoading = atom(false)
 const $deleteLoading = atom(false)
 
 export function PublicRecipesPage() {
-  const publicRecipes = useStore($publicRecipes)
   const filteredRecipes = useStore($filteredRecipes)
   const loading = useStore($loading)
   const searchQuery = useStore($searchQuery)
@@ -61,7 +60,6 @@ export function PublicRecipesPage() {
   const showRecipeModal = useStore($showRecipeModal)
   const showEditModal = useStore($showEditModal)
   const editingRecipe = useStore($editingRecipe)
-  const editLoading = useStore($editLoading)
   const deleteLoading = useStore($deleteLoading)
   const user = useStore($user)
 
@@ -157,7 +155,7 @@ export function PublicRecipesPage() {
   }
 
   const handleDeleteRecipe = async (recipe: Recipe) => {
-    if (!confirm(`Вы уверены, что хотите удалить рецепт "${recipe.name}"?`)) {
+    if (!window.confirm(`Вы уверены, что хотите удалить рецепт "${recipe.name}"?`)) {
       return
     }
 
@@ -211,12 +209,6 @@ export function PublicRecipesPage() {
     if (calories < 300) return 'green'
     if (calories <= 600) return 'yellow'
     return 'red'
-  }
-
-  const getCategoryLabel = (calories: number) => {
-    if (calories < 300) return 'Низкая калорийность'
-    if (calories <= 600) return 'Средняя калорийность'
-    return 'Высокая калорийность'
   }
 
   return (

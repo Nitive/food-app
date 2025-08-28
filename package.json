@@ -9,7 +9,7 @@
     "lint:check": "eslint src --ext .ts,.tsx",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "check": "pnpm run types && pnpm run lint:check && pnpm run format:check",
+    "check": "pnpm run format:check && pnpm run types && pnpm run lint:check",
     "fix": "pnpm run format && pnpm run lint",
     "start-backend": "tsx watch src/api.ts",
     "build-frontend": "vite build",

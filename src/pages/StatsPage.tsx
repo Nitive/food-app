@@ -67,7 +67,6 @@ const getRecommendedCalories = (user: any) => {
 
 // Функция для определения категории рецепта
 const getRecipeCategory = (recipe: any): string => {
-  const name = recipe.name.toLowerCase()
   const calories = recipe.calories
 
   if (calories < 300) return 'low_calorie'

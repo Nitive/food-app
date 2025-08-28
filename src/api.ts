@@ -468,7 +468,7 @@ const app = new Elysia({ adapter: node() as any })
   .post(
     '/api/ingredients',
     async ({ body, cookie }) => {
-      const user = await requireAuth({ cookie })
+      await requireAuth({ cookie })
       const { name, amountType } = body
 
       // Создаем ингредиент (ингредиенты общие, но создаются пользователем)
@@ -1514,7 +1514,7 @@ const app = new Elysia({ adapter: node() as any })
   .put(
     '/api/public/recipes/:id',
     async ({ params, body, cookie }) => {
-      const user = await checkPublicRecipeEditAccess({ cookie })
+      await checkPublicRecipeEditAccess({ cookie })
       const id = parseInt(params.id)
 
       // Проверяем, что рецепт существует и является общедоступным
@@ -1591,7 +1591,7 @@ const app = new Elysia({ adapter: node() as any })
 
   // Удалить общедоступный рецепт (только для Elizaveta Smirnova)
   .delete('/api/public/recipes/:id', async ({ params, cookie }) => {
-    const user = await checkPublicRecipeEditAccess({ cookie })
+    await checkPublicRecipeEditAccess({ cookie })
     const id = parseInt(params.id)
 
     // Проверяем, что рецепт существует и является общедоступным
