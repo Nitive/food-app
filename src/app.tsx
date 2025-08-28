@@ -1165,6 +1165,7 @@ function IngredientsPage() {
   const [filterCategory, setFilterCategory] = React.useState<string | null>(null)
   const [sortBy, setSortBy] = React.useState<'name' | 'amount' | 'category'>('name')
   const [viewMode, setViewMode] = React.useState<'cards' | 'table'>('cards')
+  const [showLowStockOnly, setShowLowStockOnly] = React.useState(false)
 
   // Функция для определения категории ингредиента
   const getIngredientCategory = (name: string): string => {
@@ -1220,6 +1221,14 @@ function IngredientsPage() {
       filtered = filtered.filter((ingredient) => getIngredientCategory(ingredient.name) === filterCategory)
     }
 
+    // Фильтр по низким запасам
+    if (showLowStockOnly) {
+      filtered = filtered.filter((ingredient) => {
+        const stock = stockItems.find((s) => s.ingredient.id === ingredient.id)?.amount || 0
+        return stock < 10
+      })
+    }
+
     // Сортировка
     filtered.sort((a, b) => {
       const stockA = stockItems.find((s) => s.ingredient.id === a.id)?.amount || 0
@@ -1238,7 +1247,7 @@ function IngredientsPage() {
     })
 
     return filtered
-  }, [ingredients, stockItems, searchQuery, filterCategory, sortBy])
+  }, [ingredients, stockItems, searchQuery, filterCategory, sortBy, showLowStockOnly])
 
   // Статистика
   const stats = {
@@ -1346,14 +1355,26 @@ function IngredientsPage() {
             <TextInput
               placeholder="Поиск ингредиентов..."
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(e) => {
+                setSearchQuery(e.target.value)
+                // Сбрасываем фильтр низких запасов при поиске
+                if (showLowStockOnly && e.target.value) {
+                  setShowLowStockOnly(false)
+                }
+              }}
               style={{ flex: 1 }}
               leftSection={<span style={{ fontSize: '12px' }}>🔍</span>}
             />
             <Select
               placeholder="Категория"
               value={filterCategory || ''}
-              onChange={(value) => setFilterCategory(value || null)}
+              onChange={(value) => {
+                setFilterCategory(value || null)
+                // Сбрасываем фильтр низких запасов при изменении категории
+                if (showLowStockOnly) {
+                  setShowLowStockOnly(false)
+                }
+              }}
               data={[{ value: '', label: 'Все категории' }, ...categories]}
               clearable
               w={200}
@@ -1387,10 +1408,25 @@ function IngredientsPage() {
             </Button.Group>
           </Group>
 
-          {searchQuery || filterCategory ? (
-            <Text size="sm" c="dimmed">
-              Найдено ингредиентов: {filteredAndSortedIngredients.length}
-            </Text>
+          {(searchQuery || filterCategory || showLowStockOnly) ? (
+            <Group justify="space-between" align="center">
+              <Text size="sm" c="dimmed">
+                Найдено ингредиентов: {filteredAndSortedIngredients.length}
+                {showLowStockOnly && " (только с низкими запасами)"}
+              </Text>
+              <Button
+                variant="light"
+                color="gray"
+                size="xs"
+                onClick={() => {
+                  setSearchQuery('')
+                  setFilterCategory(null)
+                  setShowLowStockOnly(false)
+                }}
+              >
+                ❌ Очистить фильтры
+              </Button>
+            </Group>
           ) : null}
         </Stack>
       </Card>
@@ -1614,24 +1650,22 @@ function IngredientsPage() {
             🗑️ Очистить низкие запасы
           </Button>
           <Button
-            variant="light"
+            variant={showLowStockOnly ? "filled" : "light"}
             color="blue"
             onClick={() => {
-              // Показать только ингредиенты с низкими запасами
-              setFilterCategory(null)
-              setSearchQuery('')
-              // Фильтруем только те, у которых количество < 10
-              const lowStockIngredients = ingredients.filter((ingredient) => {
-                const stock = stockItems.find((s) => s.ingredient.id === ingredient.id)?.amount || 0
-                return stock < 10
-              })
-              if (lowStockIngredients.length > 0) {
-                setSearchQuery(lowStockIngredients.map((i) => i.name).join(' '))
+              if (showLowStockOnly) {
+                // Сбросить фильтр низких запасов
+                setShowLowStockOnly(false)
+              } else {
+                // Показать только ингредиенты с низкими запасами
+                setFilterCategory(null)
+                setSearchQuery('')
+                setShowLowStockOnly(true)
               }
             }}
             size="sm"
           >
-            🔍 Показать низкие запасы
+            {showLowStockOnly ? "❌ Сбросить фильтр" : "🔍 Показать низкие запасы"}
           </Button>
         </Group>
       </Card>
