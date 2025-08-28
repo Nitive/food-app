@@ -22,11 +22,12 @@ import {
   List,
   ThemeIcon,
 } from '@mantine/core'
-import { IconSearch, IconFilter, IconSortAZ, IconSortZA, IconEye, IconPlus } from '@tabler/icons-react'
+import { IconSearch, IconFilter, IconSortAZ, IconSortZA, IconEye, IconPlus, IconEdit, IconTrash } from '@tabler/icons-react'
 import { apiClient, type Recipe } from '../api-client.js'
 import { atom } from 'nanostores'
 import { useStore } from '@nanostores/react'
-import { $calendarItems, addToCalendar } from '../app.js'
+import { $calendarItems, addToCalendar, $user } from '../app.js'
+import { EditRecipeForm } from '../components/EditRecipeForm.js'
 
 // Атомы для состояния
 const $publicRecipes = atom<Recipe[]>([])
@@ -42,6 +43,10 @@ const $sortBy = atom<'name' | 'calories' | 'cookingTime' | 'difficulty'>('name')
 const $sortOrder = atom<'asc' | 'desc'>('asc')
 const $selectedRecipe = atom<Recipe | null>(null)
 const $showRecipeModal = atom(false)
+const $showEditModal = atom(false)
+const $editingRecipe = atom<Recipe | null>(null)
+const $editLoading = atom(false)
+const $deleteLoading = atom(false)
 
 export function PublicRecipesPage() {
   const publicRecipes = useStore($publicRecipes)
@@ -57,6 +62,11 @@ export function PublicRecipesPage() {
   const sortOrder = useStore($sortOrder)
   const selectedRecipe = useStore($selectedRecipe)
   const showRecipeModal = useStore($showRecipeModal)
+  const showEditModal = useStore($showEditModal)
+  const editingRecipe = useStore($editingRecipe)
+  const editLoading = useStore($editLoading)
+  const deleteLoading = useStore($deleteLoading)
+  const user = useStore($user)
 
   // Загрузка рецептов
   const loadPublicRecipes = React.useCallback(async () => {
@@ -118,6 +128,51 @@ export function PublicRecipesPage() {
     $maxCookingTime.set(null)
     $sortBy.set('name')
     $sortOrder.set('asc')
+  }
+
+  // Проверка прав доступа для редактирования
+  const canEditPublicRecipes = user?.email === 'elizasmi20@gmail.com'
+
+  // Обработчики редактирования
+  const openEditModal = (recipe: Recipe) => {
+    $editingRecipe.set(recipe)
+    $showEditModal.set(true)
+  }
+
+  const closeEditModal = () => {
+    $editingRecipe.set(null)
+    $showEditModal.set(false)
+  }
+
+  const handleEditRecipe = async (recipeData: any) => {
+    if (!editingRecipe) return
+
+    $editLoading.set(true)
+    try {
+      await apiClient.updatePublicRecipe(editingRecipe.id, recipeData)
+      closeEditModal()
+      loadPublicRecipes() // Перезагружаем список
+    } catch (error) {
+      console.error('Ошибка редактирования рецепта:', error)
+    } finally {
+      $editLoading.set(false)
+    }
+  }
+
+  const handleDeleteRecipe = async (recipe: Recipe) => {
+    if (!confirm(`Вы уверены, что хотите удалить рецепт "${recipe.name}"?`)) {
+      return
+    }
+
+    $deleteLoading.set(true)
+    try {
+      await apiClient.deletePublicRecipe(recipe.id)
+      loadPublicRecipes() // Перезагружаем список
+    } catch (error) {
+      console.error('Ошибка удаления рецепта:', error)
+    } finally {
+      $deleteLoading.set(false)
+    }
   }
 
   const openRecipeModal = (recipe: Recipe) => {
@@ -322,6 +377,29 @@ export function PublicRecipesPage() {
                         <IconPlus size={16} />
                       </ActionIcon>
                     </Tooltip>
+                    {canEditPublicRecipes && (
+                      <>
+                        <Tooltip label="Редактировать рецепт">
+                          <ActionIcon
+                            variant="light"
+                            color="yellow"
+                            onClick={() => openEditModal(recipe)}
+                          >
+                            <IconEdit size={16} />
+                          </ActionIcon>
+                        </Tooltip>
+                        <Tooltip label="Удалить рецепт">
+                          <ActionIcon
+                            variant="light"
+                            color="red"
+                            onClick={() => handleDeleteRecipe(recipe)}
+                            loading={deleteLoading}
+                          >
+                            <IconTrash size={16} />
+                          </ActionIcon>
+                        </Tooltip>
+                      </>
+                    )}
                   </Group>
                 </Group>
               </Card.Section>
@@ -425,6 +503,23 @@ export function PublicRecipesPage() {
               </Button>
             </Group>
           </Stack>
+        )}
+      </Modal>
+
+      {/* Модальное окно для редактирования рецепта */}
+      <Modal
+        opened={showEditModal}
+        onClose={closeEditModal}
+        title={`Редактировать рецепт: ${editingRecipe?.name}`}
+        size="lg"
+      >
+        {editingRecipe && (
+          <EditRecipeForm
+            opened={showEditModal}
+            onClose={closeEditModal}
+            recipe={editingRecipe}
+            onSave={handleEditRecipe}
+          />
         )}
       </Modal>
     </Container>

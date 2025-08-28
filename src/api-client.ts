@@ -372,4 +372,28 @@ export const apiClient = {
     const { data } = await client.api.public.recipes.get(queryParams)
     return data || []
   },
+
+  async updatePublicRecipe(
+    id: number,
+    recipeData: {
+      name: string
+      calories: number
+      proteins: number
+      fats: number
+      carbohydrates: number
+      instructions?: string
+      cookingTime?: number
+      difficulty?: string
+    }
+  ): Promise<Recipe> {
+    const { data } = await client.api.public.recipes({ id }).put(recipeData)
+    if (!data) throw new Error('Failed to update public recipe')
+    return data as unknown as Recipe
+  },
+
+  async deletePublicRecipe(id: number): Promise<{ deleted: boolean }> {
+    const { data } = await client.api.public.recipes({ id }).delete()
+    if (!data) throw new Error('Failed to delete public recipe')
+    return data as unknown as { deleted: boolean }
+  },
 }

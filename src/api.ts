@@ -13,6 +13,18 @@ import { requireAuth } from './middleware.js'
 
 const prisma = new PrismaClient()
 
+// Функция проверки прав доступа для редактирования общедоступных рецептов
+async function checkPublicRecipeEditAccess({ cookie }: { cookie: any }) {
+  const user = await requireAuth({ cookie })
+  
+  // Проверяем, является ли пользователь Elizaveta Smirnova
+  if (user.user.email !== 'elizasmi20@gmail.com') {
+    throw new Error('Доступ запрещен. Только Elizaveta Smirnova может редактировать общедоступные рецепты.')
+  }
+  
+  return user
+}
+
 function getRedirectUri(request: Request) {
   const redirectUri = new URL('/api/auth/google/callback', request.url)
   if (request.headers.get('x-forwarded-proto') === 'https') {
@@ -1457,6 +1469,110 @@ const app = new Elysia({ adapter: node() as any })
         amountType: ri.ingredient.amountType,
       })),
     }))
+  })
+
+  // Обновить общедоступный рецепт (только для Elizaveta Smirnova)
+  .put(
+    '/api/public/recipes/:id',
+    async ({ params, body, cookie }) => {
+      const user = await checkPublicRecipeEditAccess({ cookie })
+      const id = parseInt(params.id)
+
+      // Проверяем, что рецепт существует и является общедоступным
+      const existingRecipe = await prisma.recipe.findUnique({
+        where: { id },
+      })
+
+      if (!existingRecipe) {
+        throw new Error('Рецепт не найден')
+      }
+
+      if (existingRecipe.authorId !== null) {
+        throw new Error('Можно редактировать только общедоступные рецепты')
+      }
+
+      const { name, calories, proteins, fats, carbohydrates, instructions, cookingTime, difficulty } = body
+
+      const updateData: any = {
+        name,
+        calories,
+        proteins,
+        fats,
+        carbohydrates,
+      }
+
+      if (instructions !== undefined) updateData.instructions = instructions
+      if (cookingTime !== undefined) updateData.cookingTime = cookingTime
+      if (difficulty !== undefined) updateData.difficulty = difficulty
+
+      const updatedRecipe = await prisma.recipe.update({
+        where: { id },
+        data: updateData,
+        include: {
+          ingredients: {
+            include: {
+              ingredient: true,
+            },
+          },
+        },
+      })
+
+      return {
+        id: updatedRecipe.id,
+        name: updatedRecipe.name,
+        calories: updatedRecipe.calories,
+        proteins: updatedRecipe.proteins,
+        fats: updatedRecipe.fats,
+        carbohydrates: updatedRecipe.carbohydrates,
+        instructions: updatedRecipe.instructions,
+        cookingTime: updatedRecipe.cookingTime,
+        difficulty: updatedRecipe.difficulty,
+        authorId: updatedRecipe.authorId,
+        ingredients: (updatedRecipe as any).ingredients.map((ri: any) => ({
+          name: ri.ingredient.name,
+          amount: ri.amount,
+          amountType: ri.ingredient.amountType,
+        })),
+      }
+    },
+    {
+      body: t.Object({
+        name: t.String(),
+        calories: t.Number(),
+        proteins: t.Number(),
+        fats: t.Number(),
+        carbohydrates: t.Number(),
+        instructions: t.Optional(t.String()),
+        cookingTime: t.Optional(t.Number()),
+        difficulty: t.Optional(t.String()),
+      }),
+    }
+  )
+
+  // Удалить общедоступный рецепт (только для Elizaveta Smirnova)
+  .delete('/api/public/recipes/:id', async ({ params, cookie }) => {
+    const user = await checkPublicRecipeEditAccess({ cookie })
+    const id = parseInt(params.id)
+
+    // Проверяем, что рецепт существует и является общедоступным
+    const existingRecipe = await prisma.recipe.findUnique({
+      where: { id },
+    })
+
+    if (!existingRecipe) {
+      throw new Error('Рецепт не найден')
+    }
+
+    if (existingRecipe.authorId !== null) {
+      throw new Error('Можно удалять только общедоступные рецепты')
+    }
+
+    // Удаляем рецепт (каскадное удаление ингредиентов произойдет автоматически)
+    await prisma.recipe.delete({
+      where: { id },
+    })
+
+    return { deleted: true }
   })
 
   .listen(3000, ({ hostname, port }) => {
