@@ -21,14 +21,14 @@ export function Login() {
   }
 
   return (
-    <Container size="xs" style={{ marginTop: '10vh' }}>
+    <Container size="xs" style={{ marginTop: '10vh' }} data-testid="login-page">
       <Paper shadow="md" p="xl" radius="md">
         <Stack align="center" gap="lg">
-          <Title order={1} ta="center">
+          <Title order={1} ta="center" data-testid="login-title">
             Добро пожаловать в Food App
           </Title>
 
-          <Text color="dimmed" ta="center" size="lg">
+          <Text color="dimmed" ta="center" size="lg" data-testid="login-description">
             Войдите в систему, чтобы управлять своими рецептами и планировать питание
           </Text>
 
@@ -38,6 +38,7 @@ export function Login() {
             color="teal"
             onClick={handleGoogleLogin}
             loading={loading}
+            data-testid="google-login-button"
             leftSection={
               <svg width="20" height="20" viewBox="0 0 24 24">
                 <path

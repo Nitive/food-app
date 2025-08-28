@@ -82,7 +82,7 @@ import { PublicRecipesPage } from './pages/PublicRecipesPage.js'
 import { ShoppingListPage } from './pages/ShoppingListPage.js'
 import { StatsPage } from './pages/StatsPage.js'
 
-function Providers(props: { children: React.ReactNode }) {
+export function Providers(props: { children: React.ReactNode }) {
   return (
     <MantineProvider
       defaultColorScheme="light"
